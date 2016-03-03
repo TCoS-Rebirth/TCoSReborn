@@ -4,13 +4,9 @@ using System.IO;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using Lidgren.Network;
-using TCoSServer.Network;
-using Debug = System.Diagnostics.Debug;
+using Network;
 
 namespace ClientLauncher
 {
