@@ -237,6 +237,25 @@ namespace World
                 bc.center = Vector3.zero;
             }
         }
+
+        [ContextMenu("Clear ALL Spawners & Deployers!")]
+        void EditorClearSpawners()
+        {
+            foreach (var z in _zones)
+            {
+                var spawnersObj = z.transform.FindChild("Spawners");
+                var spawners = spawnersObj.GetComponentsInChildren<NpcSpawner>();
+                var deployers = spawnersObj.GetComponentsInChildren<SpawnDeployer>();
+                for (var i = spawners.Length; i-- > 0;)
+                {
+                    DestroyImmediate(spawners[i].gameObject);
+                }
+                for (var i = deployers.Length; i-- > 0;)
+                {
+                    DestroyImmediate(deployers[i].gameObject);
+                }
+            }
+        }
 #endif
 
         #region Helper

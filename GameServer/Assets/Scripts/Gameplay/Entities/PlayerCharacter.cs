@@ -911,6 +911,7 @@ namespace Gameplay.Entities
 
             //Send message to remove from player log
             var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
+            SendToClient(m);
             return;
         }
 

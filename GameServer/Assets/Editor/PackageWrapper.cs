@@ -187,6 +187,19 @@ namespace PackageExtractor
             return null;
         }
 
+        //Valshaaran : implemented to filter out incorrect conversation topic matches in that extractor
+        public SBObject FindObject(string objName, string fullPackageName)
+        {  
+            
+            foreach (var obj in allSBObjects)
+            {
+                if ((obj.Name == objName) && (obj.Package == fullPackageName))
+                        return obj;
+            }
+
+            return null;
+        }
+
         public WrappedPackageObject FindObjectWrapper(string objName, bool includesParentName)
         {
             var packageName = "";

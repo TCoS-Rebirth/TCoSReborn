@@ -1302,14 +1302,11 @@ namespace PackageExtractor.Adapter
                 {
                     if (prop.Value != null)
                     {
-                        Debug.Log("Adding WPO " + prop.Value + " to working set");
+                        //Debug.Log("Adding WPO " + prop.Value + " to working set");
 
-
-                        //TODO : Erroneously returns wrong WPOs with matching name, fix
-
+                        /*
                         //SBObject name equals last part of prop value
                         //SBObject parent equals topic internal name/2nd-last part of prop value
-
                         var propValueParts = prop.Value.Split('.');
                         var objName = propValueParts[propValueParts.Length - 1];
                         string objParent;
@@ -1330,6 +1327,20 @@ namespace PackageExtractor.Adapter
 
                         Log("Finding propSBO - objName = " + objName + ", objParent = " + objParent + "...", Color.yellow);
                         var propSBO = pW.FindReferencedObject(objName, objParent);
+                        */
+
+                        var propValueParts = prop.Value.Split('.');
+
+                        //build full package name from value parts
+                        var packageName = propValueParts[0];
+                        for (int n = 1; n < (propValueParts.Length - 1); n++)
+                        {
+                            packageName += "." + propValueParts[n]; 
+                        }
+
+                        var objName = propValueParts[propValueParts.Length - 1];
+                        var propSBO = pW.FindObject(objName, packageName);
+
 
                         if (propSBO == null)
                         {

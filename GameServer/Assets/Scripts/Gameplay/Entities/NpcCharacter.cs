@@ -18,6 +18,10 @@ namespace Gameplay.Entities
 {
     public class NpcCharacter : Character
     {
+        //Debug flag - when false, NPCs will give all topics regardless of prequest / requirements status
+        //When true, NPCs will filter out topics not relevant to the parameter player
+        const bool FILTER_TOPICS = true;
+
         public enum MoveResult
         {
             TargetNotReachable,
@@ -491,10 +495,9 @@ namespace Gameplay.Entities
                 var bestNode = ConversationTopic.chooseBestNode(newTopic.getStartNodes());
                 source.currentConv = new PlayerCharacter.CurrentConv(newTopic, bestNode, this);
 
-                var allTopics = PrepareTopics(false, source);
+                var topicsToGive = PrepareTopics(source);
 
-                var m = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, newTopic, bestNode, allTopics);
-                //source.Owner.Connection.SendQueued(m);
+                var m = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, newTopic, bestNode, topicsToGive);
                 source.ReceiveRelevanceMessage(this, m);
             }
             else
@@ -503,11 +506,12 @@ namespace Gameplay.Entities
             }
         }
 
+
         public void Converse(PlayerCharacter source, int responseID)
         {
             var srcConv = source.currentConv;
 
-            var allTopics = PrepareTopics(false, source);
+            var topicsToGive = PrepareTopics(source);
 
             //Handle quest provide topic special responses (i.e. Accept, Decline quest)
             if (srcConv.curTopic.TopicType == EConversationType.ECT_Provide)
@@ -526,12 +530,13 @@ namespace Gameplay.Entities
             }
 
             //Select response
+
             var nextNode = srcConv.curTopic.getNextNode(srcConv.curNode, responseID);
 
             if (nextNode == null)
             {
-                Debug.Log("NpcCharacter.Converse : failed to get next node, searching topics");
-                foreach (var ct in allTopics)
+                Debug.Log("NpcCharacter.Converse : failed to get next node, searching topics...");
+                foreach (var ct in topicsToGive)
                 {
                     if (ct.resource.ID == responseID)
                     {
@@ -540,7 +545,17 @@ namespace Gameplay.Entities
                         return;
                     }
                 }
+
+                //No matching nodes or topics - end the conversation
+                Debug.Log("NpcCharacter.Converse : ... failed to get any new node, ending conversation");                
+                var mEndConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+                source.currentConv = null;
+                source.ReceiveRelevanceMessage(this, mEndConverse);
+                return;
             }
+
+            //Update the currentConv curNode to the new node
+            srcConv.curNode = nextNode;
 
             if (srcConv.curTopic == null)
             {
@@ -548,18 +563,20 @@ namespace Gameplay.Entities
                 return;
             }
 
-            var mConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, srcConv.curTopic, nextNode,
-                allTopics);
+
+            var mConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, srcConv.curTopic, srcConv.curNode,
+                topicsToGive);
             source.ReceiveRelevanceMessage(this, mConverse);
         }
 
 
 
-        public List<ConversationTopic> PrepareTopics(bool noFilter, PlayerCharacter p)   //can set p to null when noFilter == true
+        public List<ConversationTopic> PrepareTopics(PlayerCharacter p)   //can set p to null when noFilter == true
         {
+
             var topicRefs = new List<SBResource>();
 
-            if (noFilter)
+            if (!FILTER_TOPICS)
             {
                 //Offer all topics
                 topicRefs.AddRange(typeRef.Topics);
@@ -568,10 +585,12 @@ namespace Gameplay.Entities
 
             else {
 
-                //Filter out current topic ID
+                //Add normal topics, filter out current topic ID, greeting topics
                 foreach (var topic in typeRef.Topics)
                 {
-                    if (topic.ID != p.currentConv.curTopic.resource.ID)
+                    if (    (topic.ID != p.currentConv.curTopic.resource.ID)
+                        &&  (!topic.Name.Contains("CT_G"))
+                        )
                     {
                         topicRefs.Add(topic);
                     }
@@ -650,8 +669,9 @@ namespace Gameplay.Entities
 
                 p.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
 
-                var mQuestAdd = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(quest.resourceID, tarProgressArray);
+                var mQuestAdd = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(quest.resourceID, tarProgressArray);                
                 var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+                p.currentConv = null;
                 p.ReceiveRelevanceMessage(this, mQuestAdd);
                 p.ReceiveRelevanceMessage(this, endConv);
                 return true;
@@ -660,8 +680,9 @@ namespace Gameplay.Entities
 
         public void handleQuestDeclined(PlayerCharacter p)
         {
-            //TODO: Placeholder implementation just closes the conversation window
+            //TODO: Placeholder implementation just closes the conversation window (return to start node?)            
             var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+            p.currentConv = null;
             p.ReceiveRelevanceMessage(this, endConv);
         }
         #endregion

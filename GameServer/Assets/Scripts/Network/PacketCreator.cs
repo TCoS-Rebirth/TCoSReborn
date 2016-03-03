@@ -1225,8 +1225,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST);
 
-            m.WriteInt32(0);  //unknown
-            m.WriteInt32(questID);  //NOT correct (unknown)          
+            m.WriteInt32(questID);         
 
             return m;
         }
