@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ServerConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ListenIP>127.0.0.1</ListenIP>
+  <PublicIP>127.0.0.1</PublicIP>
+  <ServerPort>22234</ServerPort>
+  <ServerName>TCoS-Reborn</ServerName>
+  <ServerLanguage>English</ServerLanguage>
+  <ServerType>PVE</ServerType>
+  <AccessRestriction>Player</AccessRestriction>
+  <DatabaseIP>127.0.0.1</DatabaseIP>
+  <DatabasePort>3306</DatabasePort>
+  <DatabaseUsername>root</DatabaseUsername>
+  <DatabasePassword>root</DatabasePassword>
+  <DatabaseName>Spellborn</DatabaseName>
+  <LoginServerIp>127.0.0.1</LoginServerIp>
+  <LoginServerPort>22232</LoginServerPort>
+</ServerConfiguration>

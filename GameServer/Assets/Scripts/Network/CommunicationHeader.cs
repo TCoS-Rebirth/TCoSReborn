@@ -1,0 +1,18 @@
+namespace Network
+{
+    public enum CommunicationHeader
+    {
+        INVALID = 0,
+        U2L_REGISTER_UNIVERSE,
+        L2U_QUERY_POPULATION,
+        U2L_UPDATE_POPULATION,
+        CL2L_QUERY_INFO,
+        L2CL_UPDATE_INFO,
+        CL2L_REGISTER_ACCOUNT,
+        L2CL_REGISTER_ACCOUNT_ACK,
+        L2U_CLEANUP_LEFTOVER_ACCOUNT,
+        L2U_ACCOUNT_REQUESTLOGIN,
+        U2L_ACCOUNT_REQUESTLOGIN_ACK,
+        U2L_ACCOUNT_ONLOGOUT
+    }
+}
