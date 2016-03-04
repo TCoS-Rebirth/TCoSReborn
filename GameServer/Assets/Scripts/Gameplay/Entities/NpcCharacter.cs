@@ -667,7 +667,7 @@ namespace Gameplay.Entities
                     tarProgressArray.Add(0);
                 }
 
-                p.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
+                p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
 
                 var mQuestAdd = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(quest.resourceID, tarProgressArray);                
                 var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);

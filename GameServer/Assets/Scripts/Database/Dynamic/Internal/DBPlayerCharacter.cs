@@ -45,7 +45,10 @@ namespace Database.Dynamic.Internal
             return equip;
         }
 
-        //TODO: current/completed quests list database property
+        //Valshaaran : current/completed quests list database property
+        public List<DBQuestTarget> QuestTargets = new List<DBQuestTarget>();
+
+        
     }
 
 }
