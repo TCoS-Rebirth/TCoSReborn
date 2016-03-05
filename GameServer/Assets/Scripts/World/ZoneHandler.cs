@@ -79,7 +79,7 @@ namespace World
             }
             for (var i = 0; i < _zones.Count; i++)
             {
-                if (!_zones[i].IsEnabled)
+                if (!_zones[i].IsEnabled || _zones[i].PlayerCount == 0)
                 {
                     continue;
                 }
