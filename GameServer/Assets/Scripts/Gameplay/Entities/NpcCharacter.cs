@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿//Debug flag - when false, NPCs will give all topics regardless of prequest / requirements status
+//When true, NPCs will filter out topics not relevant to the parameter player
+//#define FILTER_TOPICS
+
 using System.Collections.Generic;
 using Common;
 using Database.Static;
@@ -18,10 +21,6 @@ namespace Gameplay.Entities
 {
     public class NpcCharacter : Character
     {
-        //Debug flag - when false, NPCs will give all topics regardless of prequest / requirements status
-        //When true, NPCs will filter out topics not relevant to the parameter player
-        const bool FILTER_TOPICS = true;
-
         public enum MoveResult
         {
             TargetNotReachable,
@@ -575,16 +574,11 @@ namespace Gameplay.Entities
         {
 
             var topicRefs = new List<SBResource>();
-
-            if (!FILTER_TOPICS)
-            {
-                //Offer all topics
-                topicRefs.AddRange(typeRef.Topics);
-                topicRefs.AddRange(typeRef.QuestTopics);
-            }
-
-            else {
-
+#if FILTER_TOPICS
+            //Offer all topics
+            topicRefs.AddRange(typeRef.Topics);
+            topicRefs.AddRange(typeRef.QuestTopics);
+#else
                 //Add normal topics, filter out current topic ID, greeting topics
                 foreach (var topic in typeRef.Topics)
                 {
@@ -639,8 +633,7 @@ namespace Gameplay.Entities
                     //TODO : Quest target topics
 
                 }
-            }
-
+#endif
             var topicsOut = GameData.Get.convDB.GetTopics(topicRefs);
             return topicsOut;
         }
