@@ -95,6 +95,19 @@ CREATE TABLE `playercharacterskills` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- ----------------------------
+-- Table structure for `playercharacterquests`
+-- ----------------------------
+DROP TABLE IF EXISTS `playercharacterquests`;
+CREATE TABLE `playercharacterquests` (
+  `CharacterID` int(11) NOT NULL,
+  `QuestID` int(11) NOT NULL DEFAULT '-1',
+  `IsComplete` boolean NOT NULL DEFAULT false,
+  `TargetIndex` int(11) NOT NULL DEFAULT '0',
+  `TargetProgress` int(11) NOT NULL DEFAULT '0',  
+  PRIMARY KEY (`CharacterID`,`questID`,`TargetIndex`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- ----------------------------
 -- Table structure for `server`
 -- ----------------------------
 DROP TABLE IF EXISTS `server`;

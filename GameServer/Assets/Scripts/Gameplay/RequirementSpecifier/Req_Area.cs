@@ -19,7 +19,7 @@ namespace Gameplay.RequirementSpecifier
 
         public bool isMet()
         {
-            //TODO: Implement Req_NPC_Exists
+            //TODO: Implement Req_Area
             throw new NotImplementedException();
         }
     }

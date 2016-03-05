@@ -8,8 +8,8 @@ namespace Gameplay.Entities.Players
     [Serializable]
     public class QuestDataContainer : ScriptableObject
     {
-        public List<PlayerQuestProgress> curQuests;
-        public List<int> completedQuestIDs;
+        public List<PlayerQuestProgress> curQuests = new List<PlayerQuestProgress>();
+        public List<int> completedQuestIDs = new List<int>();
 
         public void CompleteQuest(int questID)
         {
@@ -49,20 +49,24 @@ namespace Gameplay.Entities.Players
 
         public void LoadForPlayer(List<DBQuestTarget> quests, PlayerCharacter pc)
         {
-            pc.QuestData = ScriptableObject.CreateInstance<QuestDataContainer>();
+            //TODO : Implementation appears to work ok now with simple parameters, but may want revisiting
+
+            curQuests = new List<PlayerQuestProgress>();
+            completedQuestIDs = new List<int>();
+
 
             foreach (var dbQT in quests)
             {
                 if (dbQT.isCompleted)
                 {
-                    pc.QuestData.completedQuestIDs.Add(dbQT.ResourceId);
+                    completedQuestIDs.Add(dbQT.ResourceId);
                 }
                 else
                 {
-
                     bool idExists = false;
                     int entryIndex = 0;
-                    for (int n = 0; n < pc.QuestData.curQuests.Count; n++)
+
+                    for (int n = 0; n < curQuests.Count; n++)
                     {
                         if (dbQT.ResourceId == curQuests[n].questID)
                         {
@@ -72,26 +76,31 @@ namespace Gameplay.Entities.Players
                         }
                     }
 
+
                     if (!idExists)
                     {
-                        entryIndex = pc.QuestData.curQuests.Count;
-                        pc.QuestData.curQuests.Add(new PlayerQuestProgress(dbQT.ResourceId, new List<int>()));
+                        entryIndex = curQuests.Count;
+                        curQuests.Add(new PlayerQuestProgress(dbQT.ResourceId, new List<int>()));
                     }
 
                     //While curQuest progress list length < new target index, add empty item to list
-                    var listLength = pc.QuestData.curQuests[entryIndex].targetProgress.Count;
+                    var listLength = curQuests[entryIndex].targetProgress.Count;
 
                     for (int n = listLength; n < dbQT.targetIndex; n++)
                     {
-
-                        pc.QuestData.curQuests[entryIndex].targetProgress.Add(0);
+                        curQuests[entryIndex].targetProgress.Add(0);
                     }
 
-                    //Insert the new progress value at its index position    
-                    pc.QuestData.curQuests[entryIndex].targetProgress[dbQT.targetIndex] = dbQT.targetProgress;
+                    //Insert the new progress value at its index position   
+                    if (curQuests[entryIndex].targetProgress.Count <= dbQT.targetIndex) {
+                        curQuests[entryIndex].targetProgress.Add(0);
+                    }
+                    curQuests[entryIndex].targetProgress[dbQT.targetIndex] = dbQT.targetProgress;
 
                 }
             }
+
+            pc.QuestData = this;
         }
 
         public List<DBQuestTarget> SaveForPlayer()

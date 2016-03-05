@@ -1,11 +1,12 @@
 ﻿using System;
 using Gameplay.Entities;
+using Database.Static;
 
 namespace Gameplay.RequirementSpecifier
 {
     public class Req_QuestReq : Content_Requirement
     {
-        public string quest; //Quest_Type
+        public SBResource quest; //Quest_Type
 
         public override bool isMet(PlayerCharacter p)
         {
@@ -19,7 +20,6 @@ namespace Gameplay.RequirementSpecifier
 
         public bool isMet()
         {
-            //TODO: Implement Req_NPC_Exists
             throw new NotImplementedException();
         }
     }

@@ -1,11 +1,12 @@
 using System;
 using Gameplay.Entities;
+using Database.Static;
 
 namespace Gameplay.RequirementSpecifier
 {
     public class Req_QuestRepeatable : Content_Requirement
     {
-        public string quest; //Quest_Type
+        public SBResource Quest; //Quest_Type
         public bool Repeatable;
 
         public override bool isMet(PlayerCharacter p)

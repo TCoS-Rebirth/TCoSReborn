@@ -7,18 +7,12 @@ namespace Gameplay.RequirementSpecifier
     {
         public override bool isMet(PlayerCharacter p)
         {
-            return isMet();
+            return false;
         }
 
         public override bool isMet(NpcCharacter n)
         {
-            return isMet();
-        }
-
-        public bool isMet()
-        {
-            //TODO: Implement Req_NPC
-            throw new NotImplementedException();
+            return true;
         }
     }
 }

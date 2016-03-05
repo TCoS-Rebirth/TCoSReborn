@@ -94,6 +94,8 @@ namespace PackageExtractor.Adapter
             questCol = ScriptableObject.CreateInstance<QuestCollection>();
             //Create new assets
             AssetDatabase.CreateAsset(questCol, gameDataPath + "Quests/" + saveName + ".asset");
+
+            //TODO : Obliterates existing conversation data, look at improving this if possible
             AssetDatabase.CreateAsset(convCol, gameDataPath + "Conversations/" + saveName + ".asset");
 
             //Populate quest collection with quest chain skeletons first (name, localized name ID, quest area)
@@ -248,7 +250,7 @@ namespace PackageExtractor.Adapter
                     //Get each requirement WPO
                     var reqWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(req.GetValue<string>());
                     //populate requirement object and add to requirements
-                    var newCR = ExtractRequirement(reqWPO, resourcesProp);
+                    var newCR = getReq(reqWPO, resourcesProp, pW, qC);
                     curQ.requirements.Add(newCR);
                     newCR.name = qo.Name + "." + reqWPO.Name;
                     AssetDatabase.AddObjectToAsset(newCR, qC);
@@ -431,12 +433,25 @@ namespace PackageExtractor.Adapter
                         }
 
                         //Duplicate avoidance check
-                        if (!alteredNT.QuestTopics.Contains(topic))
+                        bool isDuplicate = false;
+                        foreach (var questTopic in alteredNT.QuestTopics)
+                        {
+                            if (questTopic.ID == topic.ID)
+                            {
+                                isDuplicate = true;
+                                break;
+                            }
+                        }
+                        if (!isDuplicate)
+                        {
+                            //Not a duplicate, so add
                             alteredNT.QuestTopics.Add(topic);
-
-                        //AssetDatabase.AddObjectToAsset(topic, nt);
-                        EditorUtility.CopySerialized(alteredNT, nt);
-                        EditorUtility.SetDirty(nt);
+                            //AssetDatabase.AddObjectToAsset(topic, nt);
+                            EditorUtility.CopySerialized(alteredNT, nt);
+                            EditorUtility.SetDirty(nt);
+                        }
+                        
+                        
                         return;
                     }
                 }

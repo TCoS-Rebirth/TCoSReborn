@@ -1,12 +1,13 @@
 ﻿using System;
 using Gameplay.Entities;
+using Database.Static;
 
 namespace Gameplay.RequirementSpecifier
 {
     public class Req_TargetActive : Content_Requirement
-    {
+    {        
+        public SBResource quest; //Quest_Type
         public int objective;
-        public string quest; //Quest_Type
 
         public override bool isMet(PlayerCharacter p)
         {
@@ -20,7 +21,7 @@ namespace Gameplay.RequirementSpecifier
 
         public bool isMet()
         {
-            //TODO: Implement Req_NPC_Exists
+            //TODO: Implement Req_TargetActive
             throw new NotImplementedException();
         }
     }
