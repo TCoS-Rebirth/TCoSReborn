@@ -17,7 +17,7 @@ namespace PackageExtractor.Adapter
         List<SkillEffectCollection> avEffectCollections = new List<SkillEffectCollection>();
 
         ConvCollection convCol = ScriptableObject.CreateInstance<ConvCollection>();
-        ConvCollection conversationsGP;
+        //ConvCollection conversationsGP;
 
         List<NPC_Type> extractedNPCs = new List<NPC_Type>();
 
@@ -63,7 +63,7 @@ namespace PackageExtractor.Adapter
                 return;
             }
             path = "Assets/GameData/";
-            conversationsGP = AssetDatabase.LoadAssetAtPath<ConvCollection>("Assets/GameData/Conversations/ConversationsGP.asset");
+            //conversationsGP = AssetDatabase.LoadAssetAtPath<ConvCollection>("Assets/GameData/Conversations/ConversationsGP.asset");
             foreach (var pw in extractorWindowRef.StashedPackages)
             {
                 WalkStashStack(pw, resources, localizedStrings);
@@ -323,23 +323,32 @@ namespace PackageExtractor.Adapter
                 foreach (var topic in topics.IterateInnerProperties())
                 {
                     //Get each topicWPO
+
+
                     //TODO : Handle conversations contained in ConversationsGP
-
-
+                    //Log info for now
                     if (topic.GetValue<string>().Contains("ConversationsGP"))
                     {
-                        //Find in ConversationsGP                                                
-                        foreach (var ct in conversationsGP.topics)
+                        Log("ConversationsGP topic referenced by " + npc.name + " in package " + pW.Name, Color.yellow);
+                        continue;
+                    }
+
+                        /*
+                        if (topic.GetValue<string>().Contains("ConversationsGP"))
                         {
-                            //TODO: Look into getresource not returning valid topic resource in this instance
-                            if (ct.resource.ID == resources.GetResource(topic.GetValue<string>()).ID)
+                            //Find in ConversationsGP                                                
+                            foreach (var ct in conversationsGP.topics)
                             {
-                                //Add ref to this NPC
-                                npc.Topics.Add(ct.resource);
+                                //TODO: Look into getresource not returning valid topic resource in this instance
+                                if (ct.resource.ID == resources.GetResource(topic.GetValue<string>()).ID)
+                                {
+                                    //Add ref to this NPC
+                                    npc.Topics.Add(ct.resource);
+                                }
                             }
                         }
-                    }
-                    //end ConversationsGP
+                        //end ConversationsGP
+                        */
 
 
                     var topicWPO = pW.FindObjectWrapper(topic.GetValue<string>());

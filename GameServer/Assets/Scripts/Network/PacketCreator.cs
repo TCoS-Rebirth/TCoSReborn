@@ -1211,7 +1211,7 @@ namespace Network
             else {
                 m.WriteInt32(progressArray.Count);    //Progress array size
 
-                foreach (int aProgress in progressArray)
+                foreach (var aProgress in progressArray)
                 {
                     m.WriteInt32(aProgress);        //Progress array items
                 }
@@ -1225,7 +1225,8 @@ namespace Network
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST);
 
-            m.WriteInt32(questID);         
+            m.WriteInt32(questID); //Probable
+                    
 
             return m;
         }

@@ -18,6 +18,18 @@ namespace Gameplay.Entities.Players
             RemoveQuest(questID);
         }
 
+        public int getNumTargets(int questID)   
+        {
+            foreach (var curQuest in curQuests)
+            {
+                if (curQuest.questID == questID)
+                {
+                    return curQuest.targetProgress.Count;                    
+                }
+            }
+            return 0; //return 0 if player doesn't have quest active
+        }
+
         public void RemoveQuest(int questID)
         {
             foreach (var curQuest in curQuests)
@@ -25,6 +37,7 @@ namespace Gameplay.Entities.Players
                 if (curQuest.questID == questID)
                 {
                     curQuests.Remove(curQuest);
+                    return;
                 }
             }
         }
