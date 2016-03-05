@@ -369,28 +369,32 @@ namespace PackageExtractor.Adapter
             //foreach(WrappedPackageObject child in wpo.ChildObjects) {
             foreach (var CTSearchWPO in pW.IterateObjects())
             {
-                var CTObj = CTSearchWPO.sbObject;
+                var ctObj = CTSearchWPO.sbObject;
 
-                if (CTObj.ClassName.Contains("CT_")
-                    && CTObj.Package.Contains(wpo.Name))
+                var ctFullName = pW.Name + "." + ctObj.Package + "." + ctObj.Name;
+                var wpoFullName = pW.Name + "." + wpo.sbObject.Package + "." + wpo.sbObject.Name;
+
+                if (ctObj.ClassName.Contains("CT_")
+                    //&& CTObj.Package.Contains(wpo.Name))
+                    //&& (resources.GetResourceID(fullName))
+                    && (ctFullName.Contains(wpoFullName)))
                 {
                     Debug.Log("Found ConversationTopic WPO outside Topics array...");
 
                     //Flag denotes whether topic is a quest topic or not
                     var isQuestTopic = false;
 
-                    if (CTObj.ClassName.Contains("Quest"))
+                    if (ctObj.ClassName.Contains("Quest"))
                     {
                         isQuestTopic = true;
                     }
-
-                    var fullName = pW.Name + "." + CTObj.Package + "." + CTObj.Name;
-                    var newTopicRef = resources.GetResource(fullName);
+                    
+                    var newTopicRef = resources.GetResource(ctFullName);
 
 
                     if (newTopicRef == null)
                     {
-                        Log("...couldn't find CT resource for " + CTObj.Package + "." + CTObj.Name + ", skipping", Color.yellow);
+                        Log("...couldn't find CT resource for " + ctObj.Package + "." + ctObj.Name + ", skipping", Color.yellow);
                         break;
                     }
 

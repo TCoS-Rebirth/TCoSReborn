@@ -79,7 +79,7 @@ namespace World
             }
             for (var i = 0; i < _zones.Count; i++)
             {
-                if (!_zones[i].IsEnabled)
+                if (!_zones[i].IsEnabled || _zones[i].PlayerCount == 0)
                 {
                     continue;
                 }
@@ -235,6 +235,25 @@ namespace World
                 if (!bc) continue;
                 bc.size = new Vector3(p.collisionRadius, p.collisionHeight, p.collisionRadius);
                 bc.center = Vector3.zero;
+            }
+        }
+
+        [ContextMenu("Clear ALL Spawners & Deployers!")]
+        void EditorClearSpawners()
+        {
+            foreach (var z in _zones)
+            {
+                var spawnersObj = z.transform.FindChild("Spawners");
+                var spawners = spawnersObj.GetComponentsInChildren<NpcSpawner>();
+                var deployers = spawnersObj.GetComponentsInChildren<SpawnDeployer>();
+                for (var i = spawners.Length; i-- > 0;)
+                {
+                    DestroyImmediate(spawners[i].gameObject);
+                }
+                for (var i = deployers.Length; i-- > 0;)
+                {
+                    DestroyImmediate(deployers[i].gameObject);
+                }
             }
         }
 #endif

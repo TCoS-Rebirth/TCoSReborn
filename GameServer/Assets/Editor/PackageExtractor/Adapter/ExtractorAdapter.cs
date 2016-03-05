@@ -8,6 +8,7 @@ using Gameplay.Conversations;
 using Gameplay.Events;
 using Gameplay.RequirementSpecifier;
 using UnityEngine;
+using UnityEditor;
 
 namespace PackageExtractor.Adapter
 {
@@ -466,227 +467,315 @@ namespace PackageExtractor.Adapter
 
         #region Requirements
 
-        T ExtractBaseRequirement<T>(WrappedPackageObject reqObj) where T : Content_Requirement
+        protected Content_Requirement getReq(WrappedPackageObject reqObj, SBResources resources, PackageWrapper pW, UnityEngine.Object assetObj)
+        {
+            Content_Requirement output; // = ScriptableObject.CreateInstance<ConversationTopic>();           
+
+
+            switch (reqObj.sbObject.ClassName.Replace("SBGamePlay.", string.Empty))
+            {
+                //Switch Content_Requirement subclasses
+                case "Req_And":
+                    output = getReqAnd(reqObj, resources, pW, assetObj);  //special method
+                    break;
+
+                case "Req_Area":
+                    Req_Area reqArea = ScriptableObject.CreateInstance<Req_Area>();
+                    ReadString(reqObj, "AreaTag", out reqArea.AreaTag);
+                    output = reqArea;
+                    break;
+
+                case "Req_Chance":
+                    Req_Chance reqch = ScriptableObject.CreateInstance<Req_Chance>();
+                    ReadFloat(reqObj, "Chance", out reqch.Chance);
+                    output = reqch;
+                    break;
+
+                case "Req_Class":
+                    Req_Class reqcl = ScriptableObject.CreateInstance<Req_Class>();
+                    ReadEnum(reqObj, "RequiredClass", out reqcl.RequiredClass);
+                    output = reqcl;
+                    break;
+
+                case "Req_Conditional":
+                    Req_Conditional recc = ScriptableObject.CreateInstance<Req_Conditional>();
+                    var condProp = reqObj.FindProperty("Condition");
+                    if (condProp != null)
+                    {
+                        var condPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(condProp.GetValue<string>());
+                        recc.Condition = getReq(condPropObj, resources, pW, assetObj);
+                        recc.Condition.name = reqObj.Name + "." + condPropObj.Name;
+                        AssetDatabase.AddObjectToAsset(recc.Condition, assetObj);
+                    }
+                    var recReqProp = reqObj.FindProperty("Requirement");
+                    if (recReqProp != null)
+                    {
+                        var recReqPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(recReqProp.GetValue<string>());
+                        recc.Requirement = getReq(recReqPropObj, resources, pW, assetObj);
+                        recc.Requirement.name = reqObj.Name + "." + recReqPropObj.Name;
+                        AssetDatabase.AddObjectToAsset(recc.Requirement, assetObj);
+                    }
+                    output = recc;
+                    break;
+
+                case "Req_Distance":
+                    Req_Distance reqd = ScriptableObject.CreateInstance<Req_Distance>();
+                    ReadString(reqObj, "ActorTag", out reqd.ActorTag);
+                    ReadInt(reqObj, "Distance", out reqd.Distance);
+                    ReadEnum(reqObj, "Operator", out reqd.Operator);
+                    output = reqd;
+                    break;
+
+                case "Req_Equipment":
+                    Req_Equipment reqe = ScriptableObject.CreateInstance<Req_Equipment>();
+                    ReadString(reqObj, "Equipment", out reqe.temporaryEquipmentName);
+                    reqe.equipmentID = resources.GetResourceID(reqe.temporaryEquipmentName);
+                    output = reqe;
+                    break;
+
+                case "Req_Faction":
+                    Req_Faction reqfac = ScriptableObject.CreateInstance<Req_Faction>();
+                    ReadString(reqObj, "RequiredTaxonomy", out reqfac.temporaryTaxonomyName);
+                    reqfac.taxonomyID = resources.GetResourceID(reqfac.temporaryTaxonomyName);
+                    output = reqfac;
+                    break;
+
+                case "Req_False":
+                    Req_False reqfalse = ScriptableObject.CreateInstance<Req_False>();
+                    output = reqfalse;
+                    break;
+
+                case "Req_GameActorEnabled":
+                    Req_GameActorEnabled reqga = ScriptableObject.CreateInstance<Req_GameActorEnabled>();
+                    ReadString(reqObj, "Tag", out reqga.Tag);
+                    ReadBool(reqObj, "AllMustSucceed", out reqga.AllMustSucceed);
+                    ReadBool(reqObj, "CheckForEnabled", out reqga.CheckForEnabled);
+                    output = reqga;
+                    break;
+
+                case "Req_Gender":
+                    Req_Gender reqgen = ScriptableObject.CreateInstance<Req_Gender>();
+                    if (!ReadEnum(reqObj, "Gender", out reqgen.Gender))
+                    {
+                        //TODO: guesswork, but when gender == 0, the property seems to dissapear
+                        reqgen.Gender = NPCGender.ENG_Male;
+                        //Debug.Log("reqgen.Gender = " + reqgen.Gender);
+                    }
+                    output = reqgen;
+                    break;
+
+                case "Req_Inventory":
+                    Req_Inventory reqinv = ScriptableObject.CreateInstance<Req_Inventory>();
+                    ReadString(reqObj, "Item", out reqinv.temporaryItemName);
+                    reqinv.itemID = resources.GetResourceID(reqinv.temporaryItemName);
+                    ReadInt(reqObj, "Amount", out reqinv.Amount);
+                    ReadEnum(reqObj, "Operator", out reqinv.Operator);
+                    output = reqinv;
+                    break;
+
+                case "Req_Level":
+                    Req_Level reqlev = ScriptableObject.CreateInstance<Req_Level>();
+                    ReadInt(reqObj, "RequiredLevel", out reqlev.RequiredLevel);
+                    ReadEnum(reqObj, "Operator", out reqlev.Operator);
+                    output = reqlev;
+                    break;
+
+                case "Req_Money":
+                    Req_Money reqmon = ScriptableObject.CreateInstance<Req_Money>();
+                    ReadInt(reqObj, "RequiredAmount", out reqmon.RequiredAmount);
+                    ReadEnum(reqObj, "Operator", out reqmon.Operator);
+                    output = reqmon;
+                    break;
+
+                case "Req_Not":
+                    Req_Not reqnot = ScriptableObject.CreateInstance<Req_Not>();
+                    var reqNotProp = reqObj.FindProperty("Requirement");
+                    if (reqNotProp != null)
+                    {
+                        var reqnotObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqNotProp.GetValue<string>());
+                        reqnot.Requirement = getReq(reqnotObj, resources, pW, assetObj);
+                        reqnot.Requirement.name = reqObj.Name + "." + reqnotObj.Name;
+                        AssetDatabase.AddObjectToAsset(reqnot.Requirement, assetObj);
+                    }
+                    output = reqnot;
+                    break;
+
+                case "Req_NPC":
+                    Req_NPC reqnpc = ScriptableObject.CreateInstance<Req_NPC>();
+                    output = reqnpc;
+                    break;
+
+                case "Req_NPC_Exists":
+                    Req_NPC_Exists reqne = ScriptableObject.CreateInstance<Req_NPC_Exists>();
+                    ReadString(reqObj, "NPCType", out reqne.temporaryNPCName);
+                    reqne.npcID = resources.GetResourceID(reqne.temporaryNPCName);
+                    ReadBool(reqObj, "MustBeAlive", out reqne.MustBeAlive);
+                    output = reqne;
+                    break;
+
+                case "Req_NPCType":
+                    Req_NPCType reqty = ScriptableObject.CreateInstance<Req_NPCType>();
+                    ReadString(reqObj, "RequiredNPCType", out reqty.temporaryNPCTypeName);
+                    reqty.npcID = resources.GetResourceID(reqty.temporaryNPCTypeName);
+                    output = reqty;
+                    break;
+
+                case "Req_Or":
+                    Req_Or reqor = ScriptableObject.CreateInstance<Req_Or>();
+                    var reqorArrProp = reqObj.FindProperty("Requirements");
+                    if (reqorArrProp != null)
+                    {
+                        reqor.Requirements = new List<Content_Requirement>();
+                        foreach (var reqOrProp in reqorArrProp.IterateInnerProperties())
+                        {
+                            var reqorObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqOrProp.GetValue<string>());
+                            var reqListItem = getReq(reqorObj, resources, pW, assetObj);
+                            reqListItem.name = reqObj.Name + "." + reqorObj.Name;
+                            reqor.Requirements.Add(reqListItem);
+                            AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
+                        }
+                    }
+                    output = reqor;
+                    break;
+
+                case "Req_PePRank":
+                    Req_PePRank reqpep = ScriptableObject.CreateInstance<Req_PePRank>();
+                    ReadInt(reqObj, "RequiredPep", out reqpep.RequiredPep);
+                    ReadEnum(reqObj, "Operator", out reqpep.Operator);
+                    output = reqpep;
+                    break;
+
+                case "Req_PersistentValue":
+                    Req_PersistentValue reqpv = ScriptableObject.CreateInstance<Req_PersistentValue>();
+                    ReadString(reqObj, "context", out reqpv.context);
+                    ReadInt(reqObj, "VariableID", out reqpv.VariableID);
+                    ReadInt(reqObj, "Value", out reqpv.Value);
+                    ReadEnum(reqObj, "Operator", out reqpv.Operator);
+                    output = reqpv;
+                    break;
+
+                case "Req_Player":
+                    Req_Player reqplayer = ScriptableObject.CreateInstance<Req_Player>();
+                    output = reqplayer;
+                    break;
+
+                case "Req_QuestActive":
+                    Req_QuestActive reqqa = ScriptableObject.CreateInstance<Req_QuestActive>();
+                    string tempQAName;
+                    ReadString(reqObj, "RequiredQuest", out tempQAName);
+                    reqqa.RequiredQuest = resources.GetResource(pW.Name, tempQAName);
+                    output = reqqa;
+                    break;
+
+                case "Req_QuestFinished":
+                    Req_QuestFinished reqqf = ScriptableObject.CreateInstance<Req_QuestFinished>();
+                    string tempQFName;
+                    ReadString(reqObj, "RequiredQuest", out tempQFName);
+                    reqqf.RequiredQuest = resources.GetResource(pW.Name, tempQFName);
+                    ReadInt(reqObj, "TimesFinished", out reqqf.TimesFinished);
+                    output = reqqf;
+                    break;
+
+                case "Req_QuestRepeatable":
+                    Req_QuestRepeatable reqqr = ScriptableObject.CreateInstance<Req_QuestRepeatable>();
+                    string tempQRName;
+                    ReadString(reqObj, "quest", out tempQRName);                    
+                    reqqr.Quest = resources.GetResource(pW.Name, tempQRName);
+                    ReadBool(reqObj, "Repeatable", out reqqr.Repeatable);
+                    output = reqqr;
+                    break;
+
+                case "Req_QuestReq":
+                    Req_QuestReq reqqreq = ScriptableObject.CreateInstance<Req_QuestReq>();
+                    string tempQReqName;
+                    ReadString(reqObj, "quest", out tempQReqName);
+                    reqqreq.quest = resources.GetResource(pW.Name, tempQReqName);
+                    output = reqqreq;
+                    break;
+
+                case "Req_Race":
+                    Req_Race reqrace = ScriptableObject.CreateInstance<Req_Race>();
+                    ReadEnum(reqObj, "RequiredRace", out reqrace.RequiredRace);
+                    output = reqrace;
+                    break;
+
+                case "Req_TargetActive":
+                    Req_TargetActive reqta = ScriptableObject.CreateInstance<Req_TargetActive>();
+                    string tempTA;
+                    ReadString(reqObj, "quest", out tempTA);
+                    reqta.quest = resources.GetResource(pW.Name, tempTA);
+                    ReadInt(reqObj, "objective", out reqta.objective);
+                    output = reqta;
+                    break;
+
+                case "Req_TargetProgress":
+                    Req_TargetProgress reqpr = ScriptableObject.CreateInstance<Req_TargetProgress>();
+                    string tempTP;
+                    ReadString(reqObj, "quest", out tempTP);
+                    reqpr.quest = resources.GetResource(tempTP);
+                    ReadInt(reqObj, "objective", out reqpr.objective);
+                    ReadInt(reqObj, "Progress", out reqpr.Progress);
+                    ReadEnum(reqObj, "Operator", out reqpr.Operator);
+                    output = reqpr;
+                    break;
+
+                case "Req_Team":
+                    Req_Team reqteam = ScriptableObject.CreateInstance<Req_Team>();
+                    ReadInt(reqObj, "RequiredSize", out reqteam.RequiredSize);
+                    ReadEnum(reqObj, "Operator", out reqteam.Operator);
+                    output = reqteam;
+                    break;
+
+                case "Req_Time":
+                    Req_Time reqtime = ScriptableObject.CreateInstance<Req_Time>();
+                    ReadFloat(reqObj, "BeginTime", out reqtime.BeginTime);
+                    ReadFloat(reqObj, "EndTime", out reqtime.EndTime);
+                    output = reqtime;
+                    break;
+
+                case "Req_True":
+                    Req_True reqtrue = ScriptableObject.CreateInstance<Req_True>();
+                    output = reqtrue;
+                    break;
+
+                case "Req_World":
+                    Req_World reqwo = ScriptableObject.CreateInstance<Req_World>();
+                    ReadInt(reqObj, "RequiredWorld", out reqwo.RequiredWorld);
+                    output = reqwo;
+                    break;
+
+                default:
+                    Content_Requirement empty = ScriptableObject.CreateInstance<Content_Requirement>();
+                    empty.name = "[Empty:NotFound]";
+                    return empty;
+            }
+
+            //Read base class fields
+            ReadBool(reqObj, "ValidForPlayer", out output.ValidForPlayer);
+            ReadBool(reqObj, "ValidForRelevant", out output.ValidForRelevant);
+            ReadInt(reqObj, "ControlLocationX", out output.ControlLocationX);
+            ReadInt(reqObj, "ControlLocationY", out output.ControlLocationY);
+
+            return output;
+        }
+        /*
+
+                    T ExtractBaseRequirement<T>(WrappedPackageObject reqObj) where T : Content_Requirement
         {
             var obj = ScriptableObject.CreateInstance<T>();
             ReadBool(reqObj, "ValidForPlayer", out obj.ValidForPlayer);
             ReadBool(reqObj, "ValidForRelevant", out obj.ValidForRelevant);
             return obj;
         }
+        */
 
-        protected Content_Requirement ExtractRequirement(WrappedPackageObject requirementObject, SBResources res)
-        {
-            var className = requirementObject.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty);
-
-            //Special handling for Req_And removes need to deal with ExtractBaseRequirement template type for each subclass
-            if (className == "Req_And")
-            {
-                Content_Requirement output;
-                output = getReqAnd(requirementObject, res);
-                ReadBool(requirementObject, "ValidForPlayer", out output.ValidForPlayer);
-                ReadBool(requirementObject, "ValidForRelevant", out output.ValidForRelevant);
-                return output;
-            }
-
-            #region SwitchSubClasses
-
-            switch (className)
-            {
-                case "Req_Area":
-                    var reqAr = ExtractBaseRequirement<Req_Area>(requirementObject);
-                    ReadString(requirementObject, "AreaTag", out reqAr.AreaTag);
-                    return reqAr;
-                case "Req_Chance":
-                    var reqch = ExtractBaseRequirement<Req_Chance>(requirementObject);
-                    ReadFloat(requirementObject, "Chance", out reqch.Chance);
-                    return reqch;
-                case "Req_Class":
-                    var reqcl = ExtractBaseRequirement<Req_Class>(requirementObject);
-                    ReadEnum(requirementObject, "RequiredClass", out reqcl.RequiredClass);
-                    return reqcl;
-                case "Req_Conditional":
-                    var recc = ExtractBaseRequirement<Req_Conditional>(requirementObject);
-                    var condProp = requirementObject.FindProperty("Condition");
-                    if (condProp != null)
-                    {
-                        var condPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(condProp.GetValue<string>());
-                        recc.Condition = ExtractRequirement(condPropObj, res);
-                    }
-                    var recReqProp = requirementObject.FindProperty("Requirement");
-                    if (recReqProp != null)
-                    {
-                        var recReqPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(recReqProp.GetValue<string>());
-                        recc.Requirement = ExtractRequirement(recReqPropObj, res);
-                    }
-                    return recc;
-                case "Req_Distance":
-                    var reqd = ExtractBaseRequirement<Req_Distance>(requirementObject);
-                    ReadString(requirementObject, "ActorTag", out reqd.ActorTag);
-                    ReadInt(requirementObject, "Distance", out reqd.Distance);
-                    ReadEnum(requirementObject, "Operator", out reqd.Operator);
-                    return reqd;
-                case "Req_Equipment":
-                    var reqe = ExtractBaseRequirement<Req_Equipment>(requirementObject);
-                    ReadString(requirementObject, "Equipment", out reqe.temporaryEquipmentName);
-                    reqe.equipmentID = res.GetResourceID(reqe.temporaryEquipmentName);
-                    return reqe;
-                case "Req_Faction":
-                    var reqfac = ExtractBaseRequirement<Req_Faction>(requirementObject);
-                    ReadString(requirementObject, "RequiredTaxonomy", out reqfac.temporaryTaxonomyName);
-                    reqfac.taxonomyID = res.GetResourceID(reqfac.temporaryTaxonomyName);
-                    return reqfac;
-                case "Req_False":
-                    var recfal = ExtractBaseRequirement<Req_False>(requirementObject);
-                    return recfal;
-                case "Req_GameActorEnabled":
-                    var reqga = ExtractBaseRequirement<Req_GameActorEnabled>(requirementObject);
-                    ReadString(requirementObject, "Tag", out reqga.Tag);
-                    ReadBool(requirementObject, "AllMustSucceed", out reqga.AllMustSucceed);
-                    ReadBool(requirementObject, "CheckForEnabled", out reqga.CheckForEnabled);
-                    return reqga;
-                case "Req_Gender":
-                    var reqgen = ExtractBaseRequirement<Req_Gender>(requirementObject);
-                    if (!ReadEnum(requirementObject, "Gender", out reqgen.Gender))
-                    {
-                        //TODO: guesswork, but when gender == 0, the property seems to dissapear
-                        reqgen.Gender = NPCGender.ENG_Male;
-                        //Debug.Log("reqgen.Gender = " + reqgen.Gender);
-                    }
-
-                    return reqgen;
-                case "Req_Inventory":
-                    var reqinv = ExtractBaseRequirement<Req_Inventory>(requirementObject);
-                    ReadString(requirementObject, "Item", out reqinv.temporaryItemName);
-                    reqinv.itemID = res.GetResourceID(reqinv.temporaryItemName);
-                    ReadInt(requirementObject, "Amount", out reqinv.Amount);
-                    ReadEnum(requirementObject, "Operator", out reqinv.Operator);
-                    return reqinv;
-                case "Req_Level":
-                    var reqlev = ExtractBaseRequirement<Req_Level>(requirementObject);
-                    ReadInt(requirementObject, "RequiredLevel", out reqlev.RequiredLevel);
-                    ReadEnum(requirementObject, "Operator", out reqlev.Operator);
-                    return reqlev;
-                case "Req_Money":
-                    var reqmon = ExtractBaseRequirement<Req_Money>(requirementObject);
-                    ReadInt(requirementObject, "RequiredAmount", out reqmon.RequiredAmount);
-                    ReadEnum(requirementObject, "Operator", out reqmon.Operator);
-                    return reqmon;
-                case "Req_Not":
-                    var reqnot = ExtractBaseRequirement<Req_Not>(requirementObject);
-                    var reqNotProp = requirementObject.FindProperty("Requirement");
-                    if (reqNotProp != null)
-                    {
-                        var reqnotObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqNotProp.GetValue<string>());
-                        reqnot.Requirement = ExtractRequirement(reqnotObj, res);
-                    }
-                    return reqnot;
-                case "Req_NPC":
-                    var reqnpc = ExtractBaseRequirement<Req_NPC>(requirementObject);
-                    return reqnpc;
-                case "Req_NPC_Exists":
-                    var reqne = ExtractBaseRequirement<Req_NPC_Exists>(requirementObject);
-                    ReadString(requirementObject, "NPCType", out reqne.temporaryNPCName);
-                    reqne.npcID = res.GetResourceID(reqne.temporaryNPCName);
-                    ReadBool(requirementObject, "MustBeAlive", out reqne.MustBeAlive);
-                    return reqne;
-                case "Req_NPCType":
-                    var reqty = ExtractBaseRequirement<Req_NPCType>(requirementObject);
-                    ReadString(requirementObject, "RequiredNPCType", out reqty.temporaryNPCTypeName);
-                    reqty.npcID = res.GetResourceID(reqty.temporaryNPCTypeName);
-                    return reqty;
-                case "Req_Or":
-                    var reqor = ExtractBaseRequirement<Req_Or>(requirementObject);
-                    var reqorArrProp = requirementObject.FindProperty("Requirements");
-                    if (reqorArrProp != null)
-                    {
-                        foreach (var reqOrProp in reqorArrProp.IterateInnerProperties())
-                        {
-                            var reqorObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqOrProp.GetValue<string>());
-                            reqor.Requirements.Add(ExtractRequirement(reqorObj, res));
-                        }
-                    }
-                    return reqor;
-                case "Req_PePRank":
-                    var reqpep = ExtractBaseRequirement<Req_PePRank>(requirementObject);
-                    ReadInt(requirementObject, "RequiredPep", out reqpep.RequiredPep);
-                    ReadEnum(requirementObject, "Operator", out reqpep.Operator);
-                    return reqpep;
-                case "Req_PersistentValue":
-                    var reqpv = ExtractBaseRequirement<Req_PersistentValue>(requirementObject);
-                    ReadString(requirementObject, "context", out reqpv.context);
-                    ReadInt(requirementObject, "VariableID", out reqpv.VariableID);
-                    ReadInt(requirementObject, "Value", out reqpv.Value);
-                    ReadEnum(requirementObject, "Operator", out reqpv.Operator);
-                    return reqpv;
-                case "Req_Player":
-                    var reqpl = ExtractBaseRequirement<Req_Player>(requirementObject);
-                    return reqpl;
-                case "Req_QuestActive":
-                    var reqqa = ExtractBaseRequirement<Req_QuestActive>(requirementObject);
-                    ReadString(requirementObject, "RequiredQuest", out reqqa.RequiredQuest);
-                    return reqqa;
-                case "Req_QuestFinished":
-                    var reqqf = ExtractBaseRequirement<Req_QuestFinished>(requirementObject);
-                    ReadString(requirementObject, "RequiredQuest", out reqqf.RequiredQuest);
-                    ReadInt(requirementObject, "TimesFinished", out reqqf.TimesFinished);
-                    return reqqf;
-                case "Req_QuestRepeatable":
-                    var reqqr = ExtractBaseRequirement<Req_QuestRepeatable>(requirementObject);
-                    ReadString(requirementObject, "quest", out reqqr.quest);
-                    ReadBool(requirementObject, "Repeatable", out reqqr.Repeatable);
-                    return reqqr;
-                case "Req_QuestReq":
-                    var reqqreq = ExtractBaseRequirement<Req_QuestReq>(requirementObject);
-                    ReadString(requirementObject, "quest", out reqqreq.quest);
-                    return reqqreq;
-                case "Req_Race":
-                    var reqrace = ExtractBaseRequirement<Req_Race>(requirementObject);
-                    ReadEnum(requirementObject, "RequiredRace", out reqrace.RequiredRace);
-                    return reqrace;
-                case "Req_TargetActive":
-                    var reqta = ExtractBaseRequirement<Req_TargetActive>(requirementObject);
-                    ReadString(requirementObject, "quest", out reqta.quest);
-                    ReadInt(requirementObject, "objective", out reqta.objective);
-                    return reqta;
-                case "Req_TargetProgress":
-                    var reqpr = ExtractBaseRequirement<Req_TargetProgress>(requirementObject);
-                    ReadString(requirementObject, "quest", out reqpr.quest);
-                    ReadInt(requirementObject, "objective", out reqpr.objective);
-                    ReadInt(requirementObject, "Progress", out reqpr.Progress);
-                    ReadEnum(requirementObject, "Operator", out reqpr.Operator);
-                    return reqpr;
-                case "Req_Team":
-                    var reqteam = ExtractBaseRequirement<Req_Team>(requirementObject);
-                    ReadInt(requirementObject, "RequiredSize", out reqteam.RequiredSize);
-                    ReadEnum(requirementObject, "Operator", out reqteam.Operator);
-                    return reqteam;
-                case "Req_Time":
-                    var reqtime = ExtractBaseRequirement<Req_Time>(requirementObject);
-                    ReadFloat(requirementObject, "BeginTime", out reqtime.BeginTime);
-                    ReadFloat(requirementObject, "EndTime", out reqtime.EndTime);
-                    return reqtime;
-                case "Req_True":
-                    var reqtrue = ExtractBaseRequirement<Req_True>(requirementObject);
-                    return reqtrue;
-                case "Req_World":
-                    var reqwo = ExtractBaseRequirement<Req_World>(requirementObject);
-                    ReadInt(requirementObject, "RequiredWorld", out reqwo.RequiredWorld);
-                    return reqwo;
-            }
-
-            #endregion
-
-            var emptyNotFound = ScriptableObject.CreateInstance<Content_Requirement>();
-            emptyNotFound.name = "[Empty:NotFound]";
-            return emptyNotFound;
-        }
-
-        protected Req_And getReqAnd(WrappedPackageObject reqObj, SBResources resources)
+        protected Req_And getReqAnd(WrappedPackageObject reqObj, SBResources resources, PackageWrapper pW, UnityEngine.Object assetObj)
         {
             var output = ScriptableObject.CreateInstance<Req_And>();
             var randReqProp = reqObj.FindProperty("Requirements");
             if (randReqProp != null)
             {
+                output.Requirements = new List<Content_Requirement>();
                 foreach (var randReq in randReqProp.IterateInnerProperties())
                 {
                     var randReqObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(randReq.GetValue<string>());
@@ -700,8 +789,10 @@ namespace PackageExtractor.Adapter
                     //output.requirementRefs.Add(packageString + randReqObj.Name);
                     */
 
-                    var newReq = ExtractRequirement(randReqObj, resources);
+                    var newReq = getReq(randReqObj, resources, pW, assetObj);
+                    newReq.name = reqObj.Name + "." + randReqObj.Name;
                     output.Requirements.Add(newReq);
+                    AssetDatabase.AddObjectToAsset(newReq, assetObj);
                 }
             }
             return output;
@@ -711,7 +802,7 @@ namespace PackageExtractor.Adapter
 
         #region Events
 
-        protected Content_Event ExtractEvent(WrappedPackageObject eventObject, SBResources res)
+        protected Content_Event ExtractEvent(WrappedPackageObject eventObject, SBResources res, PackageWrapper pW, UnityEngine.Object assetObj)
         {
             switch (eventObject.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty))
             {
@@ -819,7 +910,7 @@ namespace PackageExtractor.Adapter
                     if (eventName != null)
                     {
                         var npcEvObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(eventName.GetValue<string>());
-                        evnpc.NPCAction = ExtractEvent(npcEvObj, res);
+                        evnpc.NPCAction = ExtractEvent(npcEvObj, res, pW, assetObj);
                     }
                     ReadFloat(eventObject, "Radius", out evnpc.Radius);
                     return evnpc;
@@ -833,7 +924,7 @@ namespace PackageExtractor.Adapter
                     if (otheractionName != null)
                     {
                         var otherActionObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(otheractionName.GetValue<string>());
-                        evother.OtherAction = ExtractEvent(otherActionObj, res);
+                        evother.OtherAction = ExtractEvent(otherActionObj, res, pW, assetObj);
                     }
                     return evother;
                 case "EV_Party":
@@ -845,14 +936,17 @@ namespace PackageExtractor.Adapter
                         foreach (var reqProp in reqInfo.IterateInnerProperties())
                         {
                             var reqInfoObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqProp.GetValue<string>());
-                            evpa.Requirements.Add(ExtractRequirement(reqInfoObj, res));
+                            var reqListItem = getReq(reqInfoObj, res, pW, assetObj);
+                            reqListItem.name = eventObject.Name + "." + reqInfoObj.Name;
+                            evpa.Requirements.Add(reqListItem);
+                            AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
                         }
                     }
                     var paAction = eventObject.FindProperty("PartyAction");
                     if (paAction != null)
                     {
                         var paActionObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(paAction.GetValue<string>());
-                        evpa.PartyAction = ExtractEvent(paActionObj, res);
+                        evpa.PartyAction = ExtractEvent(paActionObj, res, pW, assetObj);
                     }
                     return evpa;
                 case "EV_PartyProgress":
@@ -934,7 +1028,7 @@ namespace PackageExtractor.Adapter
                     if (slfActionProp != null)
                     {
                         var alfAcObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(slfActionProp.GetValue<string>());
-                        evslf.SelfAction = ExtractEvent(alfAcObj, res);
+                        evslf.SelfAction = ExtractEvent(alfAcObj, res, pW, assetObj);
                     }
                     return evslf;
                 case "EV_SetClass":
@@ -994,7 +1088,7 @@ namespace PackageExtractor.Adapter
                     if (swAcProp != null)
                     {
                         var swAcObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(swAcProp.GetValue<string>());
-                        evsw.SwappedAction = ExtractEvent(swAcObj, res);
+                        evsw.SwappedAction = ExtractEvent(swAcObj, res, pW, assetObj);
                     }
                     return evsw;
                 case "EV_Teleport":
@@ -1302,14 +1396,11 @@ namespace PackageExtractor.Adapter
                 {
                     if (prop.Value != null)
                     {
-                        Debug.Log("Adding WPO " + prop.Value + " to working set");
+                        //Debug.Log("Adding WPO " + prop.Value + " to working set");
 
-
-                        //TODO : Erroneously returns wrong WPOs with matching name, fix
-
+                        /*
                         //SBObject name equals last part of prop value
                         //SBObject parent equals topic internal name/2nd-last part of prop value
-
                         var propValueParts = prop.Value.Split('.');
                         var objName = propValueParts[propValueParts.Length - 1];
                         string objParent;
@@ -1330,6 +1421,20 @@ namespace PackageExtractor.Adapter
 
                         Log("Finding propSBO - objName = " + objName + ", objParent = " + objParent + "...", Color.yellow);
                         var propSBO = pW.FindReferencedObject(objName, objParent);
+                        */
+
+                        var propValueParts = prop.Value.Split('.');
+
+                        //build full package name from value parts
+                        var packageName = propValueParts[0];
+                        for (int n = 1; n < (propValueParts.Length - 1); n++)
+                        {
+                            packageName += "." + propValueParts[n]; 
+                        }
+
+                        var objName = propValueParts[propValueParts.Length - 1];
+                        var propSBO = pW.FindObject(objName, packageName);
+
 
                         if (propSBO == null)
                         {

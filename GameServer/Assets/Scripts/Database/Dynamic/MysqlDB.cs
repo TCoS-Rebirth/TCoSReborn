@@ -238,6 +238,10 @@ namespace Database.Dynamic
                 {
                     return false;
                 }
+                if (!LoadAndAssignQuests())
+                {
+                    return false;
+                }
                 return true;
             }
 
@@ -474,6 +478,40 @@ namespace Database.Dynamic
                 }
             }
 
+            static bool LoadAndAssignQuests()
+            {
+                using (var reader = DatabaseHelper.GetCharacterAllQuestsLoadCommand(CachedConnection).ExecuteReader())
+                {
+                    try
+                    {
+                        while (reader.Read())
+                        {
+                            var charID = reader.GetInt32("CharacterID");
+                            var qID = reader.GetInt32("QuestID");
+                            var isComp = reader.GetBoolean("IsComplete");
+                            var tInd = reader.GetInt32("TargetIndex");
+                            var tProg = reader.GetInt32("TargetProgress");
+                            var p = GetCharacter(charID);
+                            if (p == null)
+                            {
+                                Debug.LogWarning(string.Format("Quest with ID {0} in DB has no matching player character (ID {1})", qID, charID));
+                                continue;
+                            }
+
+                            var dbq = new DBQuestTarget(qID, isComp, tInd);
+                            dbq.targetProgress = tProg;
+                            p.QuestTargets.Add(dbq);
+                        }
+                        return true;
+                    }
+                    catch (MySqlException e)
+                    {
+                        Debug.LogError("[LoadAssignQuests]: " + e.Message);
+                        return false;
+                    }
+                }
+            }
+
             public static bool SaveCharacterLogout(PlayerCharacter pc)
             {
                 var ch = pc.dbRef;
@@ -512,6 +550,9 @@ namespace Database.Dynamic
                         ch.Items[i].DBID = AllocateDBID();
                     }
                 }
+
+                ch.QuestTargets = pc.QuestData.SaveForPlayer();
+
                 return SaveCharacterToDB(ch);
             }
 
@@ -524,7 +565,12 @@ namespace Database.Dynamic
                     {
                         SaveSkills(pc, transaction);
                         SaveItems(pc, transaction);
-                        if (updateExistingCmd.ExecuteNonQuery() != 0) return true;
+                        SaveQuests(pc, transaction);
+                        if (updateExistingCmd.ExecuteNonQuery() > 0)
+                        {
+                            transaction.Commit();
+                            return true;
+                        }
                         using (var saveNewCmd = DatabaseHelper.GetCharacterSaveNewCommand(CachedConnection, pc, transaction))
                         {
                             saveNewCmd.ExecuteNonQuery();
@@ -564,6 +610,19 @@ namespace Database.Dynamic
                     if (pc.Items[i] == null) continue;
                     saveCommand = DatabaseHelper.GetCharacterItemSaveCommand(saveCommand.Connection, pc, pc.Items[i], tr);
                     saveCommand.ExecuteNonQuery();
+                }
+            }
+
+            static void SaveQuests(DBPlayerCharacter pc, MySqlTransaction tr)
+            {
+                var clearCmd = DatabaseHelper.GetCharacterQuestsDeleteCommand(CachedConnection, pc, tr);
+                clearCmd.ExecuteNonQuery();
+                var questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(CachedConnection, pc, null, tr);
+                for (var i = 0; i < pc.QuestTargets.Count; i++)
+                {
+                    if (pc.QuestTargets[i] == null) continue;
+                    questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(questSaveCommand.Connection, pc, pc.QuestTargets[i], tr);
+                    questSaveCommand.ExecuteNonQuery();
                 }
             }
 

@@ -1,5 +1,6 @@
 using System;
 using Gameplay.Entities;
+using UnityEngine;
 
 namespace Gameplay.RequirementSpecifier
 {
@@ -10,18 +11,16 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            return isMet();
+            Debug.Log("Req_Conditional.isMet(PlayerCharacter p) : Check that this requirement functions as intended");
+            if (Condition.isMet(p)) { return Requirement.isMet(p); }
+            else { return false; }
         }
 
         public override bool isMet(NpcCharacter n)
         {
-            return isMet();
-        }
-
-        public bool isMet()
-        {
-            //TODO: Implement Req_NPC_Exists
-            throw new NotImplementedException();
+            Debug.Log("Req_Conditional.isMet(NpcCharacter n) : Check that this requirement functions as intended");
+            if (Condition.isMet(n)) { return Requirement.isMet(n); }
+            else { return false; }
         }
     }
 }

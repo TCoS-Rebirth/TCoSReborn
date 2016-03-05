@@ -32,6 +32,7 @@ namespace PackageExtractor.Adapter
 
         public override void HandlePackageContent(WrappedPackageObject wrappedObject, SBResources resources, SBLocalizedStrings localizedStrings)
         {
+            
             itc = ScriptableObject.CreateInstance<ItemCollection>();
             AssetDatabase.CreateAsset(itc, "Assets/GameData/Items/" + extractorWindowRef.ActiveWrapper.Name + ".asset");
             foreach (var wpo in extractorWindowRef.ActiveWrapper.IterateObjects())
@@ -162,6 +163,7 @@ namespace PackageExtractor.Adapter
 
         T ExtractItem<T>(WrappedPackageObject wpo, SBResources res, SBLocalizedStrings strings) where T : Item_Type
         {
+            PackageWrapper pW = extractorWindowRef.ActiveWrapper;
             var obj = ScriptableObject.CreateInstance<T>();
             obj.name = wpo.Name;
             itc.items.Add(obj);
@@ -233,7 +235,7 @@ namespace PackageExtractor.Adapter
                     var requirement = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqRefProp.GetValue<string>());
                     if (requirement != null)
                     {
-                        var req = ExtractRequirement(requirement, res);
+                        var req = getReq(requirement, res, pW, itc);
                         if (req != null)
                         {
                             req.name = requirement.Name;
@@ -258,8 +260,11 @@ namespace PackageExtractor.Adapter
 
         Item_Component ExtractComponent(WrappedPackageObject componentObject, SBResources res, List<ScriptableObject> refFloatingAssets)
         {
+            PackageWrapper pW = extractorWindowRef.ActiveWrapper;
+
             switch (componentObject.sbObject.ClassName.Replace("\0", string.Empty))
             {
+
                 case sbg + "IC_Appearance":
                     var icap = ScriptableObject.CreateInstance<IC_Appearance>();
                     ReadString(componentObject, "CharacterAppearance", out icap.Appearance);
@@ -429,7 +434,7 @@ namespace PackageExtractor.Adapter
                             var eventObject = extractorWindowRef.ActiveWrapper.FindObjectWrapper(eventProp.GetValue<string>());
                             if (eventObject != null)
                             {
-                                var ce = ExtractEvent(eventObject, res);
+                                var ce = ExtractEvent(eventObject, res, pW, itc);
                                 if (ce != null)
                                 {
                                     ce.name = eventObject.Name;

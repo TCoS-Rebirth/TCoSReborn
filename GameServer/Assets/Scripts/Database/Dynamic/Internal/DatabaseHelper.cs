@@ -240,6 +240,18 @@ namespace Database.Dynamic.Internal
             return _itemsLoadCommand;
         }
 
+        static MySqlCommand _questsLoadCommand;
+
+        public static MySqlCommand GetCharacterAllQuestsLoadCommand(MySqlConnection connection)
+        {
+            if (_questsLoadCommand == null)
+            {
+                _questsLoadCommand = new MySqlCommand("SELECT * FROM playercharacterquests", connection);
+                _questsLoadCommand.Prepare();
+            }
+            return _questsLoadCommand;
+        }
+
         #endregion
 
         #region Saving
@@ -339,6 +351,50 @@ namespace Database.Dynamic.Internal
             }
             _characterItemsDeleteCommand.Transaction = transaction;
             return _characterItemsDeleteCommand;
+        }
+
+        static MySqlCommand _characterQuestTargetSaveCommand;
+
+        public static MySqlCommand GetCharacterQuestTargetSaveCommand(MySqlConnection connection, DBPlayerCharacter pc, DBQuestTarget target, MySqlTransaction transaction)
+        {
+            if (_characterQuestTargetSaveCommand == null)
+            {
+                const string cmd = "INSERT INTO playercharacterquests (CharacterID,QuestID,IsComplete,TargetIndex,TargetProgress) VALUES (@charID,@questID,@isComplete,@tarIndex,@tarProg);";
+                _characterQuestTargetSaveCommand = new MySqlCommand(cmd, connection);
+                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
+                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@questID", target != null? target.ResourceId : -1);
+                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@isComplete", target != null ? target.isCompleted : false);
+                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarIndex", target != null ? target.targetIndex : 0);
+                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarProg", target != null ? target.targetProgress : 0);
+                _characterQuestTargetSaveCommand.Prepare();
+            }
+            else
+            {
+                _characterQuestTargetSaveCommand.Parameters["@charID"].Value = pc.DBID;
+                _characterQuestTargetSaveCommand.Parameters["@questID"].Value = target != null ? target.ResourceId : -1;
+                _characterQuestTargetSaveCommand.Parameters["@isComplete"].Value = target != null ? target.isCompleted : false;
+                _characterQuestTargetSaveCommand.Parameters["@tarIndex"].Value = target != null ? target.targetIndex : 0;
+                _characterQuestTargetSaveCommand.Parameters["@tarProg"].Value = target != null ? target.targetProgress : 0;
+            }
+            _characterQuestTargetSaveCommand.Transaction = transaction;
+            return _characterQuestTargetSaveCommand;
+        }
+
+        static MySqlCommand _characterQuestsDeleteCommand;
+
+        public static MySqlCommand GetCharacterQuestsDeleteCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        {
+            if (_characterQuestsDeleteCommand == null)
+            {
+                _characterQuestsDeleteCommand = new MySqlCommand("DELETE FROM playercharacterquests WHERE CharacterID=@charID", connection);
+                _characterQuestsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
+            }
+            else
+            {
+                _characterQuestsDeleteCommand.Parameters["@charID"].Value = pc.DBID;
+            }
+            _characterQuestsDeleteCommand.Transaction = transaction;
+            return _characterQuestsDeleteCommand;
         }
 
         #endregion

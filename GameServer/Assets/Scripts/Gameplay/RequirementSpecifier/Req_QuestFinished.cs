@@ -1,16 +1,22 @@
 using System;
 using Gameplay.Entities;
+using Database.Static;
 
 namespace Gameplay.RequirementSpecifier
 {
     public class Req_QuestFinished : Content_Requirement
     {
-        public string RequiredQuest; //Quest_Type
+        public SBResource RequiredQuest; //Quest_Type
         public int TimesFinished;
 
         public override bool isMet(PlayerCharacter p)
         {
-            throw new NotImplementedException();
+            foreach (var questID in p.QuestData.completedQuestIDs)
+            {
+                if (questID == RequiredQuest.ID) { return true; }
+            }
+
+            return false;
         }
 
         public override bool isMet(NpcCharacter n)

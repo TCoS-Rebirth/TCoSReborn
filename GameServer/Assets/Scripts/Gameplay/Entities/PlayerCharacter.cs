@@ -99,9 +99,8 @@ namespace Gameplay.Entities
             ActiveSkillDeck = ScriptableObject.CreateInstance<SkillDeck>();
             ActiveSkillDeck.LoadForPlayer(dbRef.SerializedSkillDeck, this);
 
-            //TODO: current/completed quests list proper database retrieval
-            curQuests = new List<PlayerQuestProgress>();
-            completeQuests = new List<SBResource>();
+            QuestData = ScriptableObject.CreateInstance<QuestDataContainer>();
+            QuestData.LoadForPlayer(dbRef.QuestTargets, this);
         }
 
         void OnDrawGizmos()
@@ -856,8 +855,7 @@ namespace Gameplay.Entities
         #region Quests
 
         [SerializeField]
-        public List<PlayerQuestProgress> curQuests;
-        public List<SBResource> completeQuests;
+        public QuestDataContainer QuestData;
 
         public bool IsEligibleForQuest(Quest_Type quest)
         {
@@ -883,7 +881,7 @@ namespace Gameplay.Entities
         }
         public bool HasQuest(int questID)
         {
-            foreach (var questProgress in curQuests)
+            foreach (var questProgress in QuestData.curQuests)
             {
                 if (questProgress.questID == questID) { return true; }
             }
@@ -891,26 +889,20 @@ namespace Gameplay.Entities
         }
         public bool CompletedQuest(int questID)
         {
-            foreach (var questSBR in completeQuests)
+            foreach (var questSBR in QuestData.completedQuestIDs)
             {
-                if (questSBR.ID == questID) { return true; }
+                if (questSBR == questID) { return true; }
             }
             return false;
         }
         public void RemoveQuest(int questID)
         {
             //Remove quest on game server
-            foreach (var quest in curQuests)
-            {
-                if (quest.questID == questID)
-                {
-                    curQuests.Remove(quest);
-                    break;
-                }
-            }
+            QuestData.RemoveQuest(questID);
 
             //Send message to remove from player log
             var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
+            SendToClient(m);
             return;
         }
 
@@ -918,7 +910,8 @@ namespace Gameplay.Entities
         {
             PlayerQuestProgress questProgress = null;
 
-            foreach (var qP in curQuests)
+            //get the quest ID's progress values
+            foreach (var qP in QuestData.curQuests)
             {
                 if (qP.questID == quest.resourceID) { questProgress = qP; }
             }
@@ -929,7 +922,13 @@ namespace Gameplay.Entities
                 return true;
             }
 
-            Debug.Log("Player.hasUnfinishedTargets : TODO - Compare each target progress to what its completed value should be - returning FALSE for now");
+            Debug.Log("Player.hasUnfinishedTargets : TODO - Compare each target progress to what its completed value should be");
+            //TODO: Placeholder - returns true if any targets have progress value 0, returns false otherwise
+            foreach (var targetValue in questProgress.targetProgress)
+            {
+                if (targetValue == 0) { return true; }
+            }
+
             return false;
         }
         #endregion
