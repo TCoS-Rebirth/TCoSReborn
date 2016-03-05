@@ -566,7 +566,11 @@ namespace Database.Dynamic
                         SaveSkills(pc, transaction);
                         SaveItems(pc, transaction);
                         SaveQuests(pc, transaction);
-                        if (updateExistingCmd.ExecuteNonQuery() != 0) return true;
+                        if (updateExistingCmd.ExecuteNonQuery() > 0)
+                        {
+                            transaction.Commit();
+                            return true;
+                        }
                         using (var saveNewCmd = DatabaseHelper.GetCharacterSaveNewCommand(CachedConnection, pc, transaction))
                         {
                             saveNewCmd.ExecuteNonQuery();
