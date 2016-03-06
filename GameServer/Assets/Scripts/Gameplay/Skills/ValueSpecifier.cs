@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Common;
+using UnityEngine;
 using Random = UnityEngine.Random;
 
 namespace Gameplay.Skills
@@ -38,7 +39,7 @@ namespace Gameplay.Skills
         public float CalculateValue(SkillContext sInfo)
         {
             //TODO calculate correct values
-            if (constantMinimum != 0 || constantMaximum != 0)
+            if (!Mathf.Approximately(constantMaximum, 0))
             {
                 var val = Random.Range(constantMinimum, constantMaximum);
                 val = val + val*linkedAttributeModifier*GetSourceStatisticValue(sInfo);
