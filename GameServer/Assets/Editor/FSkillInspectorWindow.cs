@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections;
 using Utility;
 using Gameplay.Skills;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Reflection;
+using Common;
+using Gameplay;
 
 public class FSkillInspectorWindow : EditorWindow
 {
@@ -80,18 +83,45 @@ public class FSkillInspectorWindow : EditorWindow
 
     void RecurseNodes(object s)
     {
+        var indentation = 30;
         var infoFields = new List<FieldInfo>();
         var objectFields = new List<FieldInfo>();
+        var objectListFields = new List<Tuple<FieldInfo, List<object>>>();
         var fields = s.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public);
         foreach (var field in fields)
         {
-            if (field.FieldType.IsSubclassOf(typeof(UnityEngine.Object)))
+            if (field.FieldType.IsGenericType && field.FieldType.GetGenericTypeDefinition() == typeof(List<>))
             {
-                objectFields.Add(field);
+                var itemType = field.FieldType.GetGenericArguments()[0];
+                if (!itemType.IsAssignableFrom(typeof(Taxonomy)))
+                {
+                    var tpl = new Tuple<FieldInfo, List<object>>(field, new List<object>());
+                    var lst = (IList)field.GetValue(s);
+                    if (lst != null)
+                    {
+                        foreach (var listEntry in lst)
+                        {
+                            if (listEntry == null) continue;
+                            tpl.Item2.Add(listEntry);
+                        }
+                    }
+                    objectListFields.Add(tpl);
+                }
+                else
+                {
+                    infoFields.Add(field);
+                }
             }
             else
             {
-                infoFields.Add(field);
+                if (field.FieldType.IsSubclassOf(typeof (UnityEngine.Object)))
+                {
+                    objectFields.Add(field);
+                }
+                else
+                {
+                    infoFields.Add(field);
+                }
             }
         }
         GUILayout.BeginVertical(_boxStyle, GUILayout.ExpandWidth(false));
@@ -105,7 +135,6 @@ public class FSkillInspectorWindow : EditorWindow
             GUILayout.Label(string.Format("({0}) {1}", o.GetType().Name, o.name), _bigLabelStyle, GUILayout.ExpandWidth(false));
         }
         var filters = new List<string>(_fieldInclusions.Split(new[] {','},StringSplitOptions.RemoveEmptyEntries));
-        //foreach (var info in infoFields)
         for (var i=0;i<infoFields.Count;i++)
         {
             var skip = _hideInfoFields;
@@ -125,14 +154,26 @@ public class FSkillInspectorWindow : EditorWindow
                 GUILayout.Label(string.Format("{0}{1} = {2}",i==infoFields.Count-1? "└" : "│", infoFields[i].Name, infoFields[i].GetValue(s)), GUILayout.ExpandWidth(false));
             }
         }
+        foreach (var objList in objectListFields)
+        {
+            GUILayout.Label(objList.Item1.Name + "= {", _bigLabelStyle, GUILayout.ExpandWidth(false));
+            for (var i=0;i<objList.Item2.Count;i++)
+            {
+                GUILayout.Label("Entry: " + i, GUILayout.ExpandWidth(false));
+                GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
+                GUILayout.Space(indentation);
+                RecurseNodes(objList.Item2[i]);
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.Label("}", _bigLabelStyle, GUILayout.ExpandWidth(false));
+        }
         foreach (var field in objectFields)
         {
             var fieldContent = field.GetValue(s);
-            if (fieldContent == null) continue;
-            
+            if (fieldContent == null) continue;   
             GUILayout.Label(field.Name+"=", _bigLabelStyle, GUILayout.ExpandWidth(false));
             GUILayout.BeginHorizontal(GUILayout.ExpandWidth(false));
-            GUILayout.Space(50);
+            GUILayout.Space(indentation);
             RecurseNodes(fieldContent);
             GUILayout.EndHorizontal();
         }
