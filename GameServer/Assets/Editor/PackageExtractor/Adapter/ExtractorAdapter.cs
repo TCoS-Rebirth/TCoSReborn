@@ -105,6 +105,32 @@ namespace PackageExtractor.Adapter
             return null;
         }
 
+        protected WrappedPackageObject findWPOFromObjProp(WrappedPackageObject wpoIn, string propName)
+        {
+            var prop = wpoIn.FindProperty(propName);
+            if (prop != null)
+            {
+                WrappedPackageObject output = extractorWindowRef.ActiveWrapper.FindObjectWrapper(prop.GetValue<string>());
+                if (output == null)
+                {
+                    Log("findWPOFromObjProp : Failed to find WPO " + prop.Value + " in this package wrapper", Color.red);
+                    return null;
+                }
+                else
+                {
+                    return output;
+                }
+                //ConversationTopic fullTopic = getConvTopicFull(topicWPO, resourcesProp, locStrings, extractorWindowRef.ActiveWrapper);
+                //AssetDatabase.AddObjectToAsset(fullTopic, convCol);
+                //Debug.Log("Got topic " + tarWPO.sbObject.Package + "." + topicWPO.Name);
+            }
+            else
+            {
+                Log("findWPOFromObjProp : Failed to find prop " + propName + " in WPO " + wpoIn.Name, Color.yellow);
+                return null;
+            }
+        }
+
         #region Parsing
 
         protected bool ReadString(WrappedPackageObject obj, string propName, out string value, bool logErrors = false)
@@ -1117,7 +1143,11 @@ namespace PackageExtractor.Adapter
 
         protected SBResource getConvTopicRef(WrappedPackageObject CTObj, SBResources resources, string pwName)
         {
-            return GetResource(CTObj, resources, pwName);
+            if (CTObj == null)
+            {
+                return null;
+            }
+                return GetResource(CTObj, resources, pwName);
         }
 
         protected ConversationTopic getConvTopicFull(WrappedPackageObject CTObj, SBResources resources, SBLocalizedStrings locStrings, PackageWrapper pW)
