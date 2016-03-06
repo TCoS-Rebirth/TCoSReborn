@@ -22,7 +22,7 @@ namespace PackageExtractor.Adapter
 
         public override string Description
         {
-            get { return "Tries to extract the Taxonomies and assign the references between them"; }
+            get { return "Tries to extract the Taxonomies and assign the references between them. Run this extractor TWICE.  "; }
         }
 
         public override void DrawGUI(Rect r)

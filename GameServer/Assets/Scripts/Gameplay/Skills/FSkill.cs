@@ -8,6 +8,15 @@ namespace Gameplay.Skills
 {
     public class FSkill : ScriptableObject
     {
+
+        public const int MaxTokenSlots = 3;
+        public const int MaxStackCount = 10;
+        public const float MaxAimingDesync = 1f;
+        public const int ComboFinishingMoveMinimum = 2;
+        public const float ComboTimeframe = 10f;
+        public const float ComboVersusTimeframe = 5f;
+        public const int ComboMaxStringLength = 9;
+
         [ReadOnly] public byte animation;
 
         [ReadOnly] public byte animation2;
@@ -41,16 +50,6 @@ namespace Gameplay.Skills
         [ReadOnly] public bool freezePawnRotation;
 
         [ReadOnly] public string group;
-
-        /*
-        #define UCONST_Game_Skills_MAX_TOKEN_SLOTS  3
-        #define UCONST_Game_Skills_MAX_STACK_COUNT  10
-        #define UCONST_Game_Skills_MAX_AIMING_DESYNC  1.0
-        #define UCONST_Game_Skills_COMBO_FINISHING_MOVE_MINIMUM 	2
-        #define UCONST_Game_Skills_COMBO_TIMEFRAME 	10.0
-        #define UCONST_Game_Skills_COMBO_VERSUS_TIMEFRAME 	5.0
-        #define UCONST_Game_Skills_COMBO_MAX_STRING_LENGTH 	9
-        */
 
         [ReadOnly] public string internalName;
 
@@ -138,35 +137,31 @@ namespace Gameplay.Skills
 
         public void RunEvents(SkillContext sInfo)
         {
-            foreach (var kf in keyFrames)
+            for (var i = 0; i < keyFrames.Count; i++)
             {
-                if (kf.Time <= sInfo.currentSkillTime)
+                if (!(keyFrames[i].Time <= sInfo.currentSkillTime)) continue;
+                var ev = keyFrames[i].EventGroup;
+                if (ev == null) continue;
+                for (var e = 0; e < ev.events.Count; e++)
                 {
-                    var ev = kf.EventGroup;
-                    if (ev != null)
-                    {
-                        foreach (var se in ev.events)
-                        {
-                            se.Execute(sInfo, sInfo.Caster);
-                        }
-                    }
+                    ev.events[e].Execute(sInfo, sInfo.Caster);
                 }
             }
         }
 
         public void Reset()
         {
-            foreach (var kf in keyFrames)
+            for (var i = 0; i < keyFrames.Count; i++)
             {
-                kf.Reset();
+                keyFrames[i].Reset();
             }
         }
 
         public void DeepClone()
         {
-            foreach (var kf in keyFrames)
+            for (var i = 0; i < keyFrames.Count; i++)
             {
-                kf.DeepClone();
+                keyFrames[i].DeepClone();
             }
         }
 
@@ -179,11 +174,9 @@ namespace Gameplay.Skills
 
             public void DeepClone()
             {
-                if (EventGroup != null)
-                {
-                    EventGroup = Instantiate(EventGroup);
-                    EventGroup.DeepClone();
-                }
+                if (EventGroup == null) return;
+                EventGroup = Instantiate(EventGroup);
+                EventGroup.DeepClone();
             }
 
             public void Reset()

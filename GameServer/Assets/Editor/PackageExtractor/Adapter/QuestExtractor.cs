@@ -21,10 +21,8 @@ namespace PackageExtractor.Adapter
 
         string gameDataPath = "Assets/GameData/";
         List<ItemCollection> itemCols = new List<ItemCollection>();
-        SBLocalizedStrings locStrings = ScriptableObject.CreateInstance<SBLocalizedStrings>();
         List<NPCCollection> npcCols = new List<NPCCollection>();
         QuestCollection questCol = ScriptableObject.CreateInstance<QuestCollection>();
-        SBResources resourcesProp = ScriptableObject.CreateInstance<SBResources>();
 
         public override string Name
         {
@@ -41,7 +39,7 @@ namespace PackageExtractor.Adapter
         {
         }
 
-        public override void HandlePackageContent(WrappedPackageObject wrappedObject, SBResources resources, SBLocalizedStrings localizedStrings)
+        public override void HandlePackageContent(WrappedPackageObject wrappedObject, SBResources resources, SBLocalizedStrings locStrings)
         {
             //Log("Disabled, unused", Color.red);
             //return;
@@ -85,12 +83,6 @@ namespace PackageExtractor.Adapter
                 }
             }
 
-            //Load localised strings
-            locStrings = AssetDatabase.LoadAssetAtPath<SBLocalizedStrings>("Assets/GameData/SBResources/SBLocalizedStrings.asset");
-
-            //Load resources
-            resourcesProp = resources;
-
             questCol = ScriptableObject.CreateInstance<QuestCollection>();
             //Create new assets
             AssetDatabase.CreateAsset(questCol, gameDataPath + "Quests/" + saveName + ".asset");
@@ -99,7 +91,7 @@ namespace PackageExtractor.Adapter
             AssetDatabase.CreateAsset(convCol, gameDataPath + "Conversations/" + saveName + ".asset");
 
             //Populate quest collection with quest chain skeletons first (name, localized name ID, quest area)
-            populateChains();
+            populateChains(locStrings);
 
             //Iterate quests
 
@@ -110,7 +102,7 @@ namespace PackageExtractor.Adapter
                 //TODO: possibly handle non-Quest_Standard quests?
                 if (objClass.EndsWith("Quest_Standard"))
                 {
-                    extractQuest(wpo, questCol, extractorWindowRef.ActiveWrapper);
+                    extractQuest(wpo, extractorWindowRef.ActiveWrapper, resources, locStrings);
                 }
             }
 
@@ -119,7 +111,7 @@ namespace PackageExtractor.Adapter
             EditorUtility.SetDirty(convCol);
         }
 
-        void populateChains()
+        void populateChains(SBLocalizedStrings locStrings)
         {
             foreach (var wpo in extractorWindowRef.ActiveWrapper.IterateObjects())
             {
@@ -140,13 +132,13 @@ namespace PackageExtractor.Adapter
             }
         }
 
-        void extractQuest(WrappedPackageObject qo, QuestCollection qC, PackageWrapper pW)
+        void extractQuest(WrappedPackageObject qo, PackageWrapper pW, SBResources resources, SBLocalizedStrings locStrings)
         {
             var curQ = new Quest_Type();
 
             //populate Quest class properties
             curQ.internalName = qo.Name;
-            curQ.resourceID = resourcesProp.GetResourceID(extractorWindowRef.ActiveWrapper.Name + "." + qo.Name);
+            curQ.resourceID = resources.GetResourceID(extractorWindowRef.ActiveWrapper.Name + "." + qo.Name);
 
             //Quest area
             int qA;
@@ -174,8 +166,8 @@ namespace PackageExtractor.Adapter
             //Provider, Finisher, Conversation topics
             if (!curQ.deliverByMail)
             {
-                ReadObject(qo, "Provider", resourcesProp, out curQ.provider);
-                ReadObject(qo, "Finisher", resourcesProp, out curQ.finisher);
+                ReadObject(qo, "Provider", resources, out curQ.provider);
+                ReadObject(qo, "Finisher", resources, out curQ.finisher);
 
                 SBProperty provideProp, midProp, finishProp;
                 provideProp = qo.FindProperty("ProvideTopic");
@@ -186,7 +178,7 @@ namespace PackageExtractor.Adapter
                 if (provideProp != null)
                 {
                     provideWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(provideProp.GetValue<string>());
-                    curQ.provideCT = getConvTopicRef(provideWPO, resourcesProp, pW.Name);
+                    curQ.provideCT = getConvTopicRef(provideWPO, resources, pW.Name);
 
                     //Add topic to quest provider
                     addTopicToNPC(curQ.provideCT, curQ.provider);
@@ -204,7 +196,7 @@ namespace PackageExtractor.Adapter
                 if (midProp != null)
                 {
                     midWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(midProp.GetValue<string>());
-                    curQ.midCT = getConvTopicRef(midWPO, resourcesProp, pW.Name);
+                    curQ.midCT = getConvTopicRef(midWPO, resources, pW.Name);
 
                     //Add topic to quest provider
                     addTopicToNPC(curQ.midCT, curQ.provider);
@@ -222,7 +214,7 @@ namespace PackageExtractor.Adapter
                 if (finishProp != null)
                 {
                     finishWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(finishProp.GetValue<string>());
-                    curQ.finishCT = getConvTopicRef(finishWPO, resourcesProp, pW.Name);
+                    curQ.finishCT = getConvTopicRef(finishWPO, resources, pW.Name);
 
                     //Add topic to quest finisher
                     addTopicToNPC(curQ.finishCT, curQ.finisher);
@@ -250,10 +242,10 @@ namespace PackageExtractor.Adapter
                     //Get each requirement WPO
                     var reqWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(req.GetValue<string>());
                     //populate requirement object and add to requirements
-                    var newCR = getReq(reqWPO, resourcesProp, pW, qC);
+                    var newCR = getReq(reqWPO, resources, pW, questCol);
                     curQ.requirements.Add(newCR);
                     newCR.name = qo.Name + "." + reqWPO.Name;
-                    AssetDatabase.AddObjectToAsset(newCR, qC);
+                    AssetDatabase.AddObjectToAsset(newCR, questCol);
                 }
             }
 
@@ -267,7 +259,7 @@ namespace PackageExtractor.Adapter
                 {
                     //Get quest resource
                     //Add it to prequests
-                    curQ.preQuests.Add(resourcesProp.GetResource(extractorWindowRef.ActiveWrapper.Name, preQuest.Value));
+                    curQ.preQuests.Add(resources.GetResource(extractorWindowRef.ActiveWrapper.Name, preQuest.Value));
                 }
             }
 
@@ -284,7 +276,7 @@ namespace PackageExtractor.Adapter
                     //Debug.Log("Working on target WPO " + tarWPO.Name);
 
                     //populate requirement object and add to requirements
-                    var newQT = extractQuestTarget(tarWPO, locStrings, pW.Name);
+                    var newQT = extractQuestTarget(tarWPO, locStrings, resources, pW.Name);
                     if (newQT != null)
                     {
                         //Assign asset a name
@@ -292,7 +284,7 @@ namespace PackageExtractor.Adapter
 
                         //Add to targets and asset DB
                         curQ.targets.Add(newQT);
-                        AssetDatabase.AddObjectToAsset(newQT, qC);
+                        AssetDatabase.AddObjectToAsset(newQT, questCol);
                     }
                 }
             }
@@ -338,7 +330,7 @@ namespace PackageExtractor.Adapter
 
             if (curQC != null)
             {
-                foreach (var colQCh in questCol.questChains)
+                foreach (var colQCh in this.questCol.questChains)
                 {
                     if (colQCh.internalName == curQC.internalName)
                     {
@@ -350,17 +342,21 @@ namespace PackageExtractor.Adapter
             else
             {
                 //Otherwise add to the looseQuests container
-                questCol.looseQuests.Add(curQ);
+                this.questCol.looseQuests.Add(curQ);
             }
         }
 
 
         Content_Inventory getRewardItems(WrappedPackageObject rewardWPO)
         {
-            var output = new Content_Inventory();
             var CIProp = rewardWPO.FindProperty("RewardItems");
             var contentInvWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(CIProp.GetValue<string>());
+            return getContentInventory(contentInvWPO);         
+        }
 
+        Content_Inventory getContentInventory(WrappedPackageObject contentInvWPO)
+        {
+            Content_Inventory output = new Content_Inventory();
             //For each item in contentInventory
             foreach (var itemProp in contentInvWPO.FindProperty("Items").IterateInnerProperties())
             {
@@ -470,16 +466,21 @@ namespace PackageExtractor.Adapter
 
         #region QuestTargets
 
-        QuestTarget extractQuestTarget(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings, string pwName)
+        QuestTarget extractQuestTarget(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings, SBResources resources, string pwName)
         {
-            QuestTarget qtObj;
+            QuestTarget output;
             switch (tarWPO.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty))
             {
                 //TODO: Handle all QuestTarget & QuestCondition subclasses
+
+                case "QT_Take":
+                    output = getQTTake(tarWPO, locStrings);
+                    break;
+
                 case "QT_Talk":
                     //Debug.Log("Handling QT_Talk quest target");
-                    qtObj = getQTTalk(tarWPO, locStrings, questCol, pwName);
-                    break;
+                    output = getQTTalk(tarWPO, questCol, resources, pwName);
+                    break;                          
 
                 default:
                     return null;
@@ -490,39 +491,31 @@ namespace PackageExtractor.Adapter
             //TODO: public List<SBResource> Pretargets;
 
             //public bool AlwaysVisible;
-            ReadBool(tarWPO, "AlwaysVisible", out qtObj.AlwaysVisible);
+            ReadBool(tarWPO, "AlwaysVisible", out output.AlwaysVisible);
 
             //TODO: public List<Content_Event> CompleteEvents;            
 
             //public SBLocalizedString Description;
-            ReadLocalizedString(tarWPO, "Description", locStrings, out qtObj.Description);
+            ReadLocalizedString(tarWPO, "Description", locStrings, out output.Description);
 
-            return qtObj;
+            return output;
         }
 
-        QT_Talk getQTTalk(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings, QuestCollection questCol, string pwName)
+        QT_Talk getQTTalk(WrappedPackageObject tarWPO, QuestCollection questCol, SBResources resources, string pwName)
         {
             var qtTalk = ScriptableObject.CreateInstance<QT_Talk>();
 
             //Topic
-            WrappedPackageObject topicWPO;
-            var topic = tarWPO.FindProperty("Topic");
-            if (topic != null)
-            {
-                topicWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(topic.GetValue<string>());
-                if (topicWPO == null)
-                {
-                    //Debug.Log("topicWPO is null"); 
-                }
-                qtTalk.Topic = getConvTopicRef(topicWPO, resourcesProp, pwName);
-                //ConversationTopic fullTopic = getConvTopicFull(topicWPO, resourcesProp, locStrings, extractorWindowRef.ActiveWrapper);
-                //AssetDatabase.AddObjectToAsset(fullTopic, convCol);
-                //Debug.Log("Got topic " + tarWPO.sbObject.Package + "." + topicWPO.Name);
-            }
+            WrappedPackageObject topicWPO = findWPOFromObjProp(tarWPO, "Topic");
+            qtTalk.Topic = getConvTopicRef(topicWPO, resources, pwName);
+
+            //ConversationTopic fullTopic = getConvTopicFull(topicWPO, resourcesProp, locStrings, extractorWindowRef.ActiveWrapper);
+            //AssetDatabase.AddObjectToAsset(fullTopic, convCol);
+            //Debug.Log("Got topic " + tarWPO.sbObject.Package + "." + topicWPO.Name);            
 
             //Person
             SBResource person;
-            if (ReadObject(tarWPO, "Person", resourcesProp, out person))
+            if (ReadObject(tarWPO, "Person", resources, out person))
             {
                 foreach (var nc in npcCols)
                 {
@@ -542,7 +535,28 @@ namespace PackageExtractor.Adapter
             return qtTalk;
         }
 
-        //TODO: Implement QuestTarget subclass get methods              
+        //TODO: Implement QuestTarget subclass get methods  
+
+        QT_Take getQTTake(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings) {
+
+            var qtTake = ScriptableObject.CreateInstance<QT_Take>();
+    
+            //get Content_Inventory class WPO where package contains WPO name
+            WrappedPackageObject cargoWPO = findWPOFromObjProp(tarWPO, "Cargo");
+            qtTake.Cargo =  getContentInventory(cargoWPO);
+
+            ReadString(tarWPO, "SourceTag", out qtTake.SourceTag);
+            ReadLocalizedString(tarWPO, "SourceDescription", locStrings, out qtTake.SourceDescription);
+
+            //TODO: check if this actually occurs in packages
+            int takeOptionTemp;
+            ReadInt(tarWPO, "Option", out takeOptionTemp);
+            qtTake.Option = (ERadialMenuOptions)takeOptionTemp;
+
+            return qtTake;
+        }
+
+                 
 
         #endregion
     }
