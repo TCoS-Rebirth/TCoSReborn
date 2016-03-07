@@ -12,11 +12,9 @@ namespace Gameplay.Skills
         {
             for (var i = 0; i < events.Count; i++)
             {
-                if (events[i] != null)
-                {
-                    events[i] = Instantiate(events[i]);
-                    events[i].DeepClone();
-                }
+                if (events[i] == null) continue;
+                events[i] = Instantiate(events[i]);
+                events[i].DeepClone();
             }
         }
 
