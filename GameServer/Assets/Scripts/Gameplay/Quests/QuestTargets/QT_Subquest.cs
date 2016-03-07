@@ -6,7 +6,7 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Subquest : QuestTarget
     {
-        Quest_Type SubQuest;
+        public int SubQuestID;
     }
 }
 

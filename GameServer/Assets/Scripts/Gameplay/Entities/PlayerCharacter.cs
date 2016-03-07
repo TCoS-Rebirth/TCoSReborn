@@ -897,7 +897,7 @@ namespace Gameplay.Entities
         }
         public void RemoveQuest(int questID)
         {
-            int numTargets = QuestData.getNumTargets(questID);
+            //int numTargets = QuestData.getNumTargets(questID);
 
             //Remove quest on game server
             QuestData.RemoveQuest(questID);

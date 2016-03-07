@@ -11,6 +11,7 @@ using Gameplay.Quests.QuestTargets;
 using Gameplay.RequirementSpecifier;
 using UnityEditor;
 using UnityEngine;
+using Gameplay.Events;
 
 namespace PackageExtractor.Adapter
 {
@@ -126,7 +127,7 @@ namespace PackageExtractor.Adapter
 
                     int qA;
                     ReadInt(wpo, "QuestArea", out qA);
-                    curQC.questArea = (EQuestArea) qA;
+                    curQC.questArea = (EQuestArea)qA;
                     questCol.questChains.Add(curQC);
                 }
             }
@@ -143,7 +144,7 @@ namespace PackageExtractor.Adapter
             //Quest area
             int qA;
             ReadInt(qo, "QuestArea", out qA);
-            curQ.questArea = (EQuestArea) qA;
+            curQ.questArea = (EQuestArea)qA;
 
             //Localized name string
             ReadLocalizedString(qo, "Name", locStrings, out curQ.nameLocStr);
@@ -276,7 +277,7 @@ namespace PackageExtractor.Adapter
                     //Debug.Log("Working on target WPO " + tarWPO.Name);
 
                     //populate requirement object and add to requirements
-                    var newQT = extractQuestTarget(tarWPO, locStrings, resources, pW.Name);
+                    var newQT = extractQuestTarget(tarWPO, locStrings, resources, pW.Name, questCol, pW);
                     if (newQT != null)
                     {
                         //Assign asset a name
@@ -346,12 +347,293 @@ namespace PackageExtractor.Adapter
             }
         }
 
+        public QuestChain getChain(string name)
+        {
+            foreach (var qc in questCol.questChains)
+            {
+                if (qc.internalName == name)
+                    return qc;
+            }
+            return null;
+        }
+
+        #region QuestTargets
+
+        QuestTarget extractQuestTarget(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings, SBResources resources, string pwName, Object assetObj, PackageWrapper pW)
+        {
+            QuestTarget output;
+            switch (tarWPO.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty))
+            {
+                //TODO: Handle all QuestTarget & QuestCondition subclasses
+
+                case "QT_Take":
+                    output = getQTTake(tarWPO, locStrings);
+                    break;
+
+                case "QT_Talk":
+                    //Debug.Log("Handling QT_Talk quest target");
+                    output = getQTTalk(tarWPO, questCol, resources, locStrings, pwName, assetObj);
+                    break;
+
+
+
+                case "QT_Hunt":
+                    output = getQTHunt(tarWPO, resources);
+                    break;
+
+                
+                case "QT_Deliver":
+                    output = getQTDeliver(tarWPO, resources);
+                    break;                
+                
+                case "QT_Fedex":
+                    output = getQTFedex(tarWPO, resources);
+                    break;
+                /*
+                case "QT_Kill":
+                    output = getQTKill(tarWPO);
+                    break;                                               
+
+                case "QT_Exterminate":
+                    output = getQTExterminate(tarWPO);
+                    break;
+
+                case "QT_Defeat":
+                    output = getQTDefeat(tarWPO);
+                    break;
+
+                case "QT_Gather":
+                    output = getQTGather(tarWPO);
+                    break;
+
+                case "QT_BeDefeated":
+                    output = getQTBeDefeated(tarWPO);
+                    break;
+
+                case "QT_Challenge":
+                    output = getQTChallenge(tarWPO);
+                    break;
+
+                case "QT_Escort":
+                    output = getQTEscort(tarWPO);
+                    break;                
+
+                case "QT_Interactor":
+                    output = getQTBeDefeated(tarWPO);
+                    break;                
+
+                case "QT_Place":
+                    output = getQTPlace(tarWPO);
+                    break;
+
+                case "QT_Reach":
+                    output = getQTReach(tarWPO);
+                    break;                
+
+                case "QT_Use":
+                    output = getQTUse(tarWPO);
+                    break;
+
+                case "QT_UseAt":
+                    output = getQTUseAt(tarWPO);
+                    break;
+
+                case "QT_UseOn":
+                    output = getQTUseOn(tarWPO);
+                    break;
+
+                case "QT_Wait":
+                    output = getQTWait(tarWPO);
+                    break;
+
+                case "QT_Subquest":
+                    output = getQTSubquest(tarWPO);
+                    break;
+                
+                //TODO:Remove one of these cases
+                case "QT_SubQuest":
+                    output = getQTSubquest(tarWPO);
+                    break;
+            */
+                default:
+                    return null;
+            }
+
+            //Add base QuestTarget class properties to qtObj
+
+                    
+            //Pretargets array
+            output.Pretargets = new List<SBResource>();
+
+            var pretargetsProp = tarWPO.FindProperty("Pretargets");
+
+            //for each "Target" in "Pretargets"
+            if (pretargetsProp != null)
+            {
+                foreach (var preTarget in pretargetsProp.IterateInnerProperties())
+                {
+                    //Find SBResource from value
+                    //add output to Pretargets
+                    output.Pretargets.Add(resources.GetResource(pwName + "." + preTarget.Value));
+
+                }
+            }
+
+            //public bool AlwaysVisible;
+            ReadBool(tarWPO, "AlwaysVisible", out output.AlwaysVisible);
+
+            output.CompleteEvents = new List<Content_Event>();
+
+            var completeEventsProp = tarWPO.FindProperty("CompleteEvents");
+
+            //CompleteEvents array;  
+            if (completeEventsProp != null)
+            {
+                foreach (var completeEventProp in completeEventsProp.IterateInnerProperties())
+                {
+                    //Find event WPO in wrapper
+                    //ExtractEvent and add it to completeEvents
+                    var eventWPO = pW.FindObjectWrapper(pW.Name + "." + completeEventProp.Value);
+                    Content_Event thisEvent = ExtractEvent(eventWPO, resources, pW, assetObj);
+                    thisEvent.name = eventWPO.sbObject.Package + "." + eventWPO.sbObject.Name;
+                    output.CompleteEvents.Add(thisEvent);
+                    AssetDatabase.AddObjectToAsset(thisEvent, assetObj);
+                }
+            }   
+
+            //public SBLocalizedString Description;
+            ReadLocalizedString(tarWPO, "Description", locStrings, out output.Description);
+
+            return output;
+        }
+
+        //TODO: Implement all QuestTarget subclass get methods 
+
+        QT_Talk getQTTalk(WrappedPackageObject tarWPO, QuestCollection questCol, SBResources resources, SBLocalizedStrings locStrings, string pwName, Object assetObj)
+        {
+            var qtTalk = ScriptableObject.CreateInstance<QT_Talk>();
+
+            //Person
+            SBResource person;
+            if (ReadObject(tarWPO, "Person", resources, out person))
+            {
+                foreach (var nc in npcCols)
+                {
+                    if (person.Name.StartsWith(nc.name))
+                    {
+                        foreach (var nt in nc.types)
+                        {
+                            if (person.ID == nt.resourceID)
+                            {
+                                qtTalk.Person = nt;
+                            }
+                        }
+                    }
+                }
+            }
+
+            //Topic
+            WrappedPackageObject topicWPO = findWPOFromObjProp(tarWPO, "Topic");
+            if (topicWPO != null) {
+            qtTalk.Topic = getConvTopicRef(topicWPO, resources, pwName);
+            ConversationTopic fullTopic = getConvTopicFull(topicWPO, resources, locStrings, extractorWindowRef.ActiveWrapper);
+
+            //Add topic ref to npc
+            if ((qtTalk.Topic != null) && (qtTalk.Person != null))
+                addTopicToNPC(qtTalk.Topic, person);
+
+            //Debug.Log("Got topic " + tarWPO.sbObject.Package + "." + topicWPO.Name); 
+            }           
+
+            
+            return qtTalk;
+        }
+
+        QT_Take getQTTake(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings) {
+
+            var qtTake = ScriptableObject.CreateInstance<QT_Take>();
+
+            //get Content_Inventory class WPO where package contains WPO name
+            WrappedPackageObject cargoWPO = findWPOFromObjProp(tarWPO, "Cargo");
+            qtTake.Cargo = getContentInventory(cargoWPO);
+
+            ReadString(tarWPO, "SourceTag", out qtTake.SourceTag);
+            ReadLocalizedString(tarWPO, "SourceDescription", locStrings, out qtTake.SourceDescription);
+
+            //TODO: check if this actually occurs in packages
+            int takeOptionTemp;
+            ReadInt(tarWPO, "Option", out takeOptionTemp);
+            qtTake.Option = (ERadialMenuOptions)takeOptionTemp;
+
+            return qtTake;
+        }
+
+        QT_Hunt getQTHunt(WrappedPackageObject tarWPO, SBResources resources)
+        {
+            var qtHunt = ScriptableObject.CreateInstance<QT_Hunt>();
+
+            ReadObject(tarWPO, "Target", resources, out qtHunt.Target);
+            ReadInt(tarWPO, "Amount", out qtHunt.Amount);
+
+            return qtHunt;
+        }
+
+        QT_Subquest getQTSubquest(WrappedPackageObject tarWPO)
+        {
+            var qtSubquest = ScriptableObject.CreateInstance<QT_Subquest>();
+
+            //TODO
+            //Valshaaran : struggling to find any instances whatsoever of this target type in quest packages
+            //qtSubquest.SubQuestID;
+
+            return qtSubquest;
+        }
+
+        QT_Deliver getQTDeliver(WrappedPackageObject tarWPO, SBResources resources)
+        {
+            var qtDeliver = ScriptableObject.CreateInstance<QT_Deliver>();
+
+            ReadObject(tarWPO, "Address", resources, out qtDeliver.NpcRecipientID);
+            ReadInt(tarWPO, "Amount", out qtDeliver.Amount);
+            qtDeliver.Cargo = getItemType(tarWPO, "Cargo");
+            ReadObject(tarWPO, "DeliveryConversation", resources, out qtDeliver.DeliveryConvID);
+
+            return qtDeliver;
+        }
+
+        QT_Fedex getQTFedex(WrappedPackageObject tarWPO, SBResources resources)
+        {
+            var qtFedex = ScriptableObject.CreateInstance<QT_Fedex>();
+
+            ReadObject(tarWPO, "Address", resources, out qtFedex.NpcRecipientID);
+            qtFedex.Cargo = getContentInventory(findWPOFromObjProp(tarWPO, "Cargo"));
+            ReadInt(tarWPO, "Price", out qtFedex.Price);
+
+            ReadObject(tarWPO, "ThankYou", resources, out qtFedex.ThanksConvID);
+
+            //Add Thanks topic to recipient NPC
+            //TODO: Some QTFedex targets don't specify recipient or thanks topic
+            //Could be assumed that in these cases recipient is quest finisher, thanks topic is quest finish topic?
+            //Could either extract these here, or handle in runtime quest code
+            //Revisit this when implementing quest target/finish logic
+
+            if ((qtFedex.ThanksConvID != null) && (qtFedex.NpcRecipientID != null))
+                addTopicToNPC(qtFedex.ThanksConvID, qtFedex.NpcRecipientID);
+
+            return qtFedex;
+        }
+
+        #endregion
+
+        #region Helpers
+
+        #region Items
 
         Content_Inventory getRewardItems(WrappedPackageObject rewardWPO)
         {
             var CIProp = rewardWPO.FindProperty("RewardItems");
             var contentInvWPO = extractorWindowRef.ActiveWrapper.FindObjectWrapper(CIProp.GetValue<string>());
-            return getContentInventory(contentInvWPO);         
+            return getContentInventory(contentInvWPO);
         }
 
         Content_Inventory getContentInventory(WrappedPackageObject contentInvWPO)
@@ -400,6 +682,41 @@ namespace PackageExtractor.Adapter
             return output;
         }
 
+        Item_Type getItemType(WrappedPackageObject wpo, string itemTPropName)
+        {
+            var output = new Item_Type();
+
+            //Link item reference
+
+            var itemProp = wpo.FindProperty(itemTPropName);
+
+            //Match collection name
+            foreach (var ic in itemCols)
+            {
+                if (itemProp.Value.StartsWith(ic.name))
+                {
+                    //Retrieve Item_Type
+                    foreach (var it in ic.items)
+                    {
+                        if (itemProp.Value.Contains(it.internalName))
+                        {
+                            //populate Item_Type and ID
+                            output = it;
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            //output
+            return output;
+
+        }
+
+        #endregion
+
+        #region NPCs
         void addTopicToNPC(SBResource topic, SBResource npcRes)
         {
             if (npcRes == null)
@@ -446,117 +763,18 @@ namespace PackageExtractor.Adapter
                             EditorUtility.CopySerialized(alteredNT, nt);
                             EditorUtility.SetDirty(nt);
                         }
-                        
-                        
+
+
                         return;
                     }
                 }
             }
         }
+        #endregion
 
-        public QuestChain getChain(string name)
-        {
-            foreach (var qc in questCol.questChains)
-            {
-                if (qc.internalName == name)
-                    return qc;
-            }
-            return null;
-        }
+        #region Conversations
 
-        #region QuestTargets
-
-        QuestTarget extractQuestTarget(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings, SBResources resources, string pwName)
-        {
-            QuestTarget output;
-            switch (tarWPO.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty))
-            {
-                //TODO: Handle all QuestTarget & QuestCondition subclasses
-
-                case "QT_Take":
-                    output = getQTTake(tarWPO, locStrings);
-                    break;
-
-                case "QT_Talk":
-                    //Debug.Log("Handling QT_Talk quest target");
-                    output = getQTTalk(tarWPO, questCol, resources, pwName);
-                    break;                          
-
-                default:
-                    return null;
-            }
-
-            //Add base QuestTarget class properties to qtObj
-
-            //TODO: public List<SBResource> Pretargets;
-
-            //public bool AlwaysVisible;
-            ReadBool(tarWPO, "AlwaysVisible", out output.AlwaysVisible);
-
-            //TODO: public List<Content_Event> CompleteEvents;            
-
-            //public SBLocalizedString Description;
-            ReadLocalizedString(tarWPO, "Description", locStrings, out output.Description);
-
-            return output;
-        }
-
-        QT_Talk getQTTalk(WrappedPackageObject tarWPO, QuestCollection questCol, SBResources resources, string pwName)
-        {
-            var qtTalk = ScriptableObject.CreateInstance<QT_Talk>();
-
-            //Topic
-            WrappedPackageObject topicWPO = findWPOFromObjProp(tarWPO, "Topic");
-            qtTalk.Topic = getConvTopicRef(topicWPO, resources, pwName);
-
-            //ConversationTopic fullTopic = getConvTopicFull(topicWPO, resourcesProp, locStrings, extractorWindowRef.ActiveWrapper);
-            //AssetDatabase.AddObjectToAsset(fullTopic, convCol);
-            //Debug.Log("Got topic " + tarWPO.sbObject.Package + "." + topicWPO.Name);            
-
-            //Person
-            SBResource person;
-            if (ReadObject(tarWPO, "Person", resources, out person))
-            {
-                foreach (var nc in npcCols)
-                {
-                    if (person.Name.StartsWith(nc.name))
-                    {
-                        foreach (var nt in nc.types)
-                        {
-                            if (person.ID == nt.resourceID)
-                            {
-                                qtTalk.Person = nt;
-                            }
-                        }
-                    }
-                }
-                //AssetDatabase.AddObjectToAsset(qtTalk.Person, questCol);
-            }
-            return qtTalk;
-        }
-
-        //TODO: Implement QuestTarget subclass get methods  
-
-        QT_Take getQTTake(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings) {
-
-            var qtTake = ScriptableObject.CreateInstance<QT_Take>();
-    
-            //get Content_Inventory class WPO where package contains WPO name
-            WrappedPackageObject cargoWPO = findWPOFromObjProp(tarWPO, "Cargo");
-            qtTake.Cargo =  getContentInventory(cargoWPO);
-
-            ReadString(tarWPO, "SourceTag", out qtTake.SourceTag);
-            ReadLocalizedString(tarWPO, "SourceDescription", locStrings, out qtTake.SourceDescription);
-
-            //TODO: check if this actually occurs in packages
-            int takeOptionTemp;
-            ReadInt(tarWPO, "Option", out takeOptionTemp);
-            qtTake.Option = (ERadialMenuOptions)takeOptionTemp;
-
-            return qtTake;
-        }
-
-                 
+        #endregion
 
         #endregion
     }
