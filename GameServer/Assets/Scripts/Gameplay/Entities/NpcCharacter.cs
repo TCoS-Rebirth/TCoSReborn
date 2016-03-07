@@ -642,7 +642,7 @@ namespace Gameplay.Entities
         #region Quests
 
         public bool tryGiveQuest(PlayerCharacter p, CT_ProvideQuest provideTopic)
-        {
+        { 
             //Handle quest accept response here
             var quest = GameData.Get.questDB.GetQuestFromContained(provideTopic.Accept.resource);
             if (quest == null)
@@ -651,23 +651,35 @@ namespace Gameplay.Entities
                 return false;
             }
             else {
-                List<int> tarProgressArray = new List<int>();
-                //Target progress array generation
-                //foreach (var target in quest.targets)
-                for (int n = 0; n < quest.targets.Count; n++)
+
+                //Handle disabled quest
+                if (quest.Disabled)
                 {
-                    //TODO : proper target base values
-                    tarProgressArray.Add(0);
+                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+                    p.currentConv = null;
+                    p.ReceiveRelevanceMessage(this, endConv);
+                    p.ReceiveChatMessage("", "Quest is disabled in this build!", EGameChatRanges.GCR_SYSTEM);
+                    return false;
                 }
+                else {
+                    List<int> tarProgressArray = new List<int>();
+                    //Target progress array generation
+                    //foreach (var target in quest.targets)
+                    for (int n = 0; n < quest.targets.Count; n++)
+                    {
+                        //TODO : proper target base values
+                        tarProgressArray.Add(0);
+                    }
 
-                p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
+                    p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
 
-                var mQuestAdd = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(quest.resourceID, tarProgressArray);                
-                var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                p.currentConv = null;
-                p.ReceiveRelevanceMessage(this, mQuestAdd);
-                p.ReceiveRelevanceMessage(this, endConv);
-                return true;
+                    var mQuestAdd = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(quest.resourceID, tarProgressArray);
+                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+                    p.currentConv = null;
+                    p.ReceiveRelevanceMessage(this, mQuestAdd);
+                    p.ReceiveRelevanceMessage(this, endConv);
+                    return true;
+                }
             }
         }
 

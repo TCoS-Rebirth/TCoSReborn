@@ -6,7 +6,7 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Wait : QuestTarget
     {
-        int Seconds;
+        public int Seconds;
     }
 }
 

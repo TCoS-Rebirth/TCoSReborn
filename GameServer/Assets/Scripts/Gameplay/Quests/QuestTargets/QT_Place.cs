@@ -3,17 +3,18 @@
 //==============================================================================
 
 using Common;
+using Database.Static;
 
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Place : QuestTarget
     {
-        int Amount;
+        public int Amount;
 
-        Content_Inventory Cargo;
-        ERadialMenuOptions Option; //Radial menu option?
-        int TargetDescription;
-        string TargetTag;
+        public Content_Inventory Cargo;
+        public ERadialMenuOptions Option; //Radial menu option?
+        public SBLocalizedString TargetDescription;
+        public string TargetTag;
     }
 }
 

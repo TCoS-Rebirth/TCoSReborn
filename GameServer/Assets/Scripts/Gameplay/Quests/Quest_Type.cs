@@ -11,6 +11,8 @@ namespace Gameplay.Quests
     [Serializable]
     public class Quest_Type
     {
+        public bool Disabled;
+
         public bool deliverByMail;
 
         public SBResource finisher;

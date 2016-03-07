@@ -3,18 +3,19 @@
 //==============================================================================
 
 using Common;
+using Database.Static;
 using Gameplay.Items;
 
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_UseAt : QuestTarget
     {
-        int Amount;
+        public int Amount;
 
-        Item_Type Item;
-        int LocationDescription;
-        ERadialMenuOptions Option; //?
-        string UseLocationTag;
+        public Item_Type Item;
+        public SBLocalizedString LocationDescription;
+        public ERadialMenuOptions Option; //menuOption
+        public string UseLocationTag;
     }
 }
 

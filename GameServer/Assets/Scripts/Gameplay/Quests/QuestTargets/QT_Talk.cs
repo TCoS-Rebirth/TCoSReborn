@@ -12,9 +12,8 @@ namespace Gameplay.Quests.QuestTargets
     [Serializable]
     public class QT_Talk : QuestTarget
     {
-        [SerializeField] public NPC_Type Person;
-
-        [SerializeField] public SBResource Topic;
+        public SBResource PersonID;
+        public SBResource TopicID;
     }
 }
 

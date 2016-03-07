@@ -11,7 +11,7 @@ namespace Gameplay.Quests.QuestTargets
     {
         public int Amount;
 
-        public SBResource Target;
+        public SBResource NpcTargetID;
     }
 }
 

@@ -5,16 +5,17 @@
 using System.Collections.Generic;
 using Gameplay.Entities.NPCs;
 using Gameplay.Items;
+using Database.Static;
 
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Gather : QuestTarget
     {
-        int Amount;
-        Item_Type Cargo;
-        float DropChance;
-        List<Taxonomy> GroupedDroppers;
-        List<NPC_Type> NamedDroppers;
+        public int Amount;
+        public Item_Type Cargo;
+        public float DropChance;
+        public List<SBResource> FactionsGroupedDropperIDs;
+        public List<SBResource> NpcsNamedDropperIDs;
     }
 }
 

@@ -6,7 +6,7 @@ namespace Gameplay.Quests.QuestConditions
 {
     public class QC_Survival : QuestCondition
     {
-        float DefeatFraction; //Player health fraction below which quest fails?
+        public float DefeatFraction; //Player health fraction below which quest fails?
     }
 }
 

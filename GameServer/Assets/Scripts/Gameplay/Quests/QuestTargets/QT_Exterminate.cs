@@ -2,13 +2,14 @@
 //  QT_Exterminate
 //==============================================================================
 
+using Database.Static;
+
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Exterminate : QuestTarget
     {
-        int KillAmount;
-
-        Taxonomy Target;
+        public int KillAmount;
+        public SBResource FactionID;
     }
 }
 

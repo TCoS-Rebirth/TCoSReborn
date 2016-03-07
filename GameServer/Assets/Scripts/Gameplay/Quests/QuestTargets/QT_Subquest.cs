@@ -2,11 +2,13 @@
 //  QT_Subquest
 //==============================================================================
 
+using Database.Static;
+
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Subquest : QuestTarget
     {
-        public int SubQuestID;
+        public SBResource SubQuestID;
     }
 }
 

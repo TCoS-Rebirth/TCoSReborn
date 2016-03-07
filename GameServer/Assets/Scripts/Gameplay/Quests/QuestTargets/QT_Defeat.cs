@@ -2,6 +2,7 @@
 //  QT_Defeat
 //==============================================================================
 
+using Database.Static;
 using Gameplay.Conversations;
 using Gameplay.Entities.NPCs;
 
@@ -9,10 +10,9 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Defeat : QuestTarget
     {
-        float DefeatFraction;
-        ConversationTopic LastWords;
-
-        NPC_Type Target;
+        public float DefeatFraction;
+        public SBResource LastWordsConvID;
+        public SBResource NpcTargetID;
     }
 }
 

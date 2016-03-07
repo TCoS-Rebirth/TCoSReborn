@@ -2,13 +2,14 @@
 //  QT_Reach
 //==============================================================================
 
+using Database.Static;
+
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Reach : QuestTarget
     {
-        int GoalDescription;
-
-        string GoalTag;
+        public SBLocalizedString GoalDescription;
+        public string GoalTag;
     }
 }
 

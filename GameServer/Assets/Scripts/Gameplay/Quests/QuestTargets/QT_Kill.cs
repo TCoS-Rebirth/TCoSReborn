@@ -4,12 +4,13 @@
 
 using System.Collections.Generic;
 using Gameplay.Entities.NPCs;
+using Database.Static;
 
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Kill : QuestTarget
     {
-        List<NPC_Type> Targets;
+        public List<SBResource> NpcTargetIDs;
     }
 }
 
