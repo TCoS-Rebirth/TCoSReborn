@@ -2,17 +2,20 @@
 //  QT_Challenge
 //==============================================================================
 
+using Common;
 using Gameplay.Items;
 
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Challenge : QuestTarget
     {
-        string CompletionTag;
-        string FailureTag;
-        Item_Type Pass; //?
+        public string CompletionTag;
+        public string FailureTag;
+        public Item_Type Pass; //Item_Type player needs to fulfil target?
 
-        int TargetWorld;
+        public MapIDs TargetWorld; //TODO:verify
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

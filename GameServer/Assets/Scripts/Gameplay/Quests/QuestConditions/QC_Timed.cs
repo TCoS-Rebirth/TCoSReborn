@@ -6,7 +6,7 @@ namespace Gameplay.Quests.QuestConditions
 {
     public class QC_Timed : QuestCondition
     {
-        int Seconds;
+        public int Seconds;
     }
 }
 

@@ -2,13 +2,16 @@
 //  QT_Reach
 //==============================================================================
 
+using Database.Static;
+
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Reach : QuestTarget
     {
-        int GoalDescription;
+        public SBLocalizedString GoalDescription;
+        public string GoalTag;
 
-        string GoalTag;
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

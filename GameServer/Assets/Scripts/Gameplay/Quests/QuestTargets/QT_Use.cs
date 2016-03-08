@@ -9,10 +9,12 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Use : QuestTarget
     {
-        int Amount;
+        public int Amount;
 
-        Item_Type Item;
-        ERadialMenuOptions Option; //?
+        public Item_Type Item;
+        public ERadialMenuOptions Option; //menuOption
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

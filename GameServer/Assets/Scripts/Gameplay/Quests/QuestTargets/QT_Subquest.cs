@@ -2,11 +2,15 @@
 //  QT_Subquest
 //==============================================================================
 
+using Database.Static;
+
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Subquest : QuestTarget
     {
-        Quest_Type SubQuest;
+        public SBResource SubQuestID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

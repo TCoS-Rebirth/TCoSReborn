@@ -11,6 +11,8 @@ namespace Gameplay.Quests.QuestTargets
         int Amount;
 
         NPC_Type Target;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

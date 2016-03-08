@@ -1,6 +1,11 @@
-﻿//Debug flag - when false, NPCs will give all topics regardless of prequest / requirements status
-//When true, NPCs will filter out topics not relevant to the parameter player
+﻿//Debug flags
+
 //#define FILTER_TOPICS
+//when undefined, NPCs will give all topics regardless of prequest / requirements status
+//When defined, NPCs will filter out topics not relevant to the parameter player
+
+
+#define BLOCK_DISABLED_QUESTS   //When defined, NPCs won't give players quests flagged disabled
 
 using System.Collections.Generic;
 using Common;
@@ -592,7 +597,7 @@ namespace Gameplay.Entities
 
                 foreach (var topic in typeRef.QuestTopics)
                 {
-                    if (topic.ID == p.currentConv.curTopic.resource.ID) { break; }  //Ignore the current topic
+                    if (topic.ID == p.currentConv.curTopic.resource.ID) { continue; }  //Ignore the current topic
 
                     Quest_Type parentQuest = GameData.Get.questDB.GetQuestFromContained(topic);
                     if (parentQuest == null)
@@ -601,39 +606,76 @@ namespace Gameplay.Entities
                         break;
                     }
 
-                    //Provide quest topics
 
-                    if (topic.Name.Contains("CT_Provide")
+                #region Provide
+                //Provide quest topics
+
+                if (topic.Name.Contains("CT_Prov")
                         && (p.IsEligibleForQuest(parentQuest))                           //check player is eligible
                         && (!p.HasQuest(parentQuest.resourceID))                    //and they don't currently have quest
-                        && (!p.CompletedQuest(parentQuest.resourceID))              //and they haven't already completed quest
+                        && (!p.QuestIsComplete(parentQuest.resourceID))              //and they haven't already completed quest
                     )
                     {
                         topicRefs.Add(topic);
                     }
+                #endregion
 
-                    //Mid quest topics
-                    else if (topic.Name.Contains("CT_Mid")
+                #region Mid
+                //Mid quest topics
+                else if (topic.Name.Contains("CT_Mid")
                         && (p.HasQuest(parentQuest.resourceID))                 //check player currently has quest
                         && (p.HasUnfinishedTargets(parentQuest))                 //and at least 1 quest target remains incomplete                                                        
                         )
                     {
                         topicRefs.Add(topic);
                     }
+                #endregion
 
-                    //Complete quest topics (quests in curQuests with all targets complete)
-                    else if (topic.Name.Contains("CT_Finish")
+                #region Finish
+                //Complete quest topics (quests in curQuests with all targets complete)
+                else if (topic.Name.Contains("CT_Fin")
                          && (p.HasQuest(parentQuest.resourceID))    //check player currently has quest
                          && (!p.HasUnfinishedTargets(parentQuest))  //and all quest targets must be complete
                         )
                     {
                         topicRefs.Add(topic);
                     }
+                #endregion
 
-                    //TODO : Quest target topics
+                //TODO : Quest target topics player is eligible for by other conditions
 
-                }
-#endif
+                #region QT_Talk handling
+                if (topic.Name.Contains("QT_T"))
+                    {
+                        var qtTalkParentQuest = GameData.Get.questDB.GetQuestFromContained(topic);
+                        if (p.HasQuest(qtTalkParentQuest.resourceID)) {  //Initial check that player has quest 
+
+                            //Get the QT_Talk obj
+                            foreach (var target in qtTalkParentQuest.targets)
+                            {
+                                if (target.resource.ID == topic.ID)
+                                {
+                                    //Now check pretargets of this QT_Talk
+                                    bool pretargetsUnfinished = false;
+                                    foreach (var pretarget in target.Pretargets)
+                                    {
+                                        int targetIndex = qtTalkParentQuest.getPretargetIndex(target.resource.ID, pretarget.ID);
+
+                                        if (!p.QuestTargetIsComplete(qtTalkParentQuest, targetIndex)) {
+                                            pretargetsUnfinished = true;
+                                            break;
+                                        }
+                                        //If any target remains incomplete, break out
+                                    }
+                                    if (!pretargetsUnfinished) topicRefs.Add(topic);
+                                }
+                            }                           
+                        }
+                    }
+                #endregion
+            }
+            #endif
+
             var topicsOut = GameData.Get.convDB.GetTopics(topicRefs);
             return topicsOut;
         }
@@ -642,7 +684,7 @@ namespace Gameplay.Entities
         #region Quests
 
         public bool tryGiveQuest(PlayerCharacter p, CT_ProvideQuest provideTopic)
-        {
+        { 
             //Handle quest accept response here
             var quest = GameData.Get.questDB.GetQuestFromContained(provideTopic.Accept.resource);
             if (quest == null)
@@ -651,23 +693,44 @@ namespace Gameplay.Entities
                 return false;
             }
             else {
-                List<int> tarProgressArray = new List<int>();
-                //Target progress array generation
-                //foreach (var target in quest.targets)
-                for (int n = 0; n < quest.targets.Count; n++)
+
+
+
+
+                //Handle disabled quest
+#if BLOCK_DISABLED_QUESTS
+                if (!quest.Disabled)
                 {
-                    //TODO : proper target base values
-                    tarProgressArray.Add(0);
+#endif
+                    List<int> tarProgressArray = new List<int>();
+                    //Target progress array generation
+                    //foreach (var target in quest.targets)
+                    for (int n = 0; n < quest.targets.Count; n++)
+                    {
+                        //TODO : proper target base values
+                        tarProgressArray.Add(0);
+                    }
+
+                    p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
+
+                    var mQuestAccept = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(quest.resourceID, tarProgressArray);
+                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+                    p.currentConv = null;
+                    p.ReceiveRelevanceMessage(this, mQuestAccept);
+                    p.ReceiveRelevanceMessage(this, endConv);
+                    return true;
+#if BLOCK_DISABLED_QUESTS                    
                 }
 
-                p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
+                else {
 
-                var mQuestAdd = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(quest.resourceID, tarProgressArray);                
-                var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                p.currentConv = null;
-                p.ReceiveRelevanceMessage(this, mQuestAdd);
-                p.ReceiveRelevanceMessage(this, endConv);
-                return true;
+                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+                    p.currentConv = null;
+                    p.ReceiveRelevanceMessage(this, endConv);
+                    p.ReceiveChatMessage("", "Quest is disabled in this build!", EGameChatRanges.GCR_SYSTEM);
+                    return false;
+                }
+#endif
             }
         }
 
@@ -678,7 +741,22 @@ namespace Gameplay.Entities
             p.currentConv = null;
             p.ReceiveRelevanceMessage(this, endConv);
         }
-        #endregion
+
+        public List<int> getRelatedQuestIDs()
+        {
+            List<int> output = new List<int>();
+
+            //cycle quest topics
+            foreach(var questTopic in typeRef.QuestTopics)
+            {
+                Quest_Type relatedQuest = GameData.Get.questDB.GetQuestFromContained(questTopic);
+                output.Add(relatedQuest.resourceID);
+            }
+
+            return output;
+        }
+
+#endregion
 
         /*
         private bool containsID(List<SBResource> list, int id)

@@ -11,6 +11,8 @@ using Gameplay.Skills;
 using UnityEngine;
 using Utility;
 using World;
+using Gameplay.Quests;
+using Database.Static;
 
 namespace Network
 {
@@ -143,12 +145,23 @@ namespace Network
             m.WriteInt32(npc.PepRank);
             //NpcPawnStream
             m.WriteInt32(npc.typeRef.resourceID); //same as resourceID
+
+            /*
             m.WriteInt32(npc.RelatedQuestIDs.Count);
             for (var i = 0; i < npc.RelatedQuestIDs.Count; i++)
             {
                 Debug.Log("Dialog: " + npc.RelatedQuestIDs[i]);
                 m.WriteInt32(npc.RelatedQuestIDs[i]);
             }
+            */
+            var relatedQuestIDs = npc.getRelatedQuestIDs();
+
+            m.WriteInt32(relatedQuestIDs.Count);    //Number of related quest
+            foreach(var questID in relatedQuestIDs)
+            {
+                m.WriteInt32(questID);              //Related quest ID array
+            }           
+
             m.WriteVector3(UnitConversion.ToUnreal(npc.Destination)); //struct NetMovment [dest, flag]
             m.WriteByte((byte) npc.MovementFlags); //ENpcMovementFlag
             m.WriteInt32(-1); //target-RelID
@@ -862,6 +875,7 @@ namespace Network
                 m.WriteByte((byte) sds[i].totalDeckSlot);
             }
 
+            /*
             var numFinishedQuests = 0;
             m.WriteInt32(numFinishedQuests);
             for (var i = 0; i < numFinishedQuests; i++)
@@ -877,6 +891,45 @@ namespace Network
                 m.WriteInt32(0); //QuestID
                 m.WriteInt32(0); //objectiveState
             }
+            */
+
+            //Valshaaran : player quest data
+
+            //Finished quests
+
+            //Array size
+            m.WriteInt32(p.QuestData.completedQuestIDs.Count);
+            //Array content
+            foreach(var questID in p.QuestData.completedQuestIDs)
+            {
+                m.WriteInt32(questID);
+            }
+
+            //Active quest targets
+
+            //Array size - cumulative sum of no. of targets
+            int totalTargets = 0;
+            foreach (var quest in p.QuestData.curQuests)
+            {
+                totalTargets += quest.targetProgress.Count;
+            }
+            m.WriteInt32(totalTargets);
+
+            //Array contents
+                foreach (var pqp in p.QuestData.curQuests)
+                {
+                Quest_Type quest = GameData.Get.questDB.GetQuest(pqp.questID);
+
+                for (int n = 0; n < quest.targets.Count; n++) {
+                    
+                    m.WriteInt32(0);                            //Unknown
+                    m.WriteInt32(0);                            //Unknown?
+                    m.WriteInt32(quest.targets[n].resource.ID); //Objective resource ID?
+                    m.WriteInt32(pqp.targetProgress[n]);        //Trying target's progress value?     
+                    
+                }
+            }
+
             var numPersistentVariables = 1;
             m.WriteInt32(numPersistentVariables);
             for (var i = 0; i < numPersistentVariables; i++)
@@ -885,6 +938,8 @@ namespace Network
                 m.WriteInt32(120); // (100) sectionID (GED files)
                 m.WriteInt32(1); //(100) 1=discovered
             }
+
+
             m.WriteInt32((int) player.Account.Level); //0=player,1=error, 2 = gamemaster, 2+ = increasing Gamemaster levels (more rights like console CS-Commands)
             return m;
         }
@@ -1194,6 +1249,35 @@ namespace Network
 
         #region QuestLog
 
+        //Valshaaran : 
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(int questID, List<int> progressArray)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
+
+            //probably quest resource ID
+            m.WriteInt32(questID);
+
+            //Write progress array
+            //TODO : Experimental
+            if (progressArray == null)
+            {
+                m.WriteInt32(1);    //Progress array size
+                m.WriteInt32(0);    //aProgress value
+            }
+            else {
+                m.WriteInt32(progressArray.Count);    //Progress array size
+
+                foreach (var aProgress in progressArray)
+                {
+                    m.WriteInt32(aProgress);        //Progress array items
+                }
+            }
+
+
+            return m;
+        }
+
         public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(int questID, List<int> progressArray)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
@@ -1220,6 +1304,8 @@ namespace Network
 
             return m;
         }
+
+       
 
         public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(int questID)
         {

@@ -488,6 +488,32 @@ namespace Database.Static
 
             }
 
+            public Quest_Type GetQuest(int questID)
+            {
+                //Determine quest collection
+                foreach (var questCol in questCollections)
+                {
+
+                    //Search collection chains for resource ID match, return matching quest
+                    foreach (var questChain in questCol.questChains)
+                    {
+                        foreach (var quest in questChain.quests)
+                        {
+                            if (quest.resourceID == questID)
+                                return quest;
+                        }
+                    }
+
+                    //Search loose quests for resID match, return match
+                    foreach (var quest in questCol.looseQuests)
+                    {
+                        if (quest.resourceID == questID)
+                            return quest;
+                    }
+                }
+                return null;
+            }
+
             public Quest_Type GetQuestFromContained(SBResource res)
             {
                 //Determine quest collection
