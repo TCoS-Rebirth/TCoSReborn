@@ -13,6 +13,8 @@ namespace Gameplay.Quests.QuestTargets
         public float DefeatFraction;
         public SBResource LastWordsConvID;
         public SBResource NpcTargetID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

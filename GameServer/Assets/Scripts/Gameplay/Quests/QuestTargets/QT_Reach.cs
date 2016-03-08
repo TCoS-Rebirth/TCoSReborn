@@ -10,6 +10,8 @@ namespace Gameplay.Quests.QuestTargets
     {
         public SBLocalizedString GoalDescription;
         public string GoalTag;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

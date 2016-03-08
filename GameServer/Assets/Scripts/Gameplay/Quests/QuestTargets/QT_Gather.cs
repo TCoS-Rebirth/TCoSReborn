@@ -16,6 +16,8 @@ namespace Gameplay.Quests.QuestTargets
         public float DropChance;
         public List<SBResource> FactionsGroupedDropperIDs;
         public List<SBResource> NpcsNamedDropperIDs;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

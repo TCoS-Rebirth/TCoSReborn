@@ -11,6 +11,8 @@ namespace Gameplay.Quests.QuestTargets
     public class QT_Kill : QuestTarget
     {
         public List<SBResource> NpcTargetIDs;
+
+        public override int GetCompletedProgressValue() { return NpcTargetIDs.Count; }
     }
 }
 

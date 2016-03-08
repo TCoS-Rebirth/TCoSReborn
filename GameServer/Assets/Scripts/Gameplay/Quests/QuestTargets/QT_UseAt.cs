@@ -16,6 +16,8 @@ namespace Gameplay.Quests.QuestTargets
         public SBLocalizedString LocationDescription;
         public ERadialMenuOptions Option; //menuOption
         public string UseLocationTag;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

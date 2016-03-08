@@ -476,6 +476,9 @@ namespace PackageExtractor.Adapter
             #region Add base QuestTarget properties to output
             //Add base QuestTarget class properties to qtObj
 
+            //SBResource
+            output.resource = resources.GetResource(pW.Name + "." + tarWPO.sbObject.Package + "." + tarWPO.sbObject.Name);
+
             //Pretargets array
             output.Pretargets = new List<SBResource>();
 

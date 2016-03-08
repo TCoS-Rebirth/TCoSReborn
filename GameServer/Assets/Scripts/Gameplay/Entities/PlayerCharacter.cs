@@ -871,7 +871,7 @@ namespace Gameplay.Entities
             //Verify prequests
             foreach (SBResource preQuest in quest.preQuests)
             {
-                if (!CompletedQuest(preQuest.ID))  //If prequest not complete
+                if (!QuestIsComplete(preQuest.ID))  //If prequest not complete
                 {
                     return false;                       //return false
                 }
@@ -887,11 +887,25 @@ namespace Gameplay.Entities
             }
             return false;
         }
-        public bool CompletedQuest(int questID)
+        public bool QuestIsComplete(int questID)
         {
             foreach (var questSBR in QuestData.completedQuestIDs)
             {
                 if (questSBR == questID) { return true; }
+            }
+            return false;
+        }
+        public bool QuestTargetIsComplete(Quest_Type quest, int targetIndex)
+        {
+            int completeThreshold = quest.targets[targetIndex].GetCompletedProgressValue();
+
+            foreach (var questProgress in QuestData.curQuests)
+            {
+                if (questProgress.questID == quest.resourceID) {
+
+                    if (questProgress.targetProgress[targetIndex] >= completeThreshold) return true;
+                    else return false;
+                }
             }
             return false;
         }

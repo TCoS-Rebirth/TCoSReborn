@@ -15,6 +15,8 @@ namespace Gameplay.Quests.QuestTargets
         public int Amount;
         public Item_Type Cargo;
         public SBResource DeliveryConvID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

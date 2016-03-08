@@ -16,6 +16,8 @@ namespace Gameplay.Quests.QuestTargets
         public Item_Type Item;
         public ERadialMenuOptions Option; //Radial menu option?
         public SBResource NpcTarget;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

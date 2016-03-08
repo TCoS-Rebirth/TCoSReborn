@@ -13,6 +13,8 @@ namespace Gameplay.Quests.QuestTargets
 
         public Item_Type Item;
         public ERadialMenuOptions Option; //menuOption
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

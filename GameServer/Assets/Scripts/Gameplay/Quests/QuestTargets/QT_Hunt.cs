@@ -12,6 +12,8 @@ namespace Gameplay.Quests.QuestTargets
         public int Amount;
 
         public SBResource NpcTargetID;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

@@ -9,6 +9,8 @@ namespace Gameplay.Quests.QuestTargets
     public class QT_Subquest : QuestTarget
     {
         public SBResource SubQuestID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

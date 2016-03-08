@@ -14,6 +14,8 @@ namespace Gameplay.Quests.QuestTargets
         public Item_Type Pass; //Item_Type player needs to fulfil target?
 
         public MapIDs TargetWorld; //TODO:verify
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

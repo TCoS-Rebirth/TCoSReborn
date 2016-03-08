@@ -14,6 +14,8 @@ namespace Gameplay.Quests.QuestTargets
     {
         public SBResource PersonID;
         public SBResource TopicID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

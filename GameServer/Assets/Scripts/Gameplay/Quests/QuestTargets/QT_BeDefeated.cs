@@ -15,5 +15,7 @@ namespace Gameplay.Quests.QuestTargets
         public List<SBResource> FactionsGroupedTargetIDs;
         public List<SBResource> NpcsNamedTargetIDs;
         public SBResource VictoryConvID;
+
+        public virtual int GetCompletedProgressValue() { return 1; }
     }
 }

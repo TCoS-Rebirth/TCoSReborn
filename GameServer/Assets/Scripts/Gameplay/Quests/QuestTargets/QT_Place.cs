@@ -15,6 +15,8 @@ namespace Gameplay.Quests.QuestTargets
         public ERadialMenuOptions Option; //Radial menu option?
         public SBLocalizedString TargetDescription;
         public string TargetTag;
+
+        public override int GetCompletedProgressValue() { return Amount + 1; }
     }
 }
 
