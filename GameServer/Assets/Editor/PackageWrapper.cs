@@ -366,6 +366,7 @@ namespace PackageExtractor
             LogString("Caching internal references", Color.white);
             wrappedObjects = wrappedObjects.OrderBy(x => x.Name, new AlphanumComparer()).ToList();
             wrappedObjects.Reverse();
+            e.Result = e.Argument;
             //foreach (WrappedPackageObject pw in wrappedObjects)
             //{
             //    pw.CachePropertReferences(FindObjectWrapper, null);

@@ -15,7 +15,7 @@ namespace PackageExtractor.Adapter
 {
     public class SpawnDeployerExtractor : ExtractorAdapter
     {
-        Zone targetZone;
+        public Zone targetZone;
 
         public override string Name
         {

@@ -750,7 +750,10 @@ namespace Gameplay.Entities
             foreach(var questTopic in typeRef.QuestTopics)
             {
                 Quest_Type relatedQuest = GameData.Get.questDB.GetQuestFromContained(questTopic);
-                output.Add(relatedQuest.resourceID);
+                if (relatedQuest != null)
+                {
+                    output.Add(relatedQuest.resourceID);
+                }
             }
 
             return output;
