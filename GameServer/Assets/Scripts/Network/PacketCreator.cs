@@ -1249,8 +1249,6 @@ namespace Network
 
         #region QuestLog
 
-        //Valshaaran : 
-
         public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(int questID, List<int> progressArray)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
@@ -1305,17 +1303,45 @@ namespace Network
             return m;
         }
 
-       
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(int questID, int targetIndex, int progress)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS);
+
+            m.WriteInt32(questID);
+            m.WriteInt32(targetIndex);
+            m.WriteInt32(progress);
+
+            return m;
+        }
 
         public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(int questID)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST);
 
-            m.WriteInt32(questID); //Probable
-                    
+            m.WriteInt32(questID);
+
+            return m;            
+        }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(int questID)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST);
+
+            m.WriteInt32(questID);
 
             return m;
         }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_COMPLETEQUEST(int questID)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_COMPLETEQUEST);
+
+            m.WriteInt32(questID);
+
+            return m;
+        }
+
+        
 
         #endregion
     }

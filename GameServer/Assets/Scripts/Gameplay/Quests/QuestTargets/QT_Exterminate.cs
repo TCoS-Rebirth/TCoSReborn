@@ -11,7 +11,7 @@ namespace Gameplay.Quests.QuestTargets
         public int KillAmount;
         public SBResource FactionID;
 
-        public virtual int GetCompletedProgressValue() { return KillAmount; }
+        public override int GetCompletedProgressValue() { return KillAmount; }
     }
 }
 

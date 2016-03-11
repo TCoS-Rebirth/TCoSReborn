@@ -6,6 +6,7 @@ using Gameplay.Events;
 using Gameplay.RequirementSpecifier;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using Gameplay.Entities;
 
 namespace Gameplay.Conversations
 {
@@ -224,6 +225,15 @@ namespace Gameplay.Conversations
             }
             Debug.Log("ConversationTopic.getStartNodes : failed to return all the start nodes");
             return null;
+        }
+
+        public bool requirementsMet(PlayerCharacter p)
+        {
+            foreach (var req in Requirements)
+            {
+                if (!req.isMet(p)) return false;
+            }
+            return true;
         }
     }
 

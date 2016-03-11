@@ -62,14 +62,24 @@ namespace Gameplay.Quests
                             }
                             return -1;
                         }
-                        
+
                     }
                     return -1;  //Failed to match pretarget ID
                 }
-                
+
             }
             return -1;  //Failed to match target ID
         }
- 
+
+        public int getTargetIndex(int targetID)
+        {
+            for (int n = 0; n < targets.Count; n++)
+            {
+                //Match targetID
+                if (targets[n].resource.ID == targetID) return n;
+            }
+            return -1;
+        }
+
     }
 }
