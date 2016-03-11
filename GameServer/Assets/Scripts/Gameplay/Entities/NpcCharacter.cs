@@ -636,7 +636,6 @@ namespace Gameplay.Entities
 
         public List<ConversationTopic> PrepareTopics(PlayerCharacter p)   //can set p to null when noFilter == true
         {
-            var srcConv = p.currentConv;
             var topicRefs = new List<SBResource>();
 
 #if NO_TOPIC_FILTER
