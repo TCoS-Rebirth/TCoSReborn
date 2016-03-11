@@ -1,5 +1,4 @@
-﻿using Common;
-using Common.UnrealTypes;
+﻿using Common.UnrealTypes;
 using Database.Static;
 using Gameplay.Entities.NPCs;
 using UnityEditor;
@@ -12,7 +11,7 @@ namespace PackageExtractor.Adapter
 {
     public class NPCSpawnerExtractor : ExtractorAdapter
     {
-        Zone targetZone;
+        public Zone targetZone;
 
         public override string Name
         {

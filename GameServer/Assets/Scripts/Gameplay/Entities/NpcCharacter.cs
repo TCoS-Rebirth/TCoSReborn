@@ -899,7 +899,6 @@ namespace Gameplay.Entities
                     Debug.Log("NpcCharacter.getRelatedQuestIDs : Couldn't find a parent quest of topic " + questTopic.Name);
                 }
             }
-
             return output;
         }
 

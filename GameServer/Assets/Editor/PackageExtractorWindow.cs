@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -70,6 +71,10 @@ public class PackageExtractorWindow : EditorWindow
         get { return openedPackages; }
     }
 
+    public ExtractorAdapter ActiveAdapter
+    {
+        get { return activeAdapter; }
+    }
     void CollectAvailableAdapters()
     {
         availableAdapters.Clear();
@@ -81,7 +86,7 @@ public class PackageExtractorWindow : EditorWindow
         }
     }
 
-    void PassToAdapter(WrappedPackageObject wrappedObject)
+    public void PassToAdapter(WrappedPackageObject wrappedObject)
     {
         if (activeAdapter != null)
         {
@@ -166,7 +171,7 @@ public class PackageExtractorWindow : EditorWindow
         passToAdapterRect = new Rect(propertyViewRect.x, propertyViewRect.y + propertyViewRect.height + spacing, propertyViewRect.width, 20);
     }
 
-    void Reset(bool fullReset)
+    public void Reset(bool fullReset)
     {
         if (fullReset)
         {
@@ -180,7 +185,7 @@ public class PackageExtractorWindow : EditorWindow
         prevScreenSize = 0;
     }
 
-    void LoadNewPackage(string packageFileName)
+    public void LoadNewPackage(string packageFileName, Action finishedCallback = null)
     {
         if (activeWrapper != null)
         {
@@ -200,7 +205,7 @@ public class PackageExtractorWindow : EditorWindow
         treeBuilder.DoWork += activeWrapper.Load;
         treeBuilder.RunWorkerCompleted += OnFinishedBuildingTree;
         isBuildingTree = true;
-        treeBuilder.RunWorkerAsync();
+        treeBuilder.RunWorkerAsync(finishedCallback);
     }
 
     void OnFinishedBuildingTree(object sender, RunWorkerCompletedEventArgs e)
@@ -215,9 +220,14 @@ public class PackageExtractorWindow : EditorWindow
         treeBuilder.RunWorkerCompleted -= OnFinishedBuildingTree;
         treeBuilder.DoWork -= activeWrapper.Load;
         treeBuilder = null;
+        var callback = e.Result as Action;
+        if (callback != null)
+        {
+            EditorApplication.delayCall += new EditorApplication.CallbackFunction(callback);
+        }
     }
 
-    void CreateAdapter(Type adapterType)
+    public void CreateAdapter(Type adapterType)
     {
         if (!adapterType.IsSubclassOf(typeof (ExtractorAdapter)))
         {
@@ -241,7 +251,7 @@ public class PackageExtractorWindow : EditorWindow
         }
     }
 
-    void RemoveAdapter()
+    public void RemoveAdapter()
     {
         if (activeAdapter != null)
         {
