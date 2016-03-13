@@ -2,6 +2,7 @@
 //  QT_Deliver
 //==============================================================================
 
+using Database.Static;
 using Gameplay.Conversations;
 using Gameplay.Entities.NPCs;
 using Gameplay.Items;
@@ -10,10 +11,12 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Deliver : QuestTarget
     {
-        NPC_Type Address;
-        int Amount;
-        Item_Type Cargo;
-        ConversationTopic DeliveryConversation;
+        public SBResource NpcRecipientID;
+        public int Amount;
+        public Item_Type Cargo;
+        public SBResource DeliveryConvID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

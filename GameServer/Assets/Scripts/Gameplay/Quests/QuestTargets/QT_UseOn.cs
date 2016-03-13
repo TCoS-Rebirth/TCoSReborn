@@ -3,6 +3,7 @@
 //==============================================================================
 
 using Common;
+using Database.Static;
 using Gameplay.Entities.NPCs;
 using Gameplay.Items;
 
@@ -10,11 +11,13 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_UseOn : QuestTarget
     {
-        int Amount;
+        public int Amount;
 
-        Item_Type Item;
-        ERadialMenuOptions Option; //Radial menu option?
-        NPC_Type Target;
+        public Item_Type Item;
+        public ERadialMenuOptions Option; //Radial menu option?
+        public SBResource NpcTarget;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 

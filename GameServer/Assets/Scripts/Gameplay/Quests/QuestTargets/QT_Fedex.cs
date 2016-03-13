@@ -2,17 +2,20 @@
 //  QT_Fedex
 //==============================================================================
 
+using Database.Static;
 using Gameplay.Conversations;
 using Gameplay.Entities.NPCs;
 
 namespace Gameplay.Quests.QuestTargets
 {
-    internal class QT_Fedex : QuestTarget
+    public class QT_Fedex : QuestTarget
     {
-        NPC_Type Address;
-        Content_Inventory Cargo;
-        int Price;
-        ConversationTopic ThankYou;
+        public SBResource NpcRecipientID;
+        public Content_Inventory Cargo;
+        public int Price;
+        public SBResource ThanksConvID;
+
+        public override int GetCompletedProgressValue() { return 1; }
     }
 }
 

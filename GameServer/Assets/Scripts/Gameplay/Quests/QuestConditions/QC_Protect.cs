@@ -4,14 +4,14 @@
 
 using System.Collections.Generic;
 using Gameplay.Entities.NPCs;
+using Database.Static;
 
 namespace Gameplay.Quests.QuestConditions
 {
     public class QC_Protect : QuestCondition
     {
-        int Slack; //TODO: No idea what this is...
-
-        List<NPC_Type> Targets;
+        public int Slack; //TODO: No idea what this is...
+        public List<SBResource> NpcsTargets;
     }
 }
 

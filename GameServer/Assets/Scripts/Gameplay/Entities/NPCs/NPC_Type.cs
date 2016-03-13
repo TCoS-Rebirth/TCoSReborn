@@ -131,39 +131,5 @@ namespace Gameplay.Entities.NPCs
             }
         }
 
-
-        public ConversationTopic chooseBestTopic()
-        {
-            //TODO : Placeholder, improve topic choice logic
-
-            //Retrieve non-quest topics
-            var choices = GameData.Get.convDB.GetTopics(Topics);
-
-            //Pick a topic of type Chat
-            var freeTopics = new List<ConversationTopic>();
-            foreach (var topic in choices)
-            {
-                if (topic.TopicType == EConversationType.ECT_Free)
-                {
-                    freeTopics.Add(topic);
-                }
-            }
-            if (freeTopics.Count > 0)
-            {
-                var rndInd = Random.Range(0, freeTopics.Count - 1);
-                return freeTopics[rndInd];
-            }
-
-            //Otherwise pick a Greeting topic
-            foreach (var topic in choices)
-            {
-                if (topic.TopicType == EConversationType.ECT_Greeting)
-                {
-                    return topic;
-                }
-            }
-
-            return null;
-        }
     }
 }

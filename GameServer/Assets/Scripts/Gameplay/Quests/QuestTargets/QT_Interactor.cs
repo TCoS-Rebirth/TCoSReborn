@@ -3,16 +3,19 @@
 //==============================================================================
 
 using Common;
+using Database.Static;
 
 namespace Gameplay.Quests.QuestTargets
 {
-    internal class QT_Interactor : QuestTarget
+    public class QT_Interactor : QuestTarget
     {
-        int Amount; //Amount of item picked up?
-        ERadialMenuOptions Option; //Interact menu option?
-        int TargetDescription;
+        public int Amount; //Amount of item picked up?
+        public ERadialMenuOptions Option; //Interact menu option?
+        public SBLocalizedString TargetDescription;
 
-        string TargetTag;
+        public string TargetTag;
+
+        public override int GetCompletedProgressValue() { return Amount + 1; }
     }
 }
 

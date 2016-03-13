@@ -238,7 +238,7 @@ namespace World
             }
         }
 
-        [ContextMenu("Clear ALL Spawners & Deployers!")]
+        [ContextMenu("Clear ALL Spawners and Deployers!")]
         void EditorClearSpawners()
         {
             foreach (var z in _zones)

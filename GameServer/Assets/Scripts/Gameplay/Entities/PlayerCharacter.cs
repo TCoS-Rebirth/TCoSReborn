@@ -13,6 +13,7 @@ using Network;
 using UnityEngine;
 using Utility;
 using World;
+using Gameplay.Quests.QuestTargets;
 
 namespace Gameplay.Entities
 {
@@ -871,7 +872,7 @@ namespace Gameplay.Entities
             //Verify prequests
             foreach (SBResource preQuest in quest.preQuests)
             {
-                if (!CompletedQuest(preQuest.ID))  //If prequest not complete
+                if (!QuestIsComplete(preQuest.ID))  //If prequest not complete
                 {
                     return false;                       //return false
                 }
@@ -887,7 +888,7 @@ namespace Gameplay.Entities
             }
             return false;
         }
-        public bool CompletedQuest(int questID)
+        public bool QuestIsComplete(int questID)
         {
             foreach (var questSBR in QuestData.completedQuestIDs)
             {
@@ -895,9 +896,37 @@ namespace Gameplay.Entities
             }
             return false;
         }
+        public bool PreTargetsComplete(QuestTarget target, Quest_Type quest)
+        {
+            foreach (var pretarget in target.Pretargets)
+            {
+                int targetIndex = quest.getPretargetIndex(target.resource.ID, pretarget.ID);
+
+                if (!QuestTargetIsComplete(quest, targetIndex))
+                {
+                    return false; //If any target remains incomplete, return false
+                }
+
+            }
+            return true;
+        }
+        public bool QuestTargetIsComplete(Quest_Type quest, int targetIndex)
+        {
+            int completeThreshold = quest.targets[targetIndex].GetCompletedProgressValue();
+
+            foreach (var questProgress in QuestData.curQuests)
+            {
+                if (questProgress.questID == quest.resourceID) {
+
+                    if (questProgress.targetProgress[targetIndex] >= completeThreshold) return true;
+                    else return false;
+                }
+            }
+            return false;
+        }
         public void RemoveQuest(int questID)
         {
-            int numTargets = QuestData.getNumTargets(questID);
+            //int numTargets = QuestData.getNumTargets(questID);
 
             //Remove quest on game server
             QuestData.RemoveQuest(questID);
@@ -906,6 +935,24 @@ namespace Gameplay.Entities
             var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
             SendToClient(m);
             return;
+        }
+        public void FinishQuest(Quest_Type quest)
+        {
+            //Set game server quest data to finished                
+            QuestData.FinishQuest(quest.resourceID);
+
+            //TODO:Give quest rewards to player
+            //Quest points
+
+            //Money
+
+            //Item rewards (Content_Inventory)
+
+            //Send complete quest packet            
+            Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);
+           // Message mQuestRemove = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(quest.resourceID);
+            SendToClient(mQuestFinish);
+            //SendToClient(mQuestRemove);
         }
 
         public bool HasUnfinishedTargets(Quest_Type quest)

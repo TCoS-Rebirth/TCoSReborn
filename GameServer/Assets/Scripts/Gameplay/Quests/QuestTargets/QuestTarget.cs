@@ -9,10 +9,15 @@ namespace Gameplay.Quests.QuestTargets
     [Serializable]
     public class QuestTarget : ScriptableObject
     {
+        public SBResource resource;
+
         public bool AlwaysVisible;
         public List<Content_Event> CompleteEvents;
         public SBLocalizedString Description;
         public List<SBResource> Pretargets;
+
+        //TODO: method works out what progress value denotes that an input target is completed
+        public virtual int GetCompletedProgressValue() { return 1;}
 
         //ConversationTopic attachedTopic;
     }

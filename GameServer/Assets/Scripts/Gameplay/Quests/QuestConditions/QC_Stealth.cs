@@ -4,14 +4,14 @@
 
 using System.Collections.Generic;
 using Gameplay.Entities.NPCs;
+using Database.Static;
 
 namespace Gameplay.Quests.QuestConditions
 {
     public class QC_Stealth : QuestCondition
     {
-        List<Taxonomy> GroupedTargets;
-
-        List<NPC_Type> NamedTargets;
+        public List<SBResource> FactionsGroupedTargets;
+        public List<SBResource> NpcsNamedTargets;
     }
 }
 

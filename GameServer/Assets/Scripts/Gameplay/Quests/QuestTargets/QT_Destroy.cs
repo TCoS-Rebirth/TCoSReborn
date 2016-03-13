@@ -8,9 +8,12 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Destroy : QuestTarget
     {
-        int Amount;
-
+        int Amount = 1;
         NPC_Type Target;
+
+        public override int GetCompletedProgressValue() {
+            return Amount;
+        }
     }
 }
 

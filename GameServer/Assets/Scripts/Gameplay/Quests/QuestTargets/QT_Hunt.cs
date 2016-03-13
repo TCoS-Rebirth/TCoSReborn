@@ -2,15 +2,18 @@
 //  QT_Hunt
 //==============================================================================
 
+using Database.Static;
 using Gameplay.Entities.NPCs;
 
 namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Hunt : QuestTarget
     {
-        int Amount;
+        public int Amount;
 
-        NPC_Type Target;
+        public SBResource NpcTargetID;
+
+        public override int GetCompletedProgressValue() { return Amount; }
     }
 }
 
