@@ -665,12 +665,7 @@ namespace Network
             var responseID = m.ReadInt32();
             Debug.Log("HandleConversationRespond : responseID = " + responseID + ", playerID = " + playerID);
 
-            if ((responseID == 0) && (pc.currentConv != null)) //Response ID 0 ends conversation
-            {
-                var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(pc.currentConv.partner);
-                pc.SendToClient(endConv);
-            }
-            else if (pc != null)
+            if (pc != null)
             {
                 if (pc.currentConv != null)
                 {

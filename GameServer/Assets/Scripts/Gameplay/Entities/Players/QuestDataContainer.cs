@@ -11,11 +11,11 @@ namespace Gameplay.Entities.Players
         public List<PlayerQuestProgress> curQuests = new List<PlayerQuestProgress>();
         public List<int> completedQuestIDs = new List<int>();
 
-        public void CompleteQuest(int questID)
+        public void FinishQuest(int questID)
         {
             //Adds completed quest ID to completed list, removes entries with that ID from curQuests
-            completedQuestIDs.Add(questID);
             RemoveQuest(questID);
+            completedQuestIDs.Add(questID);            
         }
 
         public int getNumTargets(int questID)   
@@ -58,6 +58,15 @@ namespace Gameplay.Entities.Players
                     return;
                 }
             }
+        }
+
+        public bool isCompleted(int questID)
+        {
+            foreach (var completedQID in completedQuestIDs)
+            {
+                if (questID == completedQID) return true;
+            }
+            return false;
         }
 
         public void LoadForPlayer(List<DBQuestTarget> quests, PlayerCharacter pc)
