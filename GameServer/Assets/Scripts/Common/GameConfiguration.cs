@@ -1,11 +1,10 @@
 ﻿using System;
 using Gameplay;
-using UnityEditor;
 using UnityEngine;
 using World;
 
 #if UNITY_EDITOR
-
+using UnityEditor;
 #endif
 
 namespace Common

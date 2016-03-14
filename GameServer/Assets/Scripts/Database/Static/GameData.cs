@@ -9,7 +9,9 @@ using Gameplay.Entities.NPCs;
 using Gameplay.Items;
 using Gameplay.Quests;
 using Gameplay.Skills;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace Database.Static
