@@ -82,6 +82,7 @@ namespace Gameplay.Entities
             Faction = GameData.Get.factionDB.GetFaction(dbRef.Faction);
             FameLevel = dbRef.FamePep[0];
             PepRank = dbRef.FamePep[1];
+            FamePoints = dbRef.FamePoints;
             MaxHealth = dbRef.HealthMaxHealth[1]; //TODO: calculate value instead, later (from level & items etc)
             Health = dbRef.HealthMaxHealth[0];
             LastZoneID = (MapIDs) dbRef.LastZoneID;
@@ -572,6 +573,20 @@ namespace Gameplay.Entities
             }
         }
 
+        public void GiveInventory(Content_Inventory cInv)
+        {
+            foreach (var cItem in cInv.Items)
+            {   
+                
+                Game_Item gi = new Game_Item(cItem);
+
+                //TODO: Handle attuned status?
+                //if (attuned) { gi.Attuned = 1; }
+
+                ItemManager.AddItem(gi);
+            }                            
+        }
+
         #endregion
 
         #region Currency
@@ -588,24 +603,70 @@ namespace Gameplay.Entities
         {
             amount = Mathf.Abs(amount);
             money = money + amount;
+            Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
+            SendToClient(m);
         }
 
         public void TakeMoney(int amount)
         {
             amount = Mathf.Abs(amount);
             money = Mathf.Clamp(money - amount, 0, amount);
+            Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
+            SendToClient(m);
         }
 
         #endregion
 
         #region Leveling
 
-        int famePoints;
+        float famePoints;
 
-        public int FamePoints
+        public float FamePoints
         {
             get { return famePoints; }
             set { famePoints = value; }
+        }
+
+        protected override void OnFameChanged()
+        {
+            //TODO: grant attribute points, update stats, etc.
+            Message m = PacketCreator.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(this);
+            BroadcastRelevanceMessage(m);
+            SendToClient(m);
+        }
+
+        public void GiveFame(int points)
+        {
+            famePoints += points;
+            Message mUpdateFamePoints = PacketCreator.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(this);
+            SendToClient(mUpdateFamePoints);
+
+            //Return if max level
+            if (FameLevel >= GameConfiguration.CharacterDefaults.MaxFame) return;
+
+            //Check for levelup
+            var nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            while (FamePoints >= nextLevelData.requiredFamePoints)
+            {
+                SetFame(FameLevel + 1);
+                nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            }            
+            
+        }
+
+        public void GiveQuestFame(int points, int qpFrac)
+        {
+            
+
+            if (qpFrac <= 0) { GiveFame(points); }
+            else {
+                //TODO
+                //Valshaaran - experimental quest XP formula : (quest points value) * (qpFrac / player fame level)?
+                //No modifier for now
+                //float multFactor = qpFrac / FameLevel;
+                //GiveFame((int)(points * multFactor));
+                GiveFame(points);
+            }
         }
 
         int pepPoints;
@@ -941,12 +1002,16 @@ namespace Gameplay.Entities
             //Set game server quest data to finished                
             QuestData.FinishQuest(quest.resourceID);
 
-            //TODO:Give quest rewards to player
+            //Give quest rewards to player
+
             //Quest points
+            GiveQuestFame(quest.questPoints.QP, quest.questPoints.QPFrac);
 
             //Money
+            GiveMoney(quest.money);
 
             //Item rewards (Content_Inventory)
+            GiveInventory(quest.rewardItems);         
 
             //Send complete quest packet            
             Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);
@@ -954,7 +1019,6 @@ namespace Gameplay.Entities
             SendToClient(mQuestFinish);
             //SendToClient(mQuestRemove);
         }
-
         public bool HasUnfinishedTargets(Quest_Type quest)
         {
             PlayerQuestProgress questProgress = null;

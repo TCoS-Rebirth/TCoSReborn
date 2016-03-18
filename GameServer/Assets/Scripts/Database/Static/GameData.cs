@@ -25,6 +25,7 @@ namespace Database.Static
         public NpcDB npcDB = new NpcDB();
         public SkillTemplateDB skillDB = new SkillTemplateDB();
         public QuestDB questDB = new QuestDB();
+        public LevelProgression levelProg;
 
 
         public static GameData Get
@@ -89,6 +90,15 @@ namespace Database.Static
             if (!questDB.Initialize())
             {
                 Debug.Log("error while loading questDB");
+                callback(false);
+                yield break;
+            }
+            levelProg = AssetDatabase.LoadAssetAtPath<LevelProgression>(
+                "Assets/GameData/SBResources/LevelProgression.asset"
+            );
+            if (levelProg == null)
+            {
+                Debug.Log("Error while loading level progression data");
                 callback(false);
                 yield break;
             }
