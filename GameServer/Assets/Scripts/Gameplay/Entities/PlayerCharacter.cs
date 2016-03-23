@@ -662,10 +662,11 @@ namespace Gameplay.Entities
             else {
                 //TODO
                 //Valshaaran - experimental quest XP formula : (quest points value) * (qpFrac / player fame level)?
-                //No modifier for now
-                //float multFactor = qpFrac / FameLevel;
-                //GiveFame((int)(points * multFactor));
-                GiveFame(points);
+                float multFactor = qpFrac / FameLevel;
+                GiveFame((int)(points * multFactor));
+
+                //This version just gives the unmodified points amount
+                //GiveFame(points);
             }
         }
 
@@ -786,6 +787,83 @@ namespace Gameplay.Entities
                 var m = PacketCreator.S2R_BASE_PAWN_SV2CLREL_DAMAGEACTIONS(this, 1f);
                 SendToClient(m);
             }
+        }
+
+        public void OnNPCKill(NpcCharacter npc)
+        {
+            var npct = npc.typeRef;
+
+            #region Quest progress
+            //Quest progress                
+            foreach (var curQuest in QuestData.curQuests)
+            {
+                var questObj = GameData.Get.questDB.GetQuest(curQuest.questID);
+
+                //Look for Destroy/Exterminate/Hunt/Kill targets
+                for (int n = 0; n < questObj.targets.Count;n++)
+                {
+                    var target = questObj.targets[n];
+                    //Break if target completed...
+                    if (QuestTargetIsComplete(questObj, n)) continue;
+
+                    //...or if  pretargets unfulfilled
+                    if (!PreTargetsComplete(target, questObj)) continue;
+
+                    if (target is QT_Destroy)
+                    {
+                        var tDest = (QT_Destroy)target;
+                        if (npct.resourceID == tDest.Target.resourceID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Destroy progress advancement failed");
+                            }
+                        }
+                    }
+                    else if (target is QT_Hunt)
+                    {
+                        var tHunt = (QT_Hunt)target;
+                        if (npct.resourceID == tHunt.NpcTargetID.ID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Hunt progress advancement failed");
+                            }
+                        }
+                    }
+
+                    else if (target is QT_Exterminate)
+                    {
+                        var tExt = (QT_Exterminate)target;
+                        if (npct.TaxonomyFaction.ID == tExt.FactionID.ID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Exterminate progress advancement failed");
+                            }
+                        }
+                    }
+                    else if (target is QT_Kill)
+                    {
+                        var tKill = (QT_Kill)target;
+                        foreach (var killType in tKill.NpcTargetIDs) {
+                            if (npct.resourceID == killType.ID)
+                            {
+                                if (!TryAdvanceQTKill(questObj, target, npct))
+                                {
+                                    Debug.Log("PlayerCharacter.OnNPCKill : QT_Kill progress advancement failed");
+                                }
+                                else break; //Ensures only 1 subtarget advances at a time
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region Grant PEP
+            //TODO
+            #endregion
         }
 
         #endregion
@@ -985,6 +1063,31 @@ namespace Gameplay.Entities
             }
             return false;
         }
+        public bool HasUnfinishedTargets(Quest_Type quest)
+        {
+            PlayerQuestProgress questProgress = null;
+
+            //get the quest ID's progress values
+            foreach (var qP in QuestData.curQuests)
+            {
+                if (qP.questID == quest.resourceID) { questProgress = qP; }
+            }
+
+            if (questProgress == null)
+            {
+                Debug.Log("Player.hasUnfinishedTargets : Player doesn't currently have the parameter quest - returning TRUE for now");
+                return true;
+            }
+
+            Debug.Log("Player.hasUnfinishedTargets : TODO - Compare each target progress to what its completed value should be");
+            //TODO: Placeholder - returns true if any targets have progress value 0, returns false otherwise
+            foreach (var targetValue in questProgress.targetProgress)
+            {
+                if (targetValue == 0) { return true; }
+            }
+
+            return false;
+        }
         public void RemoveQuest(int questID)
         {
             //int numTargets = QuestData.getNumTargets(questID);
@@ -1019,31 +1122,96 @@ namespace Gameplay.Entities
             SendToClient(mQuestFinish);
             //SendToClient(mQuestRemove);
         }
-        public bool HasUnfinishedTargets(Quest_Type quest)
+
+        /// <summary>
+        /// Attempts to advance a quest target's progress for both server and client 
+        /// </summary>
+        /// <param name="quest"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public bool TryAdvanceTarget(Quest_Type quest, QuestTarget target)
         {
-            PlayerQuestProgress questProgress = null;
+            var playerTarProgress = QuestData.getProgress(quest.resourceID);
+            int tarIndex = quest.getTargetIndex(target.resource.ID);
 
-            //get the quest ID's progress values
-            foreach (var qP in QuestData.curQuests)
-            {
-                if (qP.questID == quest.resourceID) { questProgress = qP; }
-            }
+            int newValue = -1;
+            //TODO
+            //Handle other target type value setting
+            if (target is QT_Hunt
+                || target is QT_Exterminate
+                || target is QT_Destroy)
+                {
+                newValue = playerTarProgress.targetProgress[tarIndex] + 1;
+                }
 
-            if (questProgress == null)
-            {
-                Debug.Log("Player.hasUnfinishedTargets : Player doesn't currently have the parameter quest - returning TRUE for now");
+            //Do the update
+            if (newValue != -1) {
+
+                //Server quest data
+                QuestData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+
+                //Dispatch packet
+                Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
+                SendToClient(m);
+
+                //target onAdvance
+                target.onAdvance(newValue);
+
                 return true;
             }
-
-            Debug.Log("Player.hasUnfinishedTargets : TODO - Compare each target progress to what its completed value should be");
-            //TODO: Placeholder - returns true if any targets have progress value 0, returns false otherwise
-            foreach (var targetValue in questProgress.targetProgress)
-            {
-                if (targetValue == 0) { return true; }
-            }
-
             return false;
         }
+        public bool TryAdvanceQTKill(Quest_Type quest, QuestTarget target, NPC_Type npcKilled)
+        {
+            var playerTarProgress = QuestData.getProgress(quest.resourceID);
+            int tarIndex = quest.getTargetIndex(target.resource.ID);
+
+            int newValue = -1;
+
+            if (target is QT_Kill)
+            {
+                var qtKill = target as QT_Kill;
+                for (int n = 0; n < qtKill.NpcTargetIDs.Count;n++)
+                {
+                    var targetNPC = qtKill.NpcTargetIDs[n];
+                    if (targetNPC.ID == npcKilled.resourceID)
+                    {
+                        var oldValue = playerTarProgress.targetProgress[tarIndex];
+                        //Valshaaran - try bit flag for each target, experimental
+                        //Bitwise OR with old progress value
+                        newValue = oldValue | (1 << n);
+
+                        //If value unchanged, continue 
+                        //- this will flag other unflagged kill targets of the same type
+                        if (newValue == oldValue)
+                        {
+                            newValue = -1;
+                            continue;
+                        }
+                        else break;
+                    }
+                }
+            }            
+
+            //Do the update
+            if (newValue != -1)
+                {
+
+                //Server quest data
+                QuestData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+
+                //Dispatch packet
+                Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
+                SendToClient(m);
+
+                //target onAdvance
+                target.onAdvance(newValue);
+
+                return true;
+                }
+            return false;
+        }
+
         #endregion
     }
 }
