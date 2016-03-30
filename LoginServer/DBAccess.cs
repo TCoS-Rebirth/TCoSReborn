@@ -59,6 +59,7 @@ namespace LoginServer
                 {
                     while (reader.Read())
                     {
+                        var dTime = reader.GetString("LastLogin");
                         return new UserAccount(
                             reader.GetInt32("ID"),
                             reader.GetString("Name"),
@@ -66,7 +67,8 @@ namespace LoginServer
                             reader.GetString("Email"),
                             reader.GetInt32("banned") == 1,
                             (AccountPrivilege)reader.GetInt32("Level"),
-                            DateTime.ParseExact(reader.GetString("LastLogin"),"MM/dd/yyyy HH:mm:ss", null),
+                            DateTime.ParseExact(dTime, "MM/dd/yyyy HH:mm:ss", CultureInfo.InvariantCulture.DateTimeFormat),
+                            //DateTime.Parse(dTime),
                             reader.GetInt32("IsOnline") == 1, 
                             reader.GetInt32("SessionKey"), 
                             reader.GetInt32("LastUniverse"));

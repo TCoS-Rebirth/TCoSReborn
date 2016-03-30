@@ -33,7 +33,7 @@ namespace World
         public void LoadClientMap(MapIDs newMap)
         {
             var m = PacketCreator.S2C_WORLD_PRE_LOGIN(newMap);
-            Connection.SendQueued(m);
+            Connection.SendMessage(m);
             MapIdTransitionTo = newMap;
         }
 

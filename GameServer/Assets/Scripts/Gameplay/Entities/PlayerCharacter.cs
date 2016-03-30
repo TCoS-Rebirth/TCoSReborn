@@ -128,7 +128,7 @@ namespace Gameplay.Entities
         /// </summary>
         public void SendToClient(Message m)
         {
-            Owner.Connection.SendQueued(m);
+            Owner.Connection.SendMessage(m);
         }
 
         #endregion
