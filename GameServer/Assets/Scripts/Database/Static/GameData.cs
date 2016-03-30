@@ -96,9 +96,6 @@ namespace Database.Static
                 yield break;
             }
             yield return null;
-            levelProg = AssetDatabase.LoadAssetAtPath<LevelProgression>(
-                "Assets/GameData/SBResources/LevelProgression.asset"
-            );
             if (levelProg == null)
             {
                 Debug.Log("Error while loading level progression data");

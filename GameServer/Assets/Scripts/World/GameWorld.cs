@@ -10,9 +10,12 @@ using Database.Dynamic;
 using Database.Static;
 using Gameplay.Entities;
 using Network;
-using UnityEditor;
 using UnityEngine;
 using Gameplay.Entities.Interactives;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace World
 {
