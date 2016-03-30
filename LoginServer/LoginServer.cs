@@ -19,7 +19,7 @@ namespace LoginServer
         DateTime _lastPopulationUpdate;
         NetServer _proxyServer;
 
-        NetConnector<LoginHeader> _server;
+        NetConnector _server;
 
         public int GenerateTransferKey()
         {
@@ -33,7 +33,7 @@ namespace LoginServer
 
         public bool StartServer(LoginServerConfiguration config)
         {
-            _server = new NetConnector<LoginHeader>(config.ListenIP, config.ListenPort, _incomingMessages);
+            _server = new NetConnector(config.ListenIP, config.ListenPort, _incomingMessages);
             _dispatchTable.Add(LoginHeader.C2L_USER_LOGIN, HandleAuthChallenge);
             _dispatchTable.Add(LoginHeader.C2L_QUERY_UNIVERSE_LIST, HandleQueryUniverseList);
             _dispatchTable.Add(LoginHeader.C2L_UNIVERSE_SELECTED, HandleUniverseSelection);
@@ -247,7 +247,7 @@ namespace LoginServer
                         if (sourceUniverse != null)
                         {
                             var outMsg = L2C_UNIVERSE_SELECTED_ACK(tKey, success ? sourceUniverse : null);
-                            connection.SendQueued(outMsg);
+                            connection.SendMessage(outMsg);
                         }   
                     }
                     break;
@@ -357,13 +357,13 @@ namespace LoginServer
         static void SendAuthResult(Network.NetConnection netConnection, eLoginRequestResult result)
         {
             var m = L2C_USER_LOGIN_ACK(result);
-            netConnection.SendDirect(m);
+            netConnection.SendMessage(m);
         }
 
         void HandleQueryUniverseList(Message m)
         {
             var outMessage = L2C_QUERY_UNIVERSE_LIST_ACK(m);
-            m.Connection.SendDirect(outMessage);
+            m.Connection.SendMessage(outMessage);
         }
 
         void HandleUniverseSelection(Message m)
@@ -385,7 +385,7 @@ namespace LoginServer
             }
             Debug.Log("Error transfering session to Universe", ConsoleColor.Red);
             var errorMsg = L2C_UNIVERSE_SELECTED_ACK(-1, null);
-            m.Connection.SendQueued(errorMsg);
+            m.Connection.SendMessage(errorMsg);
         }
 
         static void HandleDisconnect(Message m)

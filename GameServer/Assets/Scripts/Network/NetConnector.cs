@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Network
 {
-    public class NetConnector<T> where T : struct, IConvertible
+    public class NetConnector
     {
         public delegate void ConnectionDelegate(NetConnection connection);
 
@@ -77,8 +77,7 @@ namespace Network
 
         public bool Start()
         {
-            _thread = new Thread(Listen);
-            _thread.Name = string.Format("TcpServer:{0}:{1}", _ipAddress, _port);
+            _thread = new Thread(Listen) {Name = string.Format("TcpServer:{0}:{1}", _ipAddress, _port)};
             _thread.Start();
             _queueWorker = new BackgroundWorker {WorkerSupportsCancellation = true};
             _queueWorker.DoWork += ResolveSendMessageQueues;
@@ -101,9 +100,12 @@ namespace Network
                 }
                 _listener.Close();
                 _waitHandler.Set();
-                for (var i = 0; i < _connections.Count; i++)
+                lock (_connections)
                 {
-                    HandleDisconnect(_connections[i]);
+                    for (var i = 0; i < _connections.Count; i++)
+                    {
+                        HandleDisconnect(_connections[i]);
+                    }
                 }
                 _thread.Abort();
                 if (_thread != null)
@@ -111,7 +113,10 @@ namespace Network
                     _thread.Join(1000);
                 }
             }
-            _connections.Clear();
+            lock (_connections)
+            {
+                _connections.Clear();
+            }
         }
 
         void Listen()
@@ -136,7 +141,7 @@ namespace Network
                     }
                     catch (Exception e)
                     {
-                        Debug.Log(e.Message);
+                        Debug.Log("NetConnector (acceptRoutine): "+e.Message);
                         break;
                     }
                     _waitHandler.WaitOne();
@@ -144,7 +149,7 @@ namespace Network
             }
             catch (Exception e)
             {
-                Debug.Log(e.Message);
+                Debug.Log("NetConnector: "+e.Message);
             }
         }
 
@@ -166,8 +171,12 @@ namespace Network
                         clientSocket.BeginReceive(nc.incomingReadBuffer, 0, 4, SocketFlags.None, ReadMessageCallback, nc);
                     }
                 }
-                catch
+                catch (Exception e)
                 {
+                    if (!(e is ObjectDisposedException))
+                    {
+                        Debug.Log("NetConnector (accepting): " + e.Message);
+                    }
                 }
             }
         }
@@ -242,8 +251,9 @@ namespace Network
                 message.Connection.SetupReceiveState(NetConnection.ReceiveState.Header);
                 message.Connection.ClientSocket.BeginReceive(message.Connection.incomingReadBuffer, 0, 4, 0, ReadMessageCallback, message.Connection);
             }
-            catch
+            catch (Exception e)
             {
+                Debug.Log("NetConnector (dispatchMessage): "+ e.Message);
             }
         }
 
@@ -269,7 +279,10 @@ namespace Network
             {
                 OnDisconnected(connection);
             }
-            _connections.Remove(connection);
+            lock (_connections)
+            {
+                _connections.Remove(connection);
+            }
 #if UNITY
             connection.player = null;
 #endif
@@ -277,7 +290,10 @@ namespace Network
 
         void HandleUserData(Message m)
         {
-            _messageQueueRef.Enqueue(m);
+            lock (_messageQueueRef)
+            {
+                _messageQueueRef.Enqueue(m);
+            }
         }
 
         void ResolveSendMessageQueues(object sender, DoWorkEventArgs e)
@@ -293,25 +309,26 @@ namespace Network
                 {
                     for (var i = _connections.Count; i-- > 0;)
                     {
-                        if (_connections[i].queue.Count > 0)
+                        if (_connections[i].MessageQueue.Count <= 0) continue;
+                        var messageBytes = new List<byte>();
+                        lock (_connections[i].MessageQueue)
                         {
-                            var messageBytes = new List<byte>();
-                            while (_connections[i].queue.Count > 0)
+                            while (_connections[i].MessageQueue.Count > 0)
                             {
                                 if (worker.CancellationPending || _shutDownRequested)
                                 {
                                     return;
                                 }
-                                var m = _connections[i].queue.Dequeue();
+                                var m = _connections[i].MessageQueue.Dequeue();
                                 if (m != null)
                                 {
                                     messageBytes.AddRange(m.FinalizeForSending());
                                 }
                             }
-                            _connections[i].ClientSocket.Send(messageBytes.ToArray());
-                        } //count> 0
+                        }//message queue lock
+                        _connections[i].ClientSocket.Send(messageBytes.ToArray());
                     } //loop
-                } //lock
+                } // connections lock
                 Thread.Sleep(100);
             } //while
         }

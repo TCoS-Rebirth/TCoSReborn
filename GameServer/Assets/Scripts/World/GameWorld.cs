@@ -10,6 +10,7 @@ using Database.Dynamic;
 using Database.Static;
 using Gameplay.Entities;
 using Network;
+using UnityEditor;
 using UnityEngine;
 
 namespace World
@@ -179,7 +180,11 @@ namespace World
             if (!MysqlDb.Initialize())
             {
                 Debug.LogError("Database initialization failed. Canceling start");
+#if UNITY_EDITOR
+                EditorApplication.isPlaying = false;
+#else
                 Application.Quit();
+#endif
             }
             _zoneHandler.Initialize(OnZonesInitialized);
         }
@@ -278,7 +283,7 @@ namespace World
         }
 #endif
 
-        #region RelevanceIDs
+#region RelevanceIDs
 
         readonly HashSet<int> _allocatedEntityIDs = new HashSet<int>();
 
@@ -304,6 +309,6 @@ namespace World
             _allocatedEntityIDs.Remove(id);
         }
 
-        #endregion
+#endregion
     }
 }

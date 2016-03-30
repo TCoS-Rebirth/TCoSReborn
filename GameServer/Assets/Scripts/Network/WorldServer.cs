@@ -31,7 +31,7 @@ namespace Network
 
         Action<PlayerInfo> _onPlayerLogout;
 
-        NetConnector<GameHeader> _server;
+        NetConnector _server;
 
         Coroutine updatingRoutine;
 
@@ -60,7 +60,7 @@ namespace Network
         /// <returns></returns>
         public bool StartServer(ServerConfiguration config, Action<PlayerInfo> onPlayerLogout)
         {
-            _server = new NetConnector<GameHeader>(config.ListenIP, config.ServerPort, _incomingMessages);
+            _server = new NetConnector(config.ListenIP, config.ServerPort, _incomingMessages);
             var npConfig = new NetPeerConfiguration("TCoSReborn");
             npConfig.EnableMessageType(NetIncomingMessageType.DiscoveryResponse);
             npConfig.EnableMessageType(NetIncomingMessageType.StatusChanged);
@@ -178,20 +178,23 @@ namespace Network
             {
                 while (_incomingMessages.Count > 0)
                 {
-                    var m = _incomingMessages.Dequeue();
-                    Action<Message> messageHandler;
-                    if (!Enum.IsDefined(typeof (GameHeader), m.Header))
+                    lock (_incomingMessages)
                     {
-                        Debug.Log("no messageType defined for: " + m.Header);
-                        continue;
-                    }
-                    if (_dispatchTable.TryGetValue((GameHeader) m.Header, out messageHandler))
-                    {
-                        messageHandler(m);
-                    }
-                    else
-                    {
-                        Debug.Log("no messageHandler defined for: " + (GameHeader) m.Header);
+                        var m = _incomingMessages.Dequeue();
+                        Action<Message> messageHandler;
+                        if (!Enum.IsDefined(typeof (GameHeader), m.Header))
+                        {
+                            Debug.Log("no messageType defined for: " + m.Header);
+                            continue;
+                        }
+                        if (_dispatchTable.TryGetValue((GameHeader) m.Header, out messageHandler))
+                        {
+                            messageHandler(m);
+                        }
+                        else
+                        {
+                            Debug.Log("no messageHandler defined for: " + (GameHeader) m.Header);
+                        }
                     }
                 }
                 if (_pendingPlayerRemoves.Count > 0)
@@ -346,7 +349,7 @@ namespace Network
                 {
                     case MapIDs.CHARACTER_SELECTION:
                         var characters = CharacterCreationSelection.GetAccountCharacters(p.Account);
-                        m.Connection.SendDirect(PacketCreator.S2C_CS_LOGIN(p, characters));
+                        m.Connection.SendMessage(PacketCreator.S2C_CS_LOGIN(p, characters));
                         if (characters.Count > 0)
                         {
                             p.CharacterCreationState = ECharacterCreationState.CCS_SELECT_CHARACTER;
@@ -364,7 +367,7 @@ namespace Network
                         }
                         //TODO handle other Maps with special requirements
                         p.CharacterCreationState = ECharacterCreationState.CCS_ENTER_WORLD;
-                        m.Connection.SendDirect(PacketCreator.S2C_WORLD_LOGIN(p));
+                        m.Connection.SendMessage(PacketCreator.S2C_WORLD_LOGIN(p));
                         break;
                 }
             }
@@ -387,7 +390,7 @@ namespace Network
             if (ch != null)
             {
                 var response = PacketCreator.S2C_CREATE_CHARACTER_ACK(ch);
-                m.Connection.SendDirect(response);
+                m.Connection.SendMessage(response);
                 m.Connection.player.CharacterCreationState = ECharacterCreationState.CCS_SELECT_CHARACTER;
             }
             else
@@ -433,7 +436,7 @@ namespace Network
             var charID = m.ReadInt32();
             var success = CharacterCreationSelection.DeleteAccountCharacter(m.Connection.player.Account, charID);
             var response = PacketCreator.S2C_CS_DELETE_CHARACTER_ACK(charID, success);
-            m.Connection.SendDirect(response);
+            m.Connection.SendMessage(response);
         }
 
         void HandleWorldLoginAck(Message m)
@@ -460,10 +463,10 @@ namespace Network
             {
                 accountCharID = -1;
             }
-            m.Connection.SendQueued(PacketCreator.S2C_WORLD_LOGOUT_ACK());
+            m.Connection.SendMessage(PacketCreator.S2C_WORLD_LOGOUT_ACK());
             if (player != null)
             {
-                m.Connection.SendQueued(PacketCreator.S2C_USER_ON_LOGOUT(player.Account.UID, accountCharID));
+                m.Connection.SendMessage(PacketCreator.S2C_USER_ON_LOGOUT(player.Account.UID, accountCharID));
             }
         }
 

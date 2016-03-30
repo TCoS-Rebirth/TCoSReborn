@@ -9,7 +9,7 @@ namespace Network
 {
     public class NetConnection
     {
-        public Queue<Message> queue = new Queue<Message>();
+        public Queue<Message> MessageQueue = new Queue<Message>();
 
         public NetConnection(Socket socket)
         {
@@ -38,28 +38,19 @@ namespace Network
         }
 
         /// <summary>
-        ///     Use this for regular messages
+        ///     Use this to send network messages to the client
         /// </summary>
-        public void SendQueued(Message msg)
+        public void SendMessage(Message msg)
         {
             if (ClientSocket == null || !ClientSocket.Connected)
             {
                 return;
             }
             msg.Connection = this;
-            queue.Enqueue(msg);
-        }
-
-        /// <summary>
-        ///     Only use this for important (instant) messages
-        /// </summary>
-        public void SendDirect(Message msg)
-        {
-            if (ClientSocket == null || !ClientSocket.Connected)
+            lock (MessageQueue)
             {
-                return;
+                MessageQueue.Enqueue(msg);
             }
-            ClientSocket.Send(msg.FinalizeForSending());
         }
 
         #region Internal
