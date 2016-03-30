@@ -29,7 +29,9 @@ namespace Utility
             new ChatCommand(AccountPrivilege.GM, "Lists all available shards with their internal ID", Cmd_ListShards, ".shards", ".listshards", ".destinations"),
             new ChatCommand(AccountPrivilege.GM, "Toggles DebugMode (enables certain chat notifications). usage .debug on/off", Cmd_SetDebugMode, ".debug", ".debugmode"),
             new ChatCommand(AccountPrivilege.GM, "Sets your characters physique to the given value (-5 to +5). Usage: .physique X", Cmd_SetPhysique, ".physique",
-                ".setphysique")
+                ".setphysique"),
+            new ChatCommand(AccountPrivilege.GM, "Adds the given amount of fame points to this character. Usage: .addfame X", Cmd_AddFame, ".addfame",
+                ".givefame")
         };
 
         public static void HandleCommand(PlayerInfo p, string fullMessage, AccountPrivilege cmdPrivilege)
@@ -246,6 +248,20 @@ namespace Utility
             else
             {
                 ResponseMessage(p, "Message too short");
+            }
+        }
+
+        static void Cmd_AddFame(PlayerCharacter p, string fmsg)
+        {
+            var arg = fmsg.Split(' ');
+            if (arg.Length == 2)
+            {
+                int points;
+                if (int.TryParse(arg[1], out points)) {
+                    p.GiveFame(points);
+                    ResponseMessage(p, points + " fame points added");
+                }
+                else ResponseMessage(p, "Invalid value");
             }
         }
 

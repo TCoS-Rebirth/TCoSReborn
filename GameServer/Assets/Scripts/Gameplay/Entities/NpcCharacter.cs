@@ -225,6 +225,18 @@ namespace Gameplay.Entities
             }
         }
 
+        protected override void OnDiedThroughDamage(Character source)
+        {
+            base.OnDiedThroughDamage(source);
+
+            //Valshaaran - dispatch NPC death event to source player
+            if (source is PlayerCharacter)
+            {
+                var sourcePlayer = source as PlayerCharacter;
+                sourcePlayer.OnNPCKill(this);
+            }
+        }
+
         public override void TeleportTo(Vector3 newPos, Quaternion newRot)
         {
             base.TeleportTo(newPos, newRot);
@@ -539,7 +551,7 @@ namespace Gameplay.Entities
             #region QT_Talk last node
             //Handle QT_Talk last node quest target update
             if ((srcConv.curTopic.TopicType == EConversationType.ECT_Talk)
-            && (nextNode.responses.Count == 0))                     //If no further responses
+            && ((nextNode == null) || nextNode.responses.Count == 0))                     //If no further responses
             {
                 {
                     //Set target progress to 1 serverside
@@ -563,6 +575,9 @@ namespace Gameplay.Entities
                                 //send progress update packet
                                 var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(curQuest.resourceID, tarInd, 1);
                                 source.ReceiveRelevanceMessage(this, m);
+
+                                //QuestTarget.onAdvance()
+                                target.onAdvance(1);
                                 break;
                             }
                         }
@@ -604,7 +619,7 @@ namespace Gameplay.Entities
                 }
 
                 //No matching nodes or topics - end the conversation
-                Debug.Log("NpcCharacter.Converse : ... failed to get any new node, ending conversation");                
+                Debug.Log("NpcCharacter.Converse : ... failed to get any new node, ending conversation");
                 var mEndConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
                 source.currentConv = null;
                 source.ReceiveRelevanceMessage(this, mEndConverse);
@@ -650,12 +665,12 @@ namespace Gameplay.Entities
             foreach (var nTopic in typeRef.Topics)
             {
                 ConversationTopic fullTopic = GameData.Get.convDB.GetTopic(nTopic);
-                if (    (nTopic.ID != p.currentConv.curTopic.resource.ID)
-                    &&  (!nTopic.Name.Contains("CT_G"))
+                if ((nTopic.ID != p.currentConv.curTopic.resource.ID)
+                    && (!nTopic.Name.Contains("CT_G"))
                     )
                 {
-                //Check requirements
-                if (fullTopic.requirementsMet(p)) topicRefs.Add(nTopic);
+                    //Check requirements
+                    if (fullTopic.requirementsMet(p)) topicRefs.Add(nTopic);
                 }
             }
 
@@ -688,7 +703,7 @@ namespace Gameplay.Entities
                             var qtTalk = target as QT_Talk;
                             if (qtTalk != null)
                             {
-                                
+
                                 if (qtTalk.TopicID.ID == qTopic.ID)
                                 {
                                     if ((p.PreTargetsComplete(target, qtTalkParentQuest))
@@ -709,9 +724,9 @@ namespace Gameplay.Entities
                         && (!p.HasQuest(parentQuest.resourceID))                    //and they don't currently have quest
                         && (!p.QuestIsComplete(parentQuest.resourceID))              //and they haven't already completed quest
                     )
-                    {
+                {
                     if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
-                    }
+                }
                 #endregion
 
                 #region Mid
@@ -720,15 +735,16 @@ namespace Gameplay.Entities
                         && (p.HasQuest(parentQuest.resourceID))                 //check player currently has quest
                         && (p.HasUnfinishedTargets(parentQuest))                 //and at least 1 quest target remains incomplete                                                        
                         )
-                    {
-                        if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
-                    }
+                {
+                    if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                }
                 #endregion
 
                 #region Finish
                 //Complete quest topics (quests in curQuests with all targets complete)                
 
-                else if (qTopic.Name.Contains("CT_Fin")) {
+                else if (qTopic.Name.Contains("CT_Fin"))
+                {
 
                     if (p.HasQuest(parentQuest.resourceID))
                     {
@@ -738,9 +754,9 @@ namespace Gameplay.Entities
                         foreach (var tar in parentQuest.targets)
                         {
                             var qtTalk = tar as QT_Talk;
-                            if (    (qtTalk != null)
-                                &&  (qtTalk.TopicID.ID == 0)
-                                &&  (p.PreTargetsComplete(tar, parentQuest))
+                            if ((qtTalk != null)
+                                && (qtTalk.TopicID.ID == 0)
+                                && (p.PreTargetsComplete(tar, parentQuest))
                                 )
                             {
                                 //Complete the target
@@ -751,7 +767,7 @@ namespace Gameplay.Entities
                                 break;
                             }
                         }
-                            
+
                         if (!p.HasUnfinishedTargets(parentQuest))  //all quest targets must be complete)  
                         {
                             if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
@@ -761,9 +777,9 @@ namespace Gameplay.Entities
                 #endregion
 
                 //TODO : Quest target topics player is eligible for by other conditions
-                          
+
             }
-            #endif
+#endif
 
             var topicsOut = GameData.Get.convDB.GetTopics(topicRefs);
             return topicsOut;
@@ -814,7 +830,7 @@ namespace Gameplay.Entities
             if ((prepareTopics != null) && (prepareTopics.Count > 0))
                 return PrepareTopics(p)[0];
             else {
-                Debug.Log("NpcCharacter.chooseBestTopic : Couldn't choose any suitable topic"); 
+                Debug.Log("NpcCharacter.chooseBestTopic : Couldn't choose any suitable topic");
                 return null;
             }
         }
@@ -823,7 +839,7 @@ namespace Gameplay.Entities
         #region Quests
 
         public bool tryGiveQuest(PlayerCharacter p, CT_ProvideQuest provideTopic)
-        { 
+        {
             //Handle quest accept response here
             var quest = GameData.Get.questDB.GetQuestFromContained(provideTopic.Accept.resource);
             if (quest == null)
@@ -886,7 +902,7 @@ namespace Gameplay.Entities
             List<int> output = new List<int>();
 
             //cycle quest topics
-            foreach(var questTopic in typeRef.QuestTopics)
+            foreach (var questTopic in typeRef.QuestTopics)
             {
                 Quest_Type relatedQuest = GameData.Get.questDB.GetQuestFromContained(questTopic);
                 if (relatedQuest != null)
@@ -901,7 +917,7 @@ namespace Gameplay.Entities
             return output;
         }
 
-#endregion
+        #endregion
 
         /*
         private bool containsID(List<SBResource> list, int id)

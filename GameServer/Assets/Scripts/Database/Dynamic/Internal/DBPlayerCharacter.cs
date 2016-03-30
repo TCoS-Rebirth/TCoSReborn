@@ -19,6 +19,7 @@ namespace Database.Dynamic.Internal
         public int[] ExtraBodyMindFocusAttributePoints = new int[4];
         public int Faction;
         public int[] FamePep = new int[2];
+        public float FamePoints;
         public int[] HealthMaxHealth = new int[2];
         public List<Game_Item> Items = new List<Game_Item>();
         public int LastZoneID;

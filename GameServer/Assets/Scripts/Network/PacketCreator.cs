@@ -559,7 +559,15 @@ namespace Network
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS);
-            m.WriteInt32(p.FamePoints);
+            m.WriteFloat(p.FamePoints);
+            return m;
+        }
+
+        public static Message S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(PlayerCharacter p)
+        {
+            var m = new Message(GameHeader.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP);
+            m.WriteInt32(p.RelevanceID);
+            m.WriteInt32(p.FameLevel);
             return m;
         }
 
@@ -659,6 +667,8 @@ namespace Network
             return m;
         }
 
+        #region Items
+
         public static Message S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM(Game_Item item, EItemChangeNotification notification)
         {
             //Fsv2cl_item
@@ -666,7 +676,7 @@ namespace Network
             m.WriteInt32(item.DBID);
             m.WriteInt32(item.Type.resourceID);
             m.WriteInt32(item.CharacterID);
-            m.WriteByte((byte) item.LocationType);
+            m.WriteByte((byte)item.LocationType);
             m.WriteInt32(item.LocationSlot);
             m.WriteInt32(item.LocationID);
             m.WriteInt32(item.StackSize);
@@ -674,18 +684,29 @@ namespace Network
             m.WriteByte(item.Color2);
             m.WriteInt32(item.Attuned);
             m.WriteByte(0); //dummy
-            m.WriteByte((byte) notification);
+            m.WriteByte((byte)notification);
             return m;
         }
 
         public static Message S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM(EItemLocationType locationType, int locationSlot, int locationID)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM);
-            m.WriteByte((byte) locationType);
+            m.WriteByte((byte)locationType);
             m.WriteInt32(locationSlot);
             m.WriteInt32(locationID);
             return m;
         }
+
+        public static Message S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(int amount)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY);
+
+            m.WriteInt32(amount);
+
+            return m;
+        }
+
+        #endregion
 
         #region CharacterSelect
 
@@ -772,7 +793,7 @@ namespace Network
             m.WriteInt32(0); //DebugFilters
             m.WriteInt32(p.Invisible ? 1 : 0); //visibility
             //statsStream
-            m.WriteFloat(p.FameLevel); //fame
+            m.WriteFloat(p.FamePoints); //fame points (not fame level!)
             m.WriteFloat(p.PepRank); //pep
             m.WriteInt32(0); //MayChoseClassBitfield
             m.WriteByte(p.RemainingAttributePoints); //remainingAttributePoints

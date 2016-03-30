@@ -380,12 +380,13 @@ namespace Database.Dynamic
                                 Position = DatabaseHelper.DeSerializeVector3(reader.GetString(8)),
                                 Rotation = DatabaseHelper.DeSerializeVector3(reader.GetString(9)),
                                 FamePep = DatabaseHelper.DeserializeIntList(reader.GetString(10), 2).ToArray(),
-                                HealthMaxHealth = DatabaseHelper.DeserializeIntList(reader.GetString(11), 2).ToArray(),
-                                BodyMindFocus = DatabaseHelper.DeserializeIntList(reader.GetString(12), 3).ToArray(),
-                                PhysiqueMoraleConcentration = DatabaseHelper.DeserializeFloatList(reader.GetString(13), 3).ToArray(),
-                                Money = reader.GetInt32(14),
-                                ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(15), 4).ToArray(),
-                                SerializedSkillDeck = reader.GetString(16)
+                                FamePoints = reader.GetInt32(11),
+                                HealthMaxHealth = DatabaseHelper.DeserializeIntList(reader.GetString(12), 2).ToArray(),
+                                BodyMindFocus = DatabaseHelper.DeserializeIntList(reader.GetString(13), 3).ToArray(),
+                                PhysiqueMoraleConcentration = DatabaseHelper.DeserializeFloatList(reader.GetString(14), 3).ToArray(),
+                                Money = reader.GetInt32(15),
+                                ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(16), 4).ToArray(),
+                                SerializedSkillDeck = reader.GetString(17)
                             };
                             _characterCache.Add(pc);
                             SetDBIDAllocated(pc.DBID);
@@ -532,6 +533,7 @@ namespace Database.Dynamic
                 ch.Position = pc.Position;
                 ch.Rotation = pc.Rotation.eulerAngles;
                 ch.FamePep = new int[2] {pc.FameLevel, pc.PepRank};
+                ch.FamePoints = pc.FamePoints;
                 ch.HealthMaxHealth = new int[2] {(int) pc.Health, pc.MaxHealth};
                 ch.BodyMindFocus = new int[3] {pc.Body, pc.Mind, pc.Focus};
                 ch.PhysiqueMoraleConcentration = new[] {pc.Physique, pc.Morale, pc.Concentration};

@@ -82,6 +82,7 @@ namespace Gameplay.Entities
             Faction = GameData.Get.factionDB.GetFaction(dbRef.Faction);
             FameLevel = dbRef.FamePep[0];
             PepRank = dbRef.FamePep[1];
+            FamePoints = dbRef.FamePoints;
             MaxHealth = dbRef.HealthMaxHealth[1]; //TODO: calculate value instead, later (from level & items etc)
             Health = dbRef.HealthMaxHealth[0];
             LastZoneID = (MapIDs) dbRef.LastZoneID;
@@ -572,6 +573,20 @@ namespace Gameplay.Entities
             }
         }
 
+        public void GiveInventory(Content_Inventory cInv)
+        {
+            foreach (var cItem in cInv.Items)
+            {   
+                
+                Game_Item gi = new Game_Item(cItem);
+
+                //TODO: Handle attuned status?
+                //if (attuned) { gi.Attuned = 1; }
+
+                ItemManager.AddItem(gi);
+            }                            
+        }
+
         #endregion
 
         #region Currency
@@ -588,24 +603,71 @@ namespace Gameplay.Entities
         {
             amount = Mathf.Abs(amount);
             money = money + amount;
+            Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
+            SendToClient(m);
         }
 
         public void TakeMoney(int amount)
         {
             amount = Mathf.Abs(amount);
             money = Mathf.Clamp(money - amount, 0, amount);
+            Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
+            SendToClient(m);
         }
 
         #endregion
 
         #region Leveling
 
-        int famePoints;
+        float famePoints;
 
-        public int FamePoints
+        public float FamePoints
         {
             get { return famePoints; }
             set { famePoints = value; }
+        }
+
+        protected override void OnFameChanged()
+        {
+            //TODO: grant attribute points, update stats, etc.
+            Message m = PacketCreator.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(this);
+            BroadcastRelevanceMessage(m);
+            SendToClient(m);
+        }
+
+        public void GiveFame(int points)
+        {
+            famePoints += points;
+            Message mUpdateFamePoints = PacketCreator.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(this);
+            SendToClient(mUpdateFamePoints);
+
+            //Return if max level
+            if (FameLevel >= GameConfiguration.CharacterDefaults.MaxFame) return;
+
+            //Check for levelup
+            var nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            while (FamePoints >= nextLevelData.requiredFamePoints)
+            {
+                SetFame(FameLevel + 1);
+                nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            }            
+            
+        }
+
+        public void GiveQuestFame(int points, int qpFrac)
+        {
+            
+
+            if (qpFrac <= 0) { GiveFame(points); }
+            else {
+                //TODO
+                //Valshaaran - experimental quest XP formula : (quest points value) * (qpFrac / player fame level)?
+                float multFactor = qpFrac / FameLevel;
+                GiveFame((int)(points * multFactor));
+
+                //This version just gives the unmodified points amount
+                //GiveFame(points);
+            }
         }
 
         int pepPoints;
@@ -725,6 +787,83 @@ namespace Gameplay.Entities
                 var m = PacketCreator.S2R_BASE_PAWN_SV2CLREL_DAMAGEACTIONS(this, 1f);
                 SendToClient(m);
             }
+        }
+
+        public void OnNPCKill(NpcCharacter npc)
+        {
+            var npct = npc.typeRef;
+
+            #region Quest progress
+            //Quest progress                
+            foreach (var curQuest in QuestData.curQuests)
+            {
+                var questObj = GameData.Get.questDB.GetQuest(curQuest.questID);
+
+                //Look for Destroy/Exterminate/Hunt/Kill targets
+                for (int n = 0; n < questObj.targets.Count;n++)
+                {
+                    var target = questObj.targets[n];
+                    //Break if target completed...
+                    if (QuestTargetIsComplete(questObj, n)) continue;
+
+                    //...or if  pretargets unfulfilled
+                    if (!PreTargetsComplete(target, questObj)) continue;
+
+                    if (target is QT_Destroy)
+                    {
+                        var tDest = (QT_Destroy)target;
+                        if (npct.resourceID == tDest.Target.resourceID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Destroy progress advancement failed");
+                            }
+                        }
+                    }
+                    else if (target is QT_Hunt)
+                    {
+                        var tHunt = (QT_Hunt)target;
+                        if (npct.resourceID == tHunt.NpcTargetID.ID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Hunt progress advancement failed");
+                            }
+                        }
+                    }
+
+                    else if (target is QT_Exterminate)
+                    {
+                        var tExt = (QT_Exterminate)target;
+                        if (npct.TaxonomyFaction.ID == tExt.FactionID.ID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Exterminate progress advancement failed");
+                            }
+                        }
+                    }
+                    else if (target is QT_Kill)
+                    {
+                        var tKill = (QT_Kill)target;
+                        foreach (var killType in tKill.NpcTargetIDs) {
+                            if (npct.resourceID == killType.ID)
+                            {
+                                if (!TryAdvanceQTKill(questObj, target, npct))
+                                {
+                                    Debug.Log("PlayerCharacter.OnNPCKill : QT_Kill progress advancement failed");
+                                }
+                                else break; //Ensures only 1 subtarget advances at a time
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region Grant PEP
+            //TODO
+            #endregion
         }
 
         #endregion
@@ -924,37 +1063,6 @@ namespace Gameplay.Entities
             }
             return false;
         }
-        public void RemoveQuest(int questID)
-        {
-            //int numTargets = QuestData.getNumTargets(questID);
-
-            //Remove quest on game server
-            QuestData.RemoveQuest(questID);
-
-            //Send message to remove from player log
-            var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
-            SendToClient(m);
-            return;
-        }
-        public void FinishQuest(Quest_Type quest)
-        {
-            //Set game server quest data to finished                
-            QuestData.FinishQuest(quest.resourceID);
-
-            //TODO:Give quest rewards to player
-            //Quest points
-
-            //Money
-
-            //Item rewards (Content_Inventory)
-
-            //Send complete quest packet            
-            Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);
-           // Message mQuestRemove = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(quest.resourceID);
-            SendToClient(mQuestFinish);
-            //SendToClient(mQuestRemove);
-        }
-
         public bool HasUnfinishedTargets(Quest_Type quest)
         {
             PlayerQuestProgress questProgress = null;
@@ -980,6 +1088,130 @@ namespace Gameplay.Entities
 
             return false;
         }
+        public void RemoveQuest(int questID)
+        {
+            //int numTargets = QuestData.getNumTargets(questID);
+
+            //Remove quest on game server
+            QuestData.RemoveQuest(questID);
+
+            //Send message to remove from player log
+            var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
+            SendToClient(m);
+            return;
+        }
+        public void FinishQuest(Quest_Type quest)
+        {
+            //Set game server quest data to finished                
+            QuestData.FinishQuest(quest.resourceID);
+
+            //Give quest rewards to player
+
+            //Quest points
+            GiveQuestFame(quest.questPoints.QP, quest.questPoints.QPFrac);
+
+            //Money
+            GiveMoney(quest.money);
+
+            //Item rewards (Content_Inventory)
+            GiveInventory(quest.rewardItems);         
+
+            //Send complete quest packet            
+            Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);
+           // Message mQuestRemove = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(quest.resourceID);
+            SendToClient(mQuestFinish);
+            //SendToClient(mQuestRemove);
+        }
+
+        /// <summary>
+        /// Attempts to advance a quest target's progress for both server and client 
+        /// </summary>
+        /// <param name="quest"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public bool TryAdvanceTarget(Quest_Type quest, QuestTarget target)
+        {
+            var playerTarProgress = QuestData.getProgress(quest.resourceID);
+            int tarIndex = quest.getTargetIndex(target.resource.ID);
+
+            int newValue = -1;
+            //TODO
+            //Handle other target type value setting
+            if (target is QT_Hunt
+                || target is QT_Exterminate
+                || target is QT_Destroy)
+                {
+                newValue = playerTarProgress.targetProgress[tarIndex] + 1;
+                }
+
+            //Do the update
+            if (newValue != -1) {
+
+                //Server quest data
+                QuestData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+
+                //Dispatch packet
+                Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
+                SendToClient(m);
+
+                //target onAdvance
+                target.onAdvance(newValue);
+
+                return true;
+            }
+            return false;
+        }
+        public bool TryAdvanceQTKill(Quest_Type quest, QuestTarget target, NPC_Type npcKilled)
+        {
+            var playerTarProgress = QuestData.getProgress(quest.resourceID);
+            int tarIndex = quest.getTargetIndex(target.resource.ID);
+
+            int newValue = -1;
+
+            if (target is QT_Kill)
+            {
+                var qtKill = target as QT_Kill;
+                for (int n = 0; n < qtKill.NpcTargetIDs.Count;n++)
+                {
+                    var targetNPC = qtKill.NpcTargetIDs[n];
+                    if (targetNPC.ID == npcKilled.resourceID)
+                    {
+                        var oldValue = playerTarProgress.targetProgress[tarIndex];
+                        //Valshaaran - try bit flag for each target, experimental
+                        //Bitwise OR with old progress value
+                        newValue = oldValue | (1 << n);
+
+                        //If value unchanged, continue 
+                        //- this will flag other unflagged kill targets of the same type
+                        if (newValue == oldValue)
+                        {
+                            newValue = -1;
+                            continue;
+                        }
+                        else break;
+                    }
+                }
+            }            
+
+            //Do the update
+            if (newValue != -1)
+                {
+
+                //Server quest data
+                QuestData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+
+                //Dispatch packet
+                Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
+                SendToClient(m);
+
+                //target onAdvance
+                target.onAdvance(newValue);
+
+                return true;
+                }
+            return false;
+        }
+
         #endregion
     }
 }

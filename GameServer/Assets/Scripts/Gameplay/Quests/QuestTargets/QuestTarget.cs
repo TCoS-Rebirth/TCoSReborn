@@ -19,6 +19,33 @@ namespace Gameplay.Quests.QuestTargets
         //TODO: method works out what progress value denotes that an input target is completed
         public virtual int GetCompletedProgressValue() { return 1;}
 
+        /// <summary>
+        /// Compares new progress value to completed progress,
+        /// and if the target is complete, calls onComplete();
+        /// </summary>
+        /// <param name="progressValue"></param>
+        public void onAdvance(int progressValue)
+        {
+            if (isComplete(progressValue)) onComplete();
+        }
+
+        public bool isComplete(int progressValue)
+        {
+            if (progressValue >= GetCompletedProgressValue()) return true;
+            else return false;
+        }
+
+        /// <summary>
+        /// NYI - will execute all the target's Complete Events
+        /// </summary>
+        protected void onComplete()
+        {
+            foreach (var completeEvent in CompleteEvents)
+            {
+                //TODO : Implement event execution
+            }
+        }
+
         //ConversationTopic attachedTopic;
     }
 }

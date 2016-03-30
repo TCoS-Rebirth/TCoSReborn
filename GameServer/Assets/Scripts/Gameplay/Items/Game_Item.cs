@@ -18,5 +18,15 @@ namespace Gameplay.Items
         public int StackSize = 1;
         public Item_Type Type;
         public float UseTime;
+
+        //Constructor from ContentItem object
+        public Game_Item(Content_Inventory.ContentItem cItem)
+        {
+
+            Color1 = cItem.Color1;
+            Color2 = cItem.Color2;
+            Type = cItem.Item;
+            StackSize = cItem.StackSize;
+        }
     }
 }

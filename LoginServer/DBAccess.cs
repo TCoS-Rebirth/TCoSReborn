@@ -59,9 +59,17 @@ namespace LoginServer
                 {
                     while (reader.Read())
                     {
-                        return new UserAccount(reader.GetInt32("ID"), reader.GetString("Name"), reader.GetString("Pass"), reader.GetString("Email"),
-                            reader.GetInt32("banned") == 1, (AccountPrivilege)reader.GetInt32("Level"), DateTime.Parse(reader.GetString("LastLogin")), reader.GetInt32("IsOnline") == 1,
-                            reader.GetInt32("SessionKey"), reader.GetInt32("LastUniverse"));
+                        return new UserAccount(
+                            reader.GetInt32("ID"),
+                            reader.GetString("Name"),
+                            reader.GetString("Pass"),
+                            reader.GetString("Email"),
+                            reader.GetInt32("banned") == 1,
+                            (AccountPrivilege)reader.GetInt32("Level"),
+                            DateTime.ParseExact(reader.GetString("LastLogin"),"MM/dd/yyyy HH:mm:ss", null),
+                            reader.GetInt32("IsOnline") == 1, 
+                            reader.GetInt32("SessionKey"), 
+                            reader.GetInt32("LastUniverse"));
                     }
                 }
             }
@@ -161,7 +169,7 @@ namespace LoginServer
                     cmd.Parameters.AddWithValue("@level", level);
                     cmd.Parameters.AddWithValue("@isOnline", 0);
                     cmd.Parameters.AddWithValue("@nowTime", DateTime.Now.ToString(CultureInfo.InvariantCulture));
-                    cmd.Parameters.AddWithValue("@sessKey", string.Empty);
+                    cmd.Parameters.AddWithValue("@sessKey", 0);
                     cmd.Parameters.AddWithValue("@lastUni", 0);
                     var count = cmd.ExecuteNonQuery();
                     if (count == 1)

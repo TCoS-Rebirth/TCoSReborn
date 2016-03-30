@@ -12,7 +12,20 @@ namespace Gameplay.Quests.QuestTargets
     {
         public List<SBResource> NpcTargetIDs;
 
-        public override int GetCompletedProgressValue() { return NpcTargetIDs.Count; }
+        public override int GetCompletedProgressValue() {
+
+            int output = 0;
+            
+            //Uses bit flag for each subtarget NPC
+            //So completed progress value has a bit set to 1 for each subtarget
+            for (int n = 0; n < NpcTargetIDs.Count; n++)
+            {
+                output = output | (1 << n);
+            }
+
+            return output;
+
+        }
     }
 }
 
