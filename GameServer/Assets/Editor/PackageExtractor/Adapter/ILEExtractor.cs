@@ -206,7 +206,8 @@ namespace PackageExtractor.Adapter
                     }
                     #endregion
 
-                    
+                        output.isEnabled = true;
+                        output.collisionType = ECollisionType.COL_Blocking;
 
                 }
             }
