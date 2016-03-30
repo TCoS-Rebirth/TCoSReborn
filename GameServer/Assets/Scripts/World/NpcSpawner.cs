@@ -4,6 +4,7 @@ using Gameplay.Entities;
 using Gameplay.Entities.NPCs;
 using UnityEngine;
 using World.Paths;
+using Common;
 
 namespace World
 {
@@ -66,6 +67,16 @@ namespace World
             {
                 return;
             }
+
+            //Valshaaran : temp hack to not spawn anything with position 0,0,0
+            if (    transform.position.x == 0.0
+                && transform.position.y == 0.0
+                && transform.position.z == 0.0)
+            {
+                triggeredSpawn = true;
+                return;
+            }
+
             TriggerSpawn(zone);
         }
 
@@ -74,13 +85,10 @@ namespace World
             if (spawns.Count == 0)
             {
                 var newSI = new SpawnInfo();
-                newSI.initialSpawnPoint = transform.position;
-                newSI.initialSpawnRotation = transform.rotation.eulerAngles;
-                newSI.linkedPatrolPoint = linkedPatrolPoint;
-                newSI.respawnInterval = respawnTimeout;
+                newSI.setupFromSpawner(this);
 
-                newSI.typeRef = npc;
-                // si.timeOfDespawn
+                //Valshaaran - experimental raycast spawning to address mid-air ConditionalEnemy spawns
+                //var rayCast = zone.Raycast(transform.position, Vector3.down, 20f);
 
                 var newNPC = NpcCharacter.Create(npc, transform.position, transform.rotation.eulerAngles, newSI);
                 if (newNPC == null)
@@ -101,6 +109,41 @@ namespace World
                     Debug.LogWarning("NPC could not be added to zone: " + npc.ShortName + " / " + z.ReadableName + ", removing");
                 }
             }
+        }
+
+        public virtual void DespawnAll(Zone z)
+        {
+            foreach (var spawn in spawns)
+            {
+                z.RemoveFromZone(spawn);
+                Destroy(spawn.gameObject);
+            }
+            spawns.Clear();
+        }
+
+        public virtual void ClearDead(Zone z)
+        {
+            for (int n = 0; n < spawns.Count; n++)
+            {
+                var spawn = spawns[n];
+                if (spawn.PawnState == EPawnStates.PS_DEAD)
+                {
+                    z.RemoveFromZone(spawn);
+                    Destroy(spawn.gameObject);
+                    spawns.RemoveAt(n);
+                    n--;
+                }
+            }
+        }
+
+        public int liveSpawns ()
+        {
+            int output = 0;
+            foreach (var spawn in spawns)
+            {
+                if (spawn.PawnState == EPawnStates.PS_ALIVE) output++;
+            }
+            return output;
         }
 
         //        {

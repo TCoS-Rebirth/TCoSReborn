@@ -587,7 +587,29 @@ namespace Network
 
         void HandleInteractiveElementInteraction(Message m)
         {
-            Debug.Log(Helper.ByteArrayToHex(m.Buffer));
+            //Debug.Log(Helper.ByteArrayToHex(m.Buffer));
+
+            var pc = m.GetAssociatedCharacter();
+            var elementRelID = m.ReadInt32();  //IE relevance ID
+            m.ReadInt32();  //player relevance ID
+            var menuOption = (ERadialMenuOptions)m.ReadInt32();
+
+            Debug.Log("WorldServer.HandleInteractiveElementInteraction : ");
+            Debug.Log("elementRelID = " + elementRelID);
+            //Debug.Log("playerRelID = " + playerRelID);
+            Debug.Log("menuOption = " + menuOption);
+
+            if (pc != null)
+            {
+                var ile = pc.ActiveZone.GetILE(elementRelID);
+                if (ile != null)
+                {
+                    Debug.Log("LevelObjectID = " + ile.LevelObjectID);
+                    //pc.OnInteract(ile, menuOption);
+                    ile.onUse(pc, menuOption);
+                }
+            }
+            
         }
 
         #endregion

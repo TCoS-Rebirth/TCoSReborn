@@ -53,7 +53,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
             if (!ReferenceEquals(owner.ActiveZone, null))
             {
-                owner.Position = owner.ActiveZone.Raycast(_currentPosition + Vector3.up, Vector3.down, 10f);
+                //Valshaaran - amended _currentPosition to owner.Position in 1st parameter
+                //Not sure if _currentPosition ought to be set to this elsewhere?
+                owner.Position = owner.ActiveZone.Raycast(owner.Position + Vector3.up, Vector3.down, 10f);
             }
             startPosition = _currentPosition;
             startOrientation = owner.Rotation;

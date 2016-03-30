@@ -505,7 +505,9 @@ namespace Gameplay.Entities
         {
             var result = new SkillApplyResult(source, this, s);
             result.damageCaused = Mathf.Abs((int) SetHealth(Health - amount));
-            if (Mathf.Approximately(Health, 0))
+
+            //Valshaaran - added not already dead condition
+            if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Health, 0))
             {
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(source);

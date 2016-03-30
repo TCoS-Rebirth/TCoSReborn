@@ -531,7 +531,8 @@ namespace PackageExtractor.Adapter
                         var condPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(condProp.GetValue<string>());
                         recc.Condition = getReq(condPropObj, resources, pW, assetObj);
                         recc.Condition.name = reqObj.Name + "." + condPropObj.Name;
-                        AssetDatabase.AddObjectToAsset(recc.Condition, assetObj);
+                        if (assetObj != null)
+                            AssetDatabase.AddObjectToAsset(recc.Condition, assetObj);
                     }
                     var recReqProp = reqObj.FindProperty("Requirement");
                     if (recReqProp != null)
@@ -539,7 +540,8 @@ namespace PackageExtractor.Adapter
                         var recReqPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(recReqProp.GetValue<string>());
                         recc.Requirement = getReq(recReqPropObj, resources, pW, assetObj);
                         recc.Requirement.name = reqObj.Name + "." + recReqPropObj.Name;
-                        AssetDatabase.AddObjectToAsset(recc.Requirement, assetObj);
+                        if (assetObj != null)
+                            AssetDatabase.AddObjectToAsset(recc.Requirement, assetObj);
                     }
                     output = recc;
                     break;
@@ -621,7 +623,8 @@ namespace PackageExtractor.Adapter
                         var reqnotObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqNotProp.GetValue<string>());
                         reqnot.Requirement = getReq(reqnotObj, resources, pW, assetObj);
                         reqnot.Requirement.name = reqObj.Name + "." + reqnotObj.Name;
-                        AssetDatabase.AddObjectToAsset(reqnot.Requirement, assetObj);
+                        if (assetObj != null)
+                            AssetDatabase.AddObjectToAsset(reqnot.Requirement, assetObj);
                     }
                     output = reqnot;
                     break;
@@ -658,7 +661,8 @@ namespace PackageExtractor.Adapter
                             var reqListItem = getReq(reqorObj, resources, pW, assetObj);
                             reqListItem.name = reqObj.Name + "." + reqorObj.Name;
                             reqor.Requirements.Add(reqListItem);
-                            AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
+                            if (assetObj != null)
+                                AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
                         }
                     }
                     output = reqor;
@@ -690,6 +694,8 @@ namespace PackageExtractor.Adapter
                     string tempQAName;
                     ReadString(reqObj, "RequiredQuest", out tempQAName);
                     reqqa.RequiredQuest = resources.GetResource(pW.Name, tempQAName);
+                    if (reqqa.RequiredQuest == null)
+                        reqqa.RequiredQuest = resources.GetResource(tempQAName);
                     output = reqqa;
                     break;
 
@@ -730,6 +736,8 @@ namespace PackageExtractor.Adapter
                     string tempTA;
                     ReadString(reqObj, "quest", out tempTA);
                     reqta.quest = resources.GetResource(pW.Name, tempTA);
+                    if (reqta.quest == null)
+                        reqta.quest = resources.GetResource(tempTA);
                     ReadInt(reqObj, "objective", out reqta.objective);
                     output = reqta;
                     break;
@@ -782,6 +790,7 @@ namespace PackageExtractor.Adapter
             ReadInt(reqObj, "ControlLocationX", out output.ControlLocationX);
             ReadInt(reqObj, "ControlLocationY", out output.ControlLocationY);
 
+            output.name = reqObj.Name;
             return output;
         }
         /*
@@ -818,7 +827,8 @@ namespace PackageExtractor.Adapter
                     var newReq = getReq(randReqObj, resources, pW, assetObj);
                     newReq.name = reqObj.Name + "." + randReqObj.Name;
                     output.Requirements.Add(newReq);
-                    AssetDatabase.AddObjectToAsset(newReq, assetObj);
+                    if (assetObj != null)
+                        AssetDatabase.AddObjectToAsset(newReq, assetObj);
                 }
             }
             return output;
@@ -965,7 +975,8 @@ namespace PackageExtractor.Adapter
                             var reqListItem = getReq(reqInfoObj, res, pW, assetObj);
                             reqListItem.name = eventObject.Name + "." + reqInfoObj.Name;
                             evpa.Requirements.Add(reqListItem);
-                            AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
+                            if (assetObj != null)
+                                AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
                         }
                     }
                     var paAction = eventObject.FindProperty("PartyAction");

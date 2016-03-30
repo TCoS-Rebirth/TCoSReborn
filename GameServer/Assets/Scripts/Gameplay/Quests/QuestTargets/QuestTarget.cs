@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Database.Static;
 using Gameplay.Events;
 using UnityEngine;
+using Gameplay.Entities;
 
 namespace Gameplay.Quests.QuestTargets
 {
@@ -24,9 +25,9 @@ namespace Gameplay.Quests.QuestTargets
         /// and if the target is complete, calls onComplete();
         /// </summary>
         /// <param name="progressValue"></param>
-        public void onAdvance(int progressValue)
+        public void onAdvance(PlayerCharacter p, int progressValue)
         {
-            if (isComplete(progressValue)) onComplete();
+            if (isComplete(progressValue)) onComplete(p);
         }
 
         public bool isComplete(int progressValue)
@@ -36,13 +37,13 @@ namespace Gameplay.Quests.QuestTargets
         }
 
         /// <summary>
-        /// NYI - will execute all the target's Complete Events
+        /// Execute all the target's Complete Events
         /// </summary>
-        protected void onComplete()
+        protected void onComplete(PlayerCharacter p)
         {
             foreach (var completeEvent in CompleteEvents)
             {
-                //TODO : Implement event execution
+                completeEvent.Execute(p);                
             }
         }
 

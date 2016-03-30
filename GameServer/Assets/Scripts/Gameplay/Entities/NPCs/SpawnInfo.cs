@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using World;
 using World.Paths;
 
 namespace Gameplay.Entities.NPCs
@@ -31,5 +32,33 @@ namespace Gameplay.Entities.NPCs
         [Header("Runtime"), ReadOnly] public float timeOfDespawn;
 
         public NPC_Type typeRef;
+
+        public void setupFromSpawner(NpcSpawner spawner)
+        {
+            initialSpawnPoint = spawner.transform.position;
+            initialSpawnRotation = spawner.transform.rotation.eulerAngles;
+
+            linkedPatrolPoint = spawner.linkedPatrolPoint;
+            referenceAiStateMachine = spawner.referenceAiStatemachineName;
+            referencelinkedScripts = spawner.referenceScriptNames;
+            //respawnInterval?
+            typeRef = spawner.npc;
+            timeOfDespawn = spawner.respawnTimeout; //Valshaaran - not sure?
+
+        }
+
+        public void setupFromSpawner(WildlifeSpawner spawner)
+        {
+            setupFromSpawner((NpcSpawner) spawner);
+
+            levelMax = spawner.LevelMax;
+            levelMin = spawner.LevelMin;
+            maxSpawnDistance = spawner.MaxSpawnDistance;
+            respawnInterval = spawner.RespawnTime;
+            spawnerCategory = ESpawnerCategory.Wildlife;            
+            
+        }
+
+        //TODO: setup from spawn deployer?
     }
 }

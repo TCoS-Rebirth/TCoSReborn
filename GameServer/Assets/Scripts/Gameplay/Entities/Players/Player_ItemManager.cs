@@ -224,5 +224,20 @@ namespace Gameplay.Entities.Players
         {
             items = unsortedItems;
         }
+
+        public bool HasItemStack(Content_Inventory.ContentItem item)
+        {
+            int count = 0;
+
+            foreach (var i in items)
+            {
+                if (i.Type.resourceID == item.itemID)
+                {
+                    count += i.StackSize;
+                    if (count >= item.StackSize) return true;
+                }
+            }
+            return false;
+        }
     }
 }

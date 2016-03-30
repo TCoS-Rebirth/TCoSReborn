@@ -1,5 +1,6 @@
 ﻿using Common;
 using Gameplay.Entities;
+using Gameplay.Entities.Interactives;
 using World;
 
 namespace ZoneScripts

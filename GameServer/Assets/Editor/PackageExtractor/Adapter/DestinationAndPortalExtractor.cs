@@ -6,6 +6,7 @@ using UnityEngine;
 using Utility;
 using World;
 using Object = UnityEngine.Object;
+using Common.UnrealTypes;
 
 namespace PackageExtractor.Adapter
 {
@@ -68,10 +69,16 @@ namespace PackageExtractor.Adapter
                 if (wpo.sbObject.ClassName.Replace("\0", string.Empty).EndsWith("PlayerStart", StringComparison.Ordinal))
                 {
                     Vector3 loc;
+                    Rotator unrealRot;
+                    Quaternion rot = new Quaternion(); 
                     var navTag = "";
                     if (ReadVector3(wpo, "Location", out loc))
                     {
                         loc = UnitConversion.ToUnity(loc);
+                    }
+                    if (ReadRotator(wpo, "Rotation", out unrealRot))
+                    {
+                        rot = UnitConversion.ToUnity(unrealRot);                           
                     }
                     ReadString(wpo, "NavigationTag", out navTag);
                     if (navTag.Length <= 1)
@@ -83,6 +90,7 @@ namespace PackageExtractor.Adapter
                     dest.NavigationTag = navTag;
                     go.transform.parent = destHolder;
                     go.transform.position = loc;
+                    go.transform.rotation = rot;
                     dest.IsRespawn = navTag.Contains("Respawn") | navTag.Contains("respawn");
                 }
             }

@@ -4,7 +4,6 @@ using Common.UnrealTypes;
 using Database.Dynamic.Internal;
 using Gameplay.Conversations;
 using Gameplay.Entities;
-using Gameplay.Entities.NPCs;
 using Gameplay.Entities.Players;
 using Gameplay.Items;
 using Gameplay.Skills;
@@ -13,6 +12,7 @@ using Utility;
 using World;
 using Gameplay.Quests;
 using Database.Static;
+using Gameplay.Entities.Interactives;
 
 namespace Network
 {
@@ -191,20 +191,6 @@ namespace Network
             {
                 m.WriteInt32(npc.Effects[i].resourceID);
             }
-            return m;
-        }
-
-        public static Message S2C_INTERACTIVELEVELELEMENT_ADD(InteractiveLevelElement ie)
-        {
-            var m = new Message(GameHeader.S2C_INTERACTIVELEVELELEMENT_ADD);
-            m.WriteInt32(ie.RelevanceID); //relevanceID
-            m.WriteInt32(ie.LevelObjectID); //leveObjectID
-            m.WriteInt32(ie.IsEnabled ? 1 : 0); //isEnabled
-            m.WriteInt32(ie.Invisible ? 1 : 0); //isHidden
-            m.WriteRotator(UnitConversion.ToUnreal(ie.Rotation)); //NetRotation
-            m.WriteVector3(UnitConversion.ToUnreal(ie.Position)); //NetLocation
-            m.WriteByte((byte) ie.CollisionType); //collisionType
-            m.WriteInt32(0);
             return m;
         }
 
@@ -666,6 +652,47 @@ namespace Network
             m.WriteInt32(ch.GetEffectiveMoveSpeed());
             return m;
         }
+
+        #region Interactives
+
+        public static Message S2C_INTERACTIVELEVELELEMENT_ADD(InteractiveLevelElement ie)
+        {
+            var m = new Message(GameHeader.S2C_INTERACTIVELEVELELEMENT_ADD);
+            m.WriteInt32(ie.RelevanceID); //element relevanceID
+            m.WriteInt32(ie.LevelObjectID); //leveObjectID
+            m.WriteInt32(ie.IsEnabled ? 1 : 0); //isEnabled
+            m.WriteInt32(ie.Invisible ? 1 : 0); //isHidden
+            m.WriteRotator(UnitConversion.ToUnreal(ie.Rotation)); //NetRotation
+            m.WriteVector3(UnitConversion.ToUnreal(ie.Position)); //NetLocation
+            m.WriteByte((byte)ie.CollisionType); //collisionType
+            m.WriteInt32(0);
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION(InteractiveLevelElement ie, ERadialMenuOptions mainOpt, ERadialMenuOptions subOpt, Character c)
+        {
+            var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION);
+
+            m.WriteInt32(ie.RelevanceID);   //element relevance ID?
+            m.WriteInt32((int)mainOpt);     //option index?
+            m.WriteInt32((int)subOpt);      //suboption index?
+            m.WriteInt32(0);                //bool aReverse?
+            m.WriteInt32(c.RelevanceID);    //interacting pawn relevance ID?                              
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION(InteractiveLevelElement ie, ERadialMenuOptions mainOpt, ERadialMenuOptions subOpt, Character c)
+        {
+            var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION);
+
+            m.WriteInt32(ie.RelevanceID);   //element relevance ID?
+            m.WriteInt32((int)mainOpt);     //option index?
+            m.WriteInt32((int)subOpt);      //suboption index?
+            m.WriteInt32(0);                //bool aReverse?                           
+            return m;
+        }
+
+        #endregion
 
         #region Items
 

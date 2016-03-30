@@ -14,6 +14,7 @@ using UnityEngine;
 using Utility;
 using World;
 using Gameplay.Quests.QuestTargets;
+using Gameplay.Entities.Interactives;
 
 namespace Gameplay.Entities
 {
@@ -587,6 +588,18 @@ namespace Gameplay.Entities
             }                            
         }
 
+        public bool HasInventory(Content_Inventory cInv)
+        {
+            foreach (var cItem in cInv.Items)
+            {
+                if (!ItemManager.HasItemStack(cItem))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         #endregion
 
         #region Currency
@@ -1063,6 +1076,7 @@ namespace Gameplay.Entities
             }
             return false;
         }
+
         public bool HasUnfinishedTargets(Quest_Type quest)
         {
             PlayerQuestProgress questProgress = null;
@@ -1133,13 +1147,13 @@ namespace Gameplay.Entities
         {
             var playerTarProgress = QuestData.getProgress(quest.resourceID);
             int tarIndex = quest.getTargetIndex(target.resource.ID);
-
             int newValue = -1;
             //TODO
             //Handle other target type value setting
             if (target is QT_Hunt
                 || target is QT_Exterminate
-                || target is QT_Destroy)
+                || target is QT_Destroy
+                || target is QT_Take)
                 {
                 newValue = playerTarProgress.targetProgress[tarIndex] + 1;
                 }
@@ -1155,7 +1169,7 @@ namespace Gameplay.Entities
                 SendToClient(m);
 
                 //target onAdvance
-                target.onAdvance(newValue);
+                target.onAdvance(this, newValue);
 
                 return true;
             }
@@ -1205,7 +1219,7 @@ namespace Gameplay.Entities
                 SendToClient(m);
 
                 //target onAdvance
-                target.onAdvance(newValue);
+                target.onAdvance(this, newValue);
 
                 return true;
                 }

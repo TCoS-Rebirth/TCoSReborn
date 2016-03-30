@@ -31,6 +31,7 @@ namespace Gameplay.Entities
         public int RelevanceID
         {
             get { return relevanceID; }
+            set { relevanceID = value; }    //TODO: Valshaaran - Remove this when ILE dummy relevance ID stuff is resolved properly
         }
 
         public string Name
@@ -317,6 +318,18 @@ namespace Gameplay.Entities
             for (var i = 0; i < relevantObjects.Count; i++)
             {
                 if (relevantObjects[i] is T)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool ObjectIsRelevant(Entity e)
+        {
+            for (var i = 0; i < relevantObjects.Count; i++)
+            {
+                if (e.RelevanceID ==  relevantObjects[i].RelevanceID)
                 {
                     return true;
                 }

@@ -9,6 +9,7 @@ using Network;
 using UnityEngine;
 using Utility;
 using ZoneScripts;
+using Gameplay.Entities.Interactives;
 
 namespace World
 {
@@ -138,7 +139,7 @@ namespace World
             //foreach (WildlifeSpawner ws in npcSpawnerHolder.GetComponentsInChildren<NpcSpawner>())
             //{
             //TODO: properly setup all wildlife spawners
-            //}
+            //}            
 
             yieldafter = 0;
             foreach (var ie in interactiveElementHolder.GetComponentsInChildren<InteractiveLevelElement>())
@@ -279,6 +280,7 @@ namespace World
             element.ActiveZone = this;
             _script.OnInteractiveElementAdded(element);
             element.transform.parent = interactiveElementHolder;
+            element.AssignRelID();
             return true;
         }
 
@@ -452,6 +454,7 @@ namespace World
         [SerializeField] Transform playerHolder;
 
         [SerializeField] Transform interactiveElementHolder;
+        public Transform InteractiveElementHolder { get { return interactiveElementHolder; } }
 
         [SerializeField] Transform destinationsHolder;
 
@@ -577,6 +580,18 @@ namespace World
                 if (_npcs[i].RelevanceID == relID)
                 {
                     return _npcs[i];
+                }
+            }
+            return null;
+        }
+
+        public InteractiveLevelElement GetILE(int relID)
+        {
+            for (var i = _interactiveElements.Count; i-- > 0;)
+            {
+                if (_interactiveElements[i].RelevanceID == relID)
+                {
+                    return _interactiveElements[i];
                 }
             }
             return null;

@@ -593,6 +593,8 @@ namespace PackageExtractor.Adapter
 
             var qtTake = ScriptableObject.CreateInstance<QT_Take>();
 
+            ReadInt(tarWPO, "Amount", out qtTake.Amount);
+
             //get Content_Inventory class WPO where package contains WPO name
             WrappedPackageObject cargoWPO = findWPOFromObjProp(tarWPO, "Cargo");
             qtTake.Cargo = getContentInventory(cargoWPO);

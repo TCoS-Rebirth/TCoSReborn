@@ -98,8 +98,10 @@ namespace Gameplay.Entities
         {
             RespawnInfo.typeRef = typeRef;
             ClassType = typeRef.NPCClassClassification;
-            //Name = typeRef.ShortName;
-            Name = typeRef.name;
+           // if (typeRef.ShortName != null) transform.name = Name = typeRef.ShortName;
+            //else if (typeRef.LongName != null) transform.name = Name = typeRef.LongName;
+            transform.name = Name = typeRef.name;
+
             //NPC_Type with level 0 indicates random level generation by spawner
             if (typeRef.FameLevel != 0)
             {
@@ -132,10 +134,19 @@ namespace Gameplay.Entities
             }
 
             //TODO: Attach behaviour corresponding to referenced AI state machine (Killer, passive etc.)
-
             if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
             {
-                gameObject.AddComponent<KillerBehaviour>();
+                //Valshaaran - placeholder - add proper critter flag somewhere?
+                //If AI state machine reference is critter machine, set critter
+                //Pacifies the killer bunny rabbits =p
+                if (RespawnInfo.referenceAiStateMachine != null
+                    && RespawnInfo.referenceAiStateMachine.Contains("Critter"))
+                {
+                    gameObject.AddComponent<CritterBehaviour>();
+                }
+                else {
+                    gameObject.AddComponent<KillerBehaviour>();
+                }
             }
             else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Deployer)
             {
@@ -234,6 +245,19 @@ namespace Gameplay.Entities
             {
                 var sourcePlayer = source as PlayerCharacter;
                 sourcePlayer.OnNPCKill(this);
+
+                //If player has team, dispatch to relevant team members other than player
+                if (sourcePlayer.Team != null)
+                {
+                    foreach (var teamMember in sourcePlayer.Team.Members)
+                    {
+                        if (teamMember.RelevanceID == sourcePlayer.RelevanceID) continue;   //not self
+                        if (source.ObjectIsRelevant(this))
+                        {
+                            teamMember.OnNPCKill(this);
+                        }
+                    }
+                }
             }
         }
 
@@ -249,8 +273,11 @@ namespace Gameplay.Entities
         protected override void OnEnterZone(Zone z)
         {
             base.OnEnterZone(z);
+
             //drop to ground and fixate rotation
+            /*Valshaaran - experimentally done in spawners to prevent dropping in from air
             Position = z.Raycast(transform.position, Vector3.down, 10f) + Vector3.up * BodyCenterHeight;
+            */
             _destination = Position;
             SetFocusLocation(transform.position + transform.forward);
         }
@@ -577,13 +604,17 @@ namespace Gameplay.Entities
                                 source.ReceiveRelevanceMessage(this, m);
 
                                 //QuestTarget.onAdvance()
-                                target.onAdvance(1);
+                                target.onAdvance(source, 1);
                                 break;
                             }
                         }
                     }
                 }
             }
+            #endregion
+
+            #region QT_Fedex
+
             #endregion
 
             #region Finish topic
@@ -716,6 +747,10 @@ namespace Gameplay.Entities
                 }
                 #endregion
 
+                #region QT_Fedex Thanks handling
+                //TODO
+                #endregion
+
                 #region Provide
                 //Provide quest topics
 
@@ -750,9 +785,10 @@ namespace Gameplay.Entities
                     {
                         //check player currently has quest
 
-                        //Null-topic QT_Talk is handled here so that is is fulfilled when the quest targets are checked below
+                        
                         foreach (var tar in parentQuest.targets)
                         {
+                            //Null-topic QT_Talk is handled here so that is is fulfilled when the quest targets are checked below
                             var qtTalk = tar as QT_Talk;
                             if ((qtTalk != null)
                                 && (qtTalk.TopicID.ID == 0)
@@ -764,6 +800,21 @@ namespace Gameplay.Entities
                                 p.QuestData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
                                 var mNullQTTalk = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
                                 p.ReceiveRelevanceMessage(this, mNullQTTalk);
+                                break;
+                            }
+
+                            //Null-recipient QT_Fedex Thanks
+                            var qtFedex = tar as QT_Fedex;
+                            if ((qtFedex != null)
+                                && (qtFedex.NpcRecipientID.ID == 0)
+                                && (p.PreTargetsComplete(tar, parentQuest))
+                                //TODO : Proper serverside inventory check needed?
+                                ) {
+
+                                int tarIndex = parentQuest.getTargetIndex(tar.resource.ID);
+                                p.QuestData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
+                                var mNullQTFedex = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
+                                p.ReceiveRelevanceMessage(this, mNullQTFedex);
                                 break;
                             }
                         }
@@ -792,7 +843,16 @@ namespace Gameplay.Entities
             //Retrieve non-quest topics
             var choices = GameData.Get.convDB.GetTopics(typeRef.Topics);
 
-            //Pick a topic of type Chat
+            //Talk topic (QT_Talk?)
+            foreach (var topic in choices)
+            {
+                if (topic.TopicType == EConversationType.ECT_Talk)
+                {
+                    return topic;
+                }
+            }
+
+            //Otherwise pick a topic of type Chat
             var freeTopics = new List<ConversationTopic>();
             foreach (var topic in choices)
             {
@@ -816,14 +876,6 @@ namespace Gameplay.Entities
                 }
             }
 
-            //Otherwise talk topic (QT_Talk?)
-            foreach (var topic in choices)
-            {
-                if (topic.TopicType == EConversationType.ECT_Talk)
-                {
-                    return topic;
-                }
-            }
 
             //TODO : Placeholder - Otherwise preparetopics[0]
             List<ConversationTopic> prepareTopics = PrepareTopics(p);

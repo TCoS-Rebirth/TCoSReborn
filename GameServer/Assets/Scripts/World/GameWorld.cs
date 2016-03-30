@@ -11,6 +11,7 @@ using Database.Static;
 using Gameplay.Entities;
 using Network;
 using UnityEngine;
+using Gameplay.Entities.Interactives;
 
 namespace World
 {

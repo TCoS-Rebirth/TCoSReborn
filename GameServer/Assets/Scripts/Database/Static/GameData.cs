@@ -9,6 +9,8 @@ using Gameplay.Entities.NPCs;
 using Gameplay.Items;
 using Gameplay.Quests;
 using Gameplay.Skills;
+using Gameplay.Entities.Interactives;
+using World;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -93,6 +95,7 @@ namespace Database.Static
                 callback(false);
                 yield break;
             }
+            yield return null;
             levelProg = AssetDatabase.LoadAssetAtPath<LevelProgression>(
                 "Assets/GameData/SBResources/LevelProgression.asset"
             );
