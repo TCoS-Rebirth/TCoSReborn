@@ -133,14 +133,18 @@ namespace Gameplay.Entities
                 ActiveSkillDeck.LoadForNPC(this);
             }
 
-            //TODO: Attach behaviour corresponding to referenced AI state machine (Killer, passive etc.)
-            if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
+            //TODO: Make AI state machine an enumerated flag for efficiency(Killer, passive etc.)
+            if (    RespawnInfo.referenceAiStateMachine != null
+                &&  RespawnInfo.referenceAiStateMachine.Contains("Kill")) {
+                gameObject.AddComponent<KillerBehaviour>();
+            }
+            else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
             {
-                //Valshaaran - placeholder - add proper critter flag somewhere?
+                
                 //If AI state machine reference is critter machine, set critter
                 //Pacifies the killer bunny rabbits =p
                 if (RespawnInfo.referenceAiStateMachine != null
-                    && RespawnInfo.referenceAiStateMachine.Contains("Critter"))
+                &&  RespawnInfo.referenceAiStateMachine.Contains("Critter"))
                 {
                     gameObject.AddComponent<CritterBehaviour>();
                 }

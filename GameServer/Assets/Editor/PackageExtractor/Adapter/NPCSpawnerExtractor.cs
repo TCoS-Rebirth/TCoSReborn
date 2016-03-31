@@ -29,9 +29,9 @@ namespace PackageExtractor.Adapter
             targetZone = EditorGUILayout.ObjectField(targetZone, typeof (Zone), true) as Zone;
         }
 
-        NPC_Type FindNPCType(string fullName)
+        NPC_Type FindNPCType(SBResource res)
         {
-            var parts = fullName.Split('.');
+            var parts = res.Name.Split('.');
             if (parts.Length > 1)
             {
                 var col = AssetDatabase.LoadAssetAtPath<NPCCollection>("Assets/GameData/NPCs/" + parts[0] + ".asset");
@@ -39,7 +39,7 @@ namespace PackageExtractor.Adapter
                 {
                     for (var i = 0; i < col.types.Count; i++)
                     {
-                        if (col.types[i].name.Equals(parts[parts.Length - 1]))
+                        if (col.types[i].resourceID == res.ID)
                         {
                             return col.types[i];
                         }
@@ -74,10 +74,10 @@ namespace PackageExtractor.Adapter
                 {
                     var go = new GameObject(wpo.Name.Replace("\0", string.Empty));
                     var npc = go.AddComponent<NpcSpawner>();
-                    string npcTypeName;
-                    if (ReadString(wpo, "NPCType", out npcTypeName))
+                    SBResource npcTypeRes;
+                    if (ReadObject(wpo, "NPCType",resources, out npcTypeRes))
                     {
-                        npc.npc = FindNPCType(npcTypeName);
+                        npc.npc = FindNPCType(npcTypeRes);
                     }
                     if (npc.npc == null)
                     {
@@ -170,10 +170,10 @@ namespace PackageExtractor.Adapter
                 {
                     var go = new GameObject(wpo.Name.Replace("\0", string.Empty));
                     var npc = go.AddComponent<WildlifeSpawner>();
-                    string npcTypeName;
-                    if (ReadString(wpo, "NPCType", out npcTypeName))
+                    SBResource npcTypeRes;
+                    if (ReadObject(wpo, "NPCType", resources, out npcTypeRes))
                     {
-                        npc.npc = FindNPCType(npcTypeName);
+                        npc.npc = FindNPCType(npcTypeRes);
                     }
                     if (npc.npc == null)
                     {

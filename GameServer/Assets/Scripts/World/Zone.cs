@@ -462,6 +462,8 @@ namespace World
 
         [SerializeField] Transform npcSpawnerHolder;
 
+        [SerializeField] Transform triggersHolder;
+
         #endregion
 
         #region RetrieverFunctions

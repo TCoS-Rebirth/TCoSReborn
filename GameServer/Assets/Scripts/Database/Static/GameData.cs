@@ -385,7 +385,8 @@ namespace Database.Static
                         }
                     }
                 }
-                throw new Exception("Failed to get ConversationTopic with resource ID " + topicRes.ID);
+                Debug.Log("Failed to get ConversationTopic with resource ID " + topicRes.ID);
+                return null;
             }
 
             public List<ConversationTopic> GetTopics(List<SBResource> topicResList)

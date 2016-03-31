@@ -16,7 +16,6 @@ namespace PackageExtractor.Adapter
     {
         List<SkillEffectCollection> avEffectCollections = new List<SkillEffectCollection>();
 
-        ConvCollection convCol = ScriptableObject.CreateInstance<ConvCollection>();
         //ConvCollection conversationsGP;
 
         List<NPC_Type> extractedNPCs = new List<NPC_Type>();
@@ -73,9 +72,6 @@ namespace PackageExtractor.Adapter
         void WalkStashStack(PackageWrapper p, SBResources resources, SBLocalizedStrings localizedStrings)
         {
             extractedNPCs.Clear();
-            convCol = ScriptableObject.CreateInstance<ConvCollection>();
-            //Create the conversations asset
-            AssetDatabase.CreateAsset(convCol, path + "Conversations/" + p.Name + ".asset");
 
             var collection = ScriptableObject.CreateInstance<NPCCollection>();
             AssetDatabase.CreateAsset(collection, path + "NPCs/" + p.Name + ".asset");
@@ -118,11 +114,6 @@ namespace PackageExtractor.Adapter
                 }
             }
             */
-
-            if (convCol.topics.Count == 0)
-                AssetDatabase.DeleteAsset(path + "Conversations/" + p.Name + ".asset");
-            else
-                EditorUtility.SetDirty(convCol);
 
             EditorUtility.SetDirty(collection);
         }
@@ -363,11 +354,6 @@ namespace PackageExtractor.Adapter
                         //if (newTopic != null)
                         //{
                         npc.Topics.Add(newTopicRef);
-
-                        //Add full topic to conversations database 
-                        //convCol.topics.Add(newTopic);
-                        //AssetDatabase.AddObjectToAsset(newTopic, convCol);
-
 
                         //}
                     }

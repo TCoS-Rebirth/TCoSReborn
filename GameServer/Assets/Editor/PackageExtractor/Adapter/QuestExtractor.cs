@@ -87,6 +87,11 @@ namespace PackageExtractor.Adapter
 
             questCol = ScriptableObject.CreateInstance<QuestCollection>();
             //Create new assets
+
+            if (AssetDatabase.LoadAssetAtPath<QuestCollection>(gameDataPath + "Quests/" + saveName + ".asset"))
+            {
+                AssetDatabase.DeleteAsset(gameDataPath + "Quests/" + saveName + ".asset");
+            }
             AssetDatabase.CreateAsset(questCol, gameDataPath + "Quests/" + saveName + ".asset");
 
             //Populate quest collection with quest chain skeletons first (name, localized name ID, quest area)

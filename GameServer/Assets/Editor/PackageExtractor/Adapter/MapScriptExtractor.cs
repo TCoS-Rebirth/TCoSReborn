@@ -10,6 +10,7 @@ using Gameplay.RequirementSpecifier;
 using Utility;
 using System.IO;
 using UnityEditor;
+using Gameplay.Events;
 
 namespace PackageExtractor.Adapter
 {
@@ -63,6 +64,18 @@ namespace PackageExtractor.Adapter
                         Log("Failed to fully link up" + wpo.Name, Color.red);
                     }
                 }
+
+                #region Triggers
+                else if (wpo.sbObject.ClassName.EndsWith("Content_Trigger"))
+                {
+                    
+                    if(!getContentTrigger(wpo, resources, pW))
+                    {
+                        Log("Failed to extract ContentTrigger" + wpo.Name, Color.red);
+                    }
+
+                }
+                #endregion
             }
         }
 
@@ -151,6 +164,66 @@ namespace PackageExtractor.Adapter
             return true;                     
         }
 
+
+        protected bool getContentTrigger(WrappedPackageObject wpo, SBResources resources, PackageWrapper pW)
+        {
+            var triggersHolder = targetZone.transform.FindChild("Triggers");
+            if (!triggersHolder) return false;
+            for (var i = triggersHolder.childCount; i-- > 0;)
+            {
+                var child = triggersHolder.GetChild(i);
+                if (child.GetComponent<Trigger>() != null)
+                {
+                    Object.DestroyImmediate(child.gameObject);
+                }
+            }
+
+            var go = new GameObject(wpo.Name.Replace("\0", string.Empty));
+            var trigger = go.AddComponent<Trigger>();
+            go.transform.parent = triggersHolder;
+
+            //Get requirements
+            trigger.Requirements = new List<Content_Requirement>();
+            foreach (var prop in wpo.sbObject.IterateProperties())
+            {
+                if (prop.Name == "Requirements")
+                {
+                    foreach (var reqProp in prop.IterateInnerProperties())
+                    {
+                        var reqWPO = FindReferencedObject(reqProp);
+                        trigger.Requirements.Add(getReq(reqWPO, resources, pW, null));
+                    }
+                }
+            }
+
+            //Actions
+            trigger.Actions = new List<Content_Event>();
+            foreach (var prop in wpo.sbObject.IterateProperties())
+            {
+                if (prop.Name == "Actions")
+                {
+                    foreach (var eventProp in prop.IterateInnerProperties())
+                    {
+                        var evWPO = FindReferencedObject(eventProp);
+                        trigger.Actions.Add(ExtractEvent(evWPO, resources, pW, null));
+                    }
+                }
+            }
+
+            //Coll geometry (pos, radius, height)
+            Vector3 pos;
+            ReadVector3(wpo, "ColLocation", out pos);
+            trigger.transform.position = pos;
+            ReadFloat(wpo, "CollisionRadius", out trigger.Radius);
+            ReadFloat(wpo, "CollisionHeight", out trigger.Height);
+
+            //Tag
+            ReadString(wpo, "Tag", out trigger.Tag);
+
+            return true;
+        }
+
+        #region Helpers
         protected bool loadCols()
         {
             //Load NPC collections
@@ -311,5 +384,6 @@ namespace PackageExtractor.Adapter
             if (tarIndex >= targets.Count) return null;
             return targets[tarIndex];
         }
+        #endregion
     }
 }
