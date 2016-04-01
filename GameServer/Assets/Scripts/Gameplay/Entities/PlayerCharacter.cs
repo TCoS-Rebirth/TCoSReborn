@@ -102,8 +102,11 @@ namespace Gameplay.Entities
             ActiveSkillDeck = ScriptableObject.CreateInstance<SkillDeck>();
             ActiveSkillDeck.LoadForPlayer(dbRef.SerializedSkillDeck, this);
 
-            QuestData = ScriptableObject.CreateInstance<QuestDataContainer>();
-            QuestData.LoadForPlayer(dbRef.QuestTargets, this);
+            questData = ScriptableObject.CreateInstance<QuestDataContainer>();
+            questData.LoadForPlayer(dbRef.QuestTargets, this);
+
+            persistentVars = ScriptableObject.CreateInstance<PersistentVarsContainer>();
+            persistentVars.LoadForPlayer(dbRef.PersistentVars, this);
         }
 
         void OnDrawGizmos()
@@ -152,6 +155,16 @@ namespace Gameplay.Entities
             MoveFrame = frameNr;
             var m = PacketCreator.S2R_PLAYERPAWN_MOVE(this);
             BroadcastRelevanceMessage(m);
+
+            //kill player if below zone killY
+            if (    ActiveZone.killY != 0 
+                &&  pos.y < ActiveZone.killY 
+                &&  PawnState != EPawnStates.PS_DEAD)
+            {
+                Health = 0;
+                SetPawnState(EPawnStates.PS_DEAD);
+                OnDiedThroughDamage(null);                
+            }
         }
 
         /// <summary>
@@ -808,7 +821,7 @@ namespace Gameplay.Entities
 
             #region Quest progress
             //Quest progress                
-            foreach (var curQuest in QuestData.curQuests)
+            foreach (var curQuest in questData.curQuests)
             {
                 var questObj = GameData.Get.questDB.GetQuest(curQuest.questID);
 
@@ -1007,8 +1020,8 @@ namespace Gameplay.Entities
 
         #region Quests
 
-        [SerializeField]
-        public QuestDataContainer QuestData;
+        [SerializeField,ReadOnly]
+        public QuestDataContainer questData;
 
         public bool IsEligibleForQuest(Quest_Type quest)
         {
@@ -1034,7 +1047,7 @@ namespace Gameplay.Entities
         }
         public bool HasQuest(int questID)
         {
-            foreach (var questProgress in QuestData.curQuests)
+            foreach (var questProgress in questData.curQuests)
             {
                 if (questProgress.questID == questID) { return true; }
             }
@@ -1042,7 +1055,7 @@ namespace Gameplay.Entities
         }
         public bool QuestIsComplete(int questID)
         {
-            foreach (var questSBR in QuestData.completedQuestIDs)
+            foreach (var questSBR in questData.completedQuestIDs)
             {
                 if (questSBR == questID) { return true; }
             }
@@ -1066,7 +1079,7 @@ namespace Gameplay.Entities
         {
             int completeThreshold = quest.targets[targetIndex].GetCompletedProgressValue();
 
-            foreach (var questProgress in QuestData.curQuests)
+            foreach (var questProgress in questData.curQuests)
             {
                 if (questProgress.questID == quest.resourceID) {
 
@@ -1082,7 +1095,7 @@ namespace Gameplay.Entities
             PlayerQuestProgress questProgress = null;
 
             //get the quest ID's progress values
-            foreach (var qP in QuestData.curQuests)
+            foreach (var qP in questData.curQuests)
             {
                 if (qP.questID == quest.resourceID) { questProgress = qP; }
             }
@@ -1107,7 +1120,7 @@ namespace Gameplay.Entities
             //int numTargets = QuestData.getNumTargets(questID);
 
             //Remove quest on game server
-            QuestData.RemoveQuest(questID);
+            questData.RemoveQuest(questID);
 
             //Send message to remove from player log
             var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
@@ -1117,7 +1130,7 @@ namespace Gameplay.Entities
         public void FinishQuest(Quest_Type quest)
         {
             //Set game server quest data to finished                
-            QuestData.FinishQuest(quest.resourceID);
+            questData.FinishQuest(quest.resourceID);
 
             //Give quest rewards to player
 
@@ -1145,7 +1158,7 @@ namespace Gameplay.Entities
         /// <returns></returns>
         public bool TryAdvanceTarget(Quest_Type quest, QuestTarget target)
         {
-            var playerTarProgress = QuestData.getProgress(quest.resourceID);
+            var playerTarProgress = questData.getProgress(quest.resourceID);
             int tarIndex = quest.getTargetIndex(target.resource.ID);
             int newValue = -1;
             //TODO
@@ -1162,7 +1175,7 @@ namespace Gameplay.Entities
             if (newValue != -1) {
 
                 //Server quest data
-                QuestData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+                questData.UpdateQuest(quest.resourceID, tarIndex, newValue);
 
                 //Dispatch packet
                 Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
@@ -1177,7 +1190,7 @@ namespace Gameplay.Entities
         }
         public bool TryAdvanceQTKill(Quest_Type quest, QuestTarget target, NPC_Type npcKilled)
         {
-            var playerTarProgress = QuestData.getProgress(quest.resourceID);
+            var playerTarProgress = questData.getProgress(quest.resourceID);
             int tarIndex = quest.getTargetIndex(target.resource.ID);
 
             int newValue = -1;
@@ -1212,7 +1225,7 @@ namespace Gameplay.Entities
                 {
 
                 //Server quest data
-                QuestData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+                questData.UpdateQuest(quest.resourceID, tarIndex, newValue);
 
                 //Dispatch packet
                 Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
@@ -1225,6 +1238,13 @@ namespace Gameplay.Entities
                 }
             return false;
         }
+
+        #endregion
+
+        #region Persistent variables
+
+        [SerializeField, ReadOnly]
+        public PersistentVarsContainer persistentVars;
 
         #endregion
     }

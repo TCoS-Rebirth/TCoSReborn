@@ -6,24 +6,20 @@ namespace Gameplay.RequirementSpecifier
 {
     public class Req_PersistentValue : Content_Requirement
     {
-        public string context; //Content_Type
+        public int context; //Content_Type
         public EContentOperator Operator;
         public int Value;
         public int VariableID;
 
         public override bool isMet(PlayerCharacter p)
         {
-            return isMet();
+            var perVar = p.persistentVars.GetValue(context, VariableID);
+            return SBOperator.Operate(perVar, Operator, Value);
         }
 
         public override bool isMet(NpcCharacter n)
         {
-            return isMet();
-        }
-
-        public bool isMet()
-        {
-            throw new NotImplementedException();
+            return false;
         }
     }
 }

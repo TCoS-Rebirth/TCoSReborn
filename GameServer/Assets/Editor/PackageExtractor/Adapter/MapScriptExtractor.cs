@@ -17,6 +17,7 @@ namespace PackageExtractor.Adapter
     class MapScriptExtractor : ExtractorAdapter
     {
         Zone targetZone;
+        Transform triggersHolder;
         List<QuestCollection> questCols = new List<QuestCollection>();
         List<NPCCollection> npcCols = new List<NPCCollection>();
 
@@ -53,6 +54,21 @@ namespace PackageExtractor.Adapter
             }
 
             loadCols();
+            triggersHolder = targetZone.transform.FindChild("Triggers");
+            if (!triggersHolder) {
+                Log("No triggers holder object found for that zone", Color.red);
+                return;
+            }
+
+            //Clear triggersHolder
+            for (var i = triggersHolder.childCount; i-- > 0;)
+            {
+                var child = triggersHolder.GetChild(i);
+                if (child.GetComponent<Trigger>() != null)
+                {
+                    Object.DestroyImmediate(child.gameObject);
+                }
+            }
 
             foreach (var wpo in extractorWindowRef.ActiveWrapper.IterateObjects())
             {
@@ -66,16 +82,28 @@ namespace PackageExtractor.Adapter
                 }
 
                 #region Triggers
+
                 else if (wpo.sbObject.ClassName.EndsWith("Content_Trigger"))
                 {
                     
                     if(!getContentTrigger(wpo, resources, pW))
                     {
-                        Log("Failed to extract ContentTrigger" + wpo.Name, Color.red);
+                        Log("Failed to extract ContentTrigger " + wpo.Name, Color.red);
                     }
 
                 }
                 #endregion
+
+                //LevelInfo
+                if (wpo.sbObject.ClassName.EndsWith("LevelInfo"))
+                {
+                    //get killZ, add to zone
+                    float killZ;
+                    ReadFloat(wpo, "KillZ", out killZ);
+                    targetZone.killY = UnitConversion.UnrUnitsToMeters * killZ;
+
+                }
+
             }
         }
 
@@ -167,16 +195,6 @@ namespace PackageExtractor.Adapter
 
         protected bool getContentTrigger(WrappedPackageObject wpo, SBResources resources, PackageWrapper pW)
         {
-            var triggersHolder = targetZone.transform.FindChild("Triggers");
-            if (!triggersHolder) return false;
-            for (var i = triggersHolder.childCount; i-- > 0;)
-            {
-                var child = triggersHolder.GetChild(i);
-                if (child.GetComponent<Trigger>() != null)
-                {
-                    Object.DestroyImmediate(child.gameObject);
-                }
-            }
 
             var go = new GameObject(wpo.Name.Replace("\0", string.Empty));
             var trigger = go.AddComponent<Trigger>();
@@ -213,12 +231,18 @@ namespace PackageExtractor.Adapter
             //Coll geometry (pos, radius, height)
             Vector3 pos;
             ReadVector3(wpo, "ColLocation", out pos);
-            trigger.transform.position = pos;
-            ReadFloat(wpo, "CollisionRadius", out trigger.Radius);
-            ReadFloat(wpo, "CollisionHeight", out trigger.Height);
+            trigger.transform.position = UnitConversion.ToUnity(pos);
+
+            float collRadius, collHeight;
+            ReadFloat(wpo, "CollisionRadius", out collRadius);
+            ReadFloat(wpo, "CollisionHeight", out collHeight);
+            trigger.GetComponent<CapsuleCollider>().radius = UnitConversion.UnrUnitsToMeters * collRadius;
+            trigger.GetComponent<CapsuleCollider>().height = UnitConversion.UnrUnitsToMeters * collHeight;
 
             //Tag
             ReadString(wpo, "Tag", out trigger.Tag);
+
+            trigger.owningZone = targetZone;
 
             return true;
         }

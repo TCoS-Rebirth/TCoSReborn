@@ -677,7 +677,11 @@ namespace PackageExtractor.Adapter
 
                 case "Req_PersistentValue":
                     Req_PersistentValue reqpv = ScriptableObject.CreateInstance<Req_PersistentValue>();
-                    ReadString(reqObj, "context", out reqpv.context);
+
+                    //Valshaaran - experimental mapID as context ID
+                    //ReadString(reqObj, "context", out reqpv.context);
+                    reqpv.context = (int)getCurMapID();
+
                     ReadInt(reqObj, "VariableID", out reqpv.VariableID);
                     ReadInt(reqObj, "Value", out reqpv.Value);
                     ReadEnum(reqObj, "Operator", out reqpv.Operator);
@@ -998,7 +1002,11 @@ namespace PackageExtractor.Adapter
                     return evpt;
                 case "EV_PersistentValue":
                     var evpv = ScriptableObject.CreateInstance<EV_PersistentValue>();
-                    ReadString(eventObject, "context", out evpv.context);
+
+                    //Valshaaran - experimental mapID as context ID
+                    //ReadString(eventObject, "context", out evpv.context);
+                    evpv.context = (int)getCurMapID();
+
                     ReadInt(eventObject, "VariableID", out evpv.VariableID);
                     ReadInt(eventObject, "Value", out evpv.Value);
                     return evpv;
@@ -1084,7 +1092,7 @@ namespace PackageExtractor.Adapter
                     return evsh;
                 case "EV_ShowTutorial":
                     var evst = ScriptableObject.CreateInstance<EV_ShowTutorial>();
-                    ReadString(eventObject, "Article", out evst.Article);
+                    ReadObject(eventObject, "Article", res, out evst.Article);
                     return evst;
                 case "EV_Sit":
                     var evsit = ScriptableObject.CreateInstance<EV_Sit>();
@@ -1545,6 +1553,18 @@ namespace PackageExtractor.Adapter
         }
 
         #endregion
+
+        /// <summary>
+        /// Returns a corresponding MapIDs enum if the package is a map file
+        /// Otherwise returns 0
+        /// </summary>
+        /// <returns></returns>
+        protected MapIDs getCurMapID()
+        {
+            MapIDs id = (MapIDs)Enum.Parse(typeof(MapIDs), extractorWindowRef.ActiveWrapper.Name, true);
+            return id;
+        }
+
 
         #endregion
     }

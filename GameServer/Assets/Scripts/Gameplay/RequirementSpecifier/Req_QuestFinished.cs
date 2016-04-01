@@ -11,7 +11,7 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            foreach (var questID in p.QuestData.completedQuestIDs)
+            foreach (var questID in p.questData.completedQuestIDs)
             {
                 if (questID == RequiredQuest.ID) { return true; }
             }

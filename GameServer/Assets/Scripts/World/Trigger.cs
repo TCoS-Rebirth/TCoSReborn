@@ -17,9 +17,6 @@ namespace World
         public List<Content_Event> Actions;
         [ReadOnly]
         public List<Character> CharsInside = new List<Character>();
-
-        [ReadOnly]
-        public float Radius, Height;
         [ReadOnly]
         public string Tag;
 
@@ -60,14 +57,22 @@ namespace World
         {
             var col = GetComponent<CapsuleCollider>();
             col.isTrigger = true;
-            col.radius = Radius;
-            col.height = Height;
         }
 
         protected virtual void OnEnteredTrigger(Character ch)
         {
-            refreshChars();                        
-            if (reqsMet(ch)) CharsInside.Add(ch);
+            refreshChars();
+            if (reqsMet(ch))
+            {
+                CharsInside.Add(ch);
+                var pc = ch as PlayerCharacter;
+                if (pc) {
+                    foreach (var action in Actions)
+                    {
+                        action.Execute(pc);
+                    }
+                }
+            }
         }
 
         protected virtual void OnLeftTrigger(Character ch)

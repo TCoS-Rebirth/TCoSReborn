@@ -601,7 +601,7 @@ namespace Gameplay.Entities
                                 int tarInd = curQuest.getTargetIndex(target.resource.ID);
 
                                 //Update quest data array
-                                source.QuestData.UpdateQuest(curQuest.resourceID, tarInd, 1);
+                                source.questData.UpdateQuest(curQuest.resourceID, tarInd, 1);
 
                                 //send progress update packet
                                 var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(curQuest.resourceID, tarInd, 1);
@@ -801,7 +801,7 @@ namespace Gameplay.Entities
                             {
                                 //Complete the target
                                 int tarIndex = parentQuest.getTargetIndex(tar.resource.ID);
-                                p.QuestData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
+                                p.questData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
                                 var mNullQTTalk = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
                                 p.ReceiveRelevanceMessage(this, mNullQTTalk);
                                 break;
@@ -816,7 +816,7 @@ namespace Gameplay.Entities
                                 ) {
 
                                 int tarIndex = parentQuest.getTargetIndex(tar.resource.ID);
-                                p.QuestData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
+                                p.questData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
                                 var mNullQTFedex = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
                                 p.ReceiveRelevanceMessage(this, mNullQTFedex);
                                 break;
@@ -922,7 +922,7 @@ namespace Gameplay.Entities
                         tarProgressArray.Add(0);
                     }
 
-                    p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
+                    p.questData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
 
                     var mQuestAccept = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(quest.resourceID, tarProgressArray);
                     var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);

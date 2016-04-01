@@ -49,6 +49,9 @@ namespace Database.Dynamic.Internal
         //Valshaaran : current/completed quests list database property
         public List<DBQuestTarget> QuestTargets = new List<DBQuestTarget>();
 
+        //Persistent variables
+        public List<DBPersistentVar> PersistentVars = new List<DBPersistentVar>();
+
         
     }
 

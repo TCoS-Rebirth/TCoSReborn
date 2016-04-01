@@ -571,6 +571,31 @@ namespace World
             return null;
         }
 
+        public NpcCharacter FindNpcCharacter(string name)
+        {
+            foreach (var npc in _npcs)
+            {
+                if (npc.typeRef.LongName.Contains(name)) {
+                    return npc;
+                }
+            }
+            return null;
+        }
+
+        public NpcCharacter FindNpcCharacter(string name, int instanceIndex)
+        {
+            int count = 0;
+            foreach (var npc in _npcs)
+            {
+                if (npc.typeRef.LongName.Contains(name))
+                {
+                    if (count == instanceIndex) return npc;
+                    else count++;
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         ///     Tries to find an npc by it's relevanceID in this zone
         /// </summary>
@@ -656,5 +681,8 @@ namespace World
         }
 
         #endregion
+
+        [ReadOnly]
+        public float killY;    //Y-coordinate below with players are killed
     }
 }

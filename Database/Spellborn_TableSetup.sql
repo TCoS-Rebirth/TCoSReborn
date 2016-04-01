@@ -109,6 +109,18 @@ CREATE TABLE `playercharacterquests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- ----------------------------
+-- Table structure for `playercharacterpersistentvalues`
+-- ----------------------------
+DROP TABLE IF EXISTS `playercharacterpersistentvars`;
+CREATE TABLE `playercharacterpersistentvars` (
+  `CharacterID` int(11) NOT NULL,
+  `ContextID` int(11) NOT NULL DEFAULT '-1',
+  `VarID` int(11) NOT NULL DEFAULT '-1',
+  `Value` int(11) NOT NULL DEFAULT '0',  
+  PRIMARY KEY (`CharacterID`,`ContextID`,`VarID`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- ----------------------------
 -- Table structure for `server`
 -- ----------------------------
 DROP TABLE IF EXISTS `server`;

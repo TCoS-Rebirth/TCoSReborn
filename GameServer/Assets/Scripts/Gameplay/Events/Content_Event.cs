@@ -7,6 +7,7 @@ namespace Gameplay.Events
     {
 
         public virtual void Execute(PlayerCharacter p) { }
-        //public abstract void Execute(NpcCharacter n);
+        public virtual void Execute(NpcCharacter n) { }
+        public virtual void Execute(Character c) { }
     }
 }
