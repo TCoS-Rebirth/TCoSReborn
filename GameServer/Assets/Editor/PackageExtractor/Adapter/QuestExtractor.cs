@@ -516,7 +516,7 @@ namespace PackageExtractor.Adapter
                     //Find event WPO in wrapper
                     //ExtractEvent and add it to completeEvents
                     var eventWPO = pW.FindObjectWrapper(pW.Name + "." + completeEventProp.Value);
-                    Content_Event thisEvent = ExtractEvent(eventWPO, resources, pW, assetObj);
+                    Content_Event thisEvent = ExtractEvent(eventWPO, resources, locStrings, pW, assetObj);
                     thisEvent.name = eventWPO.sbObject.Package + "." + eventWPO.sbObject.Name;
                     output.CompleteEvents.Add(thisEvent);
                     AssetDatabase.AddObjectToAsset(thisEvent, assetObj);

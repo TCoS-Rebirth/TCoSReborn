@@ -1161,6 +1161,7 @@
 
     public enum ERadialMenuOptions
     {
+        NULL = -1,
         RMO_MAIN = 0,
         RMO_STATS = 1,
         RMO_NOTHING = 2,
@@ -1470,4 +1471,7 @@
         SSE_EnhanceAllStateInputAlteringEffects = 132,
         SSE_EnhanceAllStateOutputAlteringEffects = 133
     }
+
+    //Valshaaran : custom enum
+    public enum EILECategory { ILE_Base, ILE_Chair, ILE_Mailbox, ILE_Quest, ILE_Shop };
 }

@@ -39,6 +39,22 @@ namespace Gameplay.Entities.Players
             return i;
         }
 
+        public bool hasFreeSpace(int slots)
+        {
+            int i, emptyCount;
+            i = emptyCount = 0;
+            while (i < 200)
+            {
+                if (!filledItemSlots.Contains(i))
+                {
+                    emptyCount++;
+                    if (emptyCount >= slots) return true;
+                }
+            }
+
+            return false;
+        }
+
         Game_Item CanStackToExisting(Game_Item item)
         {
             for (var i = 0; i < items.Count; i++)

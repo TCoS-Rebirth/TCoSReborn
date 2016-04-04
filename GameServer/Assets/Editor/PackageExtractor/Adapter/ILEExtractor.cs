@@ -1,4 +1,5 @@
 ﻿using Common;
+using Common.UnrealTypes;
 using Database.Static;
 using Gameplay.Entities;
 using Gameplay.Entities.Interactives;
@@ -20,6 +21,7 @@ namespace PackageExtractor.Adapter
         Zone targetZone;
 
         ILEIDCollection ileCol;
+        List<QuestCollection> questCols = new List<QuestCollection>();
 
         public override string Name
         {
@@ -42,7 +44,6 @@ namespace PackageExtractor.Adapter
             PackageWrapper pW = extractorWindowRef.ActiveWrapper;
 
             //Load quest data
-            var questCols = new List<QuestCollection>();
             var files = Directory.GetFiles(Application.dataPath + "/GameData/Quests/");
             foreach (var f in files)
             {
@@ -92,7 +93,8 @@ namespace PackageExtractor.Adapter
                     || wpo.sbObject.ClassName.Replace("\0", string.Empty).EndsWith("InteractiveMailbox")
                     || wpo.sbObject.ClassName.Replace("\0", string.Empty).EndsWith("InteractiveQuestElement")
                     || wpo.sbObject.ClassName.Replace("\0", string.Empty).EndsWith("InteractiveShop"))
-                {
+                {                    
+
                     var go = new GameObject(wpo.sbObject.Name);
                     go.transform.parent = ieHolder;
                     var output = go.AddComponent<InteractiveLevelElement>();
@@ -102,8 +104,33 @@ namespace PackageExtractor.Adapter
                     ReadString(wpo, "Tag", out tagName);
                     output.Name = tagName;
 
-                    //Valshaaran - Assign from levelObjectID data. Assigns -1 if not found
+                    //Specialised
+                    if (wpo.Name.StartsWith("InteractiveLevelElement")) output.ileType = EILECategory.ILE_Base;
 
+                    if (wpo.Name.StartsWith("InteractiveChair")) {
+                        output.ileType = EILECategory.ILE_Chair;
+
+                        var sitAction = ScriptableObject.CreateInstance<ILEAction>();
+                        if (output.Actions == null) output.Actions = new List<ILEAction>();
+                        output.Actions.Add(sitAction);
+                        sitAction.menuOption = ERadialMenuOptions.RMO_SIT;
+
+                        var sitEvent = ScriptableObject.CreateInstance<EV_Sit>();
+                        if (!ReadVector3(wpo, "ActionPositionOffset", out sitEvent.Offset))
+                            sitEvent.Offset = new Vector3();
+                        else
+                            sitEvent.Offset = UnitConversion.ToUnity(sitEvent.Offset);
+
+                        //TODO: Reimplement
+                        //sitAction.Actions.Add(sitEvent);
+
+                    }
+                    if (wpo.Name.StartsWith("InteractiveMailbox")) output.ileType = EILECategory.ILE_Mailbox;
+                    if (wpo.Name.StartsWith("InteractiveQuestElement")) output.ileType = EILECategory.ILE_Quest;
+                    if (wpo.Name.StartsWith("InteractiveShop")) output.ileType = EILECategory.ILE_Shop;
+
+
+                    //Valshaaran - Assign from levelObjectID data. Assigns -1 if not found
                     output.LevelObjectID = ileCol.GetLOID(wpo.Name);
 
                     //int.TryParse(wpo.sbObject.Name.Replace("InteractiveLevelElement", string.Empty), out goid);
@@ -138,11 +165,13 @@ namespace PackageExtractor.Adapter
 
                                 //StackedActions
                                 var stackedActionsProp = actionProp.GetInnerProperty("StackedActions");
-                                actionObj.Actions = new List<Content_Event>();
+                                actionObj.StackedActions = new List<InteractionComponent>();
                                 foreach(var stackedActionProp in stackedActionsProp.IterateInnerProperties())
                                 {
-                                    var referencedActionWPO = FindReferencedObject(stackedActionProp);
-                                    actionObj.Actions.AddRange(extractActions(referencedActionWPO, resources, pW));
+                                    var intCompWPO = FindReferencedObject(stackedActionProp);
+                                    var intComp = extractIntComp(intCompWPO, resources, localizedStrings, pW, actionObj.menuOption, tagName);
+                                    intComp.owner = output;
+                                    actionObj.StackedActions.Add(intComp);
                                 }
 
                                 //Requirements
@@ -154,88 +183,183 @@ namespace PackageExtractor.Adapter
                                     actionObj.Requirements.Add(getReq(referencedReqWPO, resources, pW, null));
                                 }
 
-                                
+                                /*
                                 if (    actionObj.menuOption == ERadialMenuOptions.RMO_LOOT
                                     ||  actionObj.menuOption == ERadialMenuOptions.RMO_USE)
                                 {
                                     #region Link quest interactive elements
                                     var qtActionObj = ScriptableObject.CreateInstance<ILEQTAction>();
-                                    qtActionObj.importBase(actionObj);
-                                    //Find tagName
-                                    bool found = false;
-                                    foreach(var questCol in questCols)
-                                    {
-                                        foreach(var quest in questCol.looseQuests)
-                                        {
-                                            var qTT = questTaggedTarget(quest, tagName);
-                                            if (qTT >= 0)
-                                            {
-                                                qtActionObj.Quest = quest;
-                                                qtActionObj.TargetIndex = qTT;
-                                                found = true;
-                                                break;
-                                            }
-                                        }
-                                        if (found) break;
+                                    qtActionObj.importBase(actionObj);                                    
 
-                                        foreach(var chain in questCol.questChains)
-                                        {
-                                            foreach (var quest in chain.quests)
-                                            {
-                                                var qTT = questTaggedTarget(quest, tagName);
-                                                if (qTT >= 0)
-                                                {
-                                                    qtActionObj.Quest = quest;
-                                                    qtActionObj.TargetIndex = qTT;
-                                                    found = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (found) break;
-                                        }
-                                        if (found) break;
-                                    }
                                     //actionObj = qtActionObj;
                                     output.Actions.Add(qtActionObj);
                                     #endregion
                                 }
-
-                                else output.Actions.Add(actionObj);
+                                */
+                                output.Actions.Add(actionObj);
+                                
                             }
                         }
                     }
                     #endregion
 
-                        output.isEnabled = true;
-                        output.collisionType = ECollisionType.COL_Blocking;
+                        output.InitEnabled = true;
+                        output.InitColl = ECollisionType.COL_Colliding;
 
                 }
             }
         } 
           
-        private List<Content_Event> extractActions(WrappedPackageObject wpoIn, SBResources resources, PackageWrapper pW)
+        private InteractionComponent extractIntComp(WrappedPackageObject wpoIn, SBResources resources, SBLocalizedStrings locStrings, PackageWrapper pW, ERadialMenuOptions activeOption, string tagName)
         {
-            var output = new List<Content_Event>();
+            var output = ScriptableObject.CreateInstance<InteractionComponent>();
 
-            foreach(var prop in wpoIn.sbObject.IterateProperties())
+            string className = wpoIn.sbObject.ClassName.Replace("SBGamePlay.", string.Empty);
+            switch (className)
+            {
+                case "Interaction_Action":
+                    output = getIAct(wpoIn, resources, locStrings, pW);
+                    break;
+
+                case "Interaction_Animation":
+                    var iani = ScriptableObject.CreateInstance<InteractionAnimation>();
+                    ReadString(wpoIn, "animName", out iani.AnimName);
+                    ReadFloat(wpoIn, "LoopDuration", out iani.LoopDuration);
+                    output = iani;
+                    break;
+
+                case "Interaction_Enable":
+                    var ien = ScriptableObject.CreateInstance<InteractionEnable>();
+                    ReadBool(wpoIn, "Enabled", out ien.Enabled);
+                    output = ien;
+                    break;
+
+                case "Interaction_EnableCollision":
+                    var ienc = ScriptableObject.CreateInstance<InteractionEnableCollision>();
+                    ReadBool(wpoIn, "EnableCollision", out ienc.EnableCollision);
+                    output = ienc;
+                    break;
+
+                case "Interaction_Event":
+                    var iev = ScriptableObject.CreateInstance<InteractionEvent>();
+                    ReadString(wpoIn, "EventTag", out iev.EventTag);
+                    output = iev;
+                    break;
+
+                case "Interaction_Move":
+                    var imove = ScriptableObject.CreateInstance<InteractionMove>();
+
+                    ReadVector3(wpoIn, "Movement", out imove.Movement);
+                    imove.Movement = UnitConversion.ToUnity(imove.Movement);
+
+                    var unrRot = new Rotator();
+                    ReadRotator(wpoIn, "Rotation", out unrRot);
+                    imove.Rotation = UnitConversion.ToUnity(unrRot);
+                    ReadFloat(wpoIn, "TimeSec", out imove.TimeSec);
+
+                    output = imove;
+                    break;
+
+                case "Interaction_Progress":
+                    var iprog = ScriptableObject.CreateInstance<InteractionProgress>();
+                    iprog.ProgressSeconds = 0.0f;
+                    ReadFloat(wpoIn, "ProgressSeconds", out iprog.ProgressSeconds);
+                    output = iprog;
+                    break;
+
+                case "Interaction_Quest":
+                    output = getIQuest(wpoIn, resources, locStrings, pW, tagName);
+                    break;
+
+                case "Interaction_RandomTimer":
+                    var irt = ScriptableObject.CreateInstance<InteractionRandomTimer>();
+                    var rangeProp = wpoIn.FindProperty("RangeSeconds");
+                    foreach (var prop in rangeProp.IterateInnerProperties())
+                    {
+                        if (prop.Name == "Min") float.TryParse(prop.Value, out irt.MinTime);
+                        if (prop.Name == "Max") float.TryParse(prop.Value, out irt.MaxTime);
+                    }
+                    output = irt;
+                    break;
+
+                case "Interaction_Show":
+                    var ishow = ScriptableObject.CreateInstance<InteractionShow>();
+                    ReadBool(wpoIn, "Show", out ishow.Show);
+                    output = ishow;
+                    break;
+
+                    //TODO : Implement the rest of InteractionComponent subclasses
+            }
+
+            output.activeOption = activeOption;
+            ReadBool(wpoIn, "Reverse", out output.Reverse);
+
+            return output;
+        }
+
+        private InteractionAction getIAct(WrappedPackageObject wpoIn, SBResources res, SBLocalizedStrings locStrings, PackageWrapper pW)
+        {
+            var output = ScriptableObject.CreateInstance<InteractionAction>();
+            output.Actions = new List<Content_Event>();
+            foreach (var prop in wpoIn.sbObject.IterateProperties())
             {
                 if (prop.Name == "Actions")
                 {
-                    foreach(var actionProp in prop.IterateInnerProperties())
+                    foreach (var actionProp in prop.IterateInnerProperties())
                     {
                         var evWPO = FindReferencedObject(actionProp);
                         if (evWPO != null)
                         {
-                            output.Add(ExtractEvent(evWPO, resources, pW, null));
+                            output.Actions.Add(ExtractEvent(evWPO, res, locStrings, pW, null));
                         }
                     }
-                    break;
                 }
+            }
+            return output;
+        }
+     
+        private InteractionQuest getIQuest(WrappedPackageObject wpoin, SBResources res, SBLocalizedStrings locStrings, PackageWrapper pW, string tagName)
+        {
+            var output = ScriptableObject.CreateInstance<InteractionQuest>();
+
+            //Find tagName
+            bool found = false;
+            foreach (var questCol in questCols)
+            {
+                foreach (var quest in questCol.looseQuests)
+                {
+                    var qTT = questTaggedTarget(quest, tagName);
+                    if (qTT >= 0)
+                    {
+                        output.Quest = quest;
+                        output.TarIndex = qTT;
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) break;
+
+                foreach (var chain in questCol.questChains)
+                {
+                    foreach (var quest in chain.quests)
+                    {
+                        var qTT = questTaggedTarget(quest, tagName);
+                        if (qTT >= 0)
+                        {
+                            output.Quest = quest;
+                            output.TarIndex = qTT;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) break;
+                }
+                if (found) break;
             }
 
             return output;
         }
-     
+
         /// <summary>
         /// Returns the target index with the tag if the tag is found
         /// Otherwise returns -1

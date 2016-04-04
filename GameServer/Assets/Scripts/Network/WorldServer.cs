@@ -170,6 +170,8 @@ namespace Network
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTIONPAWN, HandleSwirlyOptionPawn);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTION, HandleSwirlyOption);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_ABANDONQUEST, HandleAbandonQuest);
+            _dispatchTable.Add(GameHeader.C2S_GAME_TRAVEL_CL2SV_TRAVELTO, HandleTravelTo);
+
         }
 
         IEnumerator UpdateQueues()
@@ -609,7 +611,7 @@ namespace Network
                 {
                     Debug.Log("LevelObjectID = " + ile.LevelObjectID);
                     //pc.OnInteract(ile, menuOption);
-                    ile.onUse(pc, menuOption);
+                    ile.onRadialMenuOption(pc, menuOption);
                 }
             }
             
@@ -876,6 +878,23 @@ namespace Network
             {
                 p.ItemManager.MoveItem(sourceLocType, sourceLocSlot, sourceLocID, targetLocType, targetLocSlot, targetLocID);
             }
+        }
+
+        #endregion
+
+        #region Travel
+
+        void HandleTravelTo(Message m)
+        {
+            throw new NotImplementedException();
+            /*
+            int relID = m.ReadInt32(); //Prob relID
+            string npcName = m.ReadString();
+            string destination = m.ReadString();
+            bool joinCrew = m.ReadInt32() > 0 ? true : false;
+
+            var pc = m.GetAssociatedCharacter();
+            */
         }
 
         #endregion

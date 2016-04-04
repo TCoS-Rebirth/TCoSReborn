@@ -1,4 +1,3 @@
-using Common;
 using Gameplay.Entities;
 
 namespace Gameplay.Events
@@ -7,13 +6,24 @@ namespace Gameplay.Events
     {
         public string EventTag;
 
-        public override void Execute(PlayerCharacter p)
+        public override bool CanExecute(Entity obj, Entity subject)
         {
-            base.Execute(p);
+            if (obj as Character || subject as Character) return true;
+            else return false;
+        }
 
-            //TODO: Not yet implemented
-            p.ReceiveChatMessage("", "Event with tag " + EventTag + " is here, but not yet implemented :(", EGameChatRanges.GCR_SYSTEM);
-
+        protected override void Execute(Entity obj, Entity subject)
+        {
+            var charObj = obj as Character;
+            var charSubj = subject as Character;   
+            if (charObj)
+            {
+                obj.TriggerScriptedEvent(EventTag, obj, charObj);
+            }
+            else if (charSubj)
+            {
+                subject.TriggerScriptedEvent(EventTag, subject, charSubj);
+            }
         }
     }
 }

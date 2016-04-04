@@ -10,10 +10,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
 {
     internal class KillerBehaviour : NPCBehaviour
     {
-        public float aggroRadius = 10f; //TODO: find good value or get from npc
-
         bool canPath;
 
+        float aggroRadius;
         float distanceSquaredToCurrentTarget;
         float distanceSquaredToHomePoint;
 
@@ -57,12 +56,14 @@ namespace Gameplay.Entities.NPCs.Behaviours
                 //Not sure if _currentPosition ought to be set to this elsewhere?
                 owner.Position = owner.ActiveZone.Raycast(owner.Position + Vector3.up, Vector3.down, 10f);
             }
-            startPosition = _currentPosition;
+            owner.RespawnInfo.initialSpawnPoint = owner.Position;
+            startPosition = owner.Position;
             startOrientation = owner.Rotation;
             owner.SetMoveSpeed(ENPCMovementFlags.ENMF_Walking);
             rndTargetPos = startPosition;
             nextRndPath = Time.time + Random.Range(5f, 15f);
             canPath = owner.ActiveZone != null && owner.ActiveZone.HasCollision;
+            aggroRadius = owner.RespawnInfo.aggroRadius;
         }
 
         public override void OnDamage(Character source, FSkill s, int amount)
@@ -303,6 +304,12 @@ namespace Gameplay.Entities.NPCs.Behaviours
             InRange,
             Fleeing,
             Dead
+        }
+
+        public void ForceAggro(Character tc)
+        {
+            target = tc;
+            state = NpcStates.Approaching;
         }
     }
 }

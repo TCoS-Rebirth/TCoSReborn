@@ -7,6 +7,8 @@ using Pathfinding;
 using UnityEngine;
 using Utility;
 using World;
+using Gameplay.Events;
+using Database.Static;
 
 namespace Gameplay.Entities
 {
@@ -20,6 +22,12 @@ namespace Gameplay.Entities
         [SerializeField, ReadOnly] Zone activeZone;
 
         [SerializeField] bool invisible;
+
+        [SerializeField]
+        ECollisionType collision;
+
+        [SerializeField]
+        bool isEnabled;
 
         MapIDs lastZoneID = 0;
 
@@ -46,8 +54,51 @@ namespace Gameplay.Entities
         public bool Invisible
         {
             get { return invisible; }
-            set { invisible = value; }
         }
+
+        public ECollisionType CollisionType
+        {
+            get { return collision; }
+        }
+
+        public bool Enabled
+        {
+            get { return isEnabled; }
+        }
+        //Valshaaran - these is to provide initial setters without confusing with
+        //the runtime method which also broadcasts the new flag to relevance
+        public bool InitEnabled
+        {
+            set { isEnabled = value; }
+        }
+
+        public ECollisionType InitColl
+        {
+            set { collision = value; }
+        }
+
+        public void SetCollision(ECollisionType col)
+        {
+            collision = col;
+            Message m = PacketCreator.S2R_GAME_ACTOR_SV2CLREL_SETCOLLISIONTYPE(this, col);
+            BroadcastRelevanceMessage(m);
+
+        }
+
+        public void SetShow(bool show, float fadeTime = 0.0f)
+        {
+            invisible = !show;
+            Message m = PacketCreator.S2R_GAME_ACTOR_SV2CLREL_SHOW(this, show, fadeTime);
+            BroadcastRelevanceMessage(m);
+        }
+
+        public void SetEnabled(bool newEnabled)
+        {
+            isEnabled = newEnabled;
+            Message m = PacketCreator.S2R_GAME_ACTOR_SV2CLREL_SETENABLED(this, newEnabled);
+            BroadcastRelevanceMessage(m);
+        }
+
 
         /// <summary>
         ///     The ID of the last Zone this entity was in
@@ -386,6 +437,73 @@ namespace Gameplay.Entities
             return relevanceID;
         }
 
+        #endregion
+
+        #region Movement
+        public void SetLocation(Vector3 newPosition)
+        {
+            //Revisit this - using a S2C packet as relevance broadcast isn't ideal
+            Position = newPosition;
+            Message m = PacketCreator.S2C_GAME_ACTOR_MOVE(this, newPosition, Rotation);
+            BroadcastRelevanceMessage(m);
+
+        }
+        public void SetRotation(Quaternion newRotation)
+        {
+            //Revisit this - using a S2C packet as relevance broadcast isn't ideal
+            Rotation = newRotation;
+            Message m = PacketCreator.S2C_GAME_ACTOR_MOVE(this, Position, newRotation);
+            BroadcastRelevanceMessage(m);
+        }
+        public void Move(Vector3 newPosition, Quaternion newRotation)
+        {
+            //Revisit this - using a S2C packet as relevance broadcast isn't ideal
+            Position = newPosition;
+            Rotation = newRotation;
+            Message m = PacketCreator.S2C_GAME_ACTOR_MOVE(this, newPosition, newRotation);
+            BroadcastRelevanceMessage(m);
+
+        }
+        #endregion
+
+        #region Events
+        public void TriggerScriptedEvent(string eventName, Entity other, Character instigator)
+        {
+            //SBEvent ev = ScriptableObject.CreateInstance<SBEvent>();
+            //ev.Trigger(eventName, other, instigator);
+
+            //TODO:Retrieve scripted event by tag (from GameData?)
+            //SBScriptedEvent sEv = GameData.Get.eventsDB.GetByTag(eventName);
+            //sEv.Trigger(other, instigator);
+            //activeZone.StartScriptedEvent(eventName, other, instigator);
+            var pc = instigator as PlayerCharacter;
+            if (pc) {
+                pc.ReceiveChatMessage("",
+                    "Scripted event " + eventName + " failed - scripted events NYI",
+                    EGameChatRanges.GCR_SYSTEM
+                );
+            }
+            throw new NotImplementedException();
+        }
+
+        public void UntriggerScriptedEvent(string eventName, Entity untriggerer)
+        {
+            //TODO
+            //activeZone.UntriggerEvent(eventName);
+            var pu = untriggerer as PlayerCharacter;
+            if (pu) {
+                pu.ReceiveChatMessage("",
+                "NYI event " + eventName + " untriggered!",
+                EGameChatRanges.GCR_SYSTEM
+            );
+            }
+            throw new NotImplementedException();
+        }
+
+        public void UntriggerEvent(Character instigator)
+        {
+            ActiveZone.UntriggerEvent(this, instigator);
+        }
         #endregion
     }
 }

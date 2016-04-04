@@ -69,7 +69,7 @@ namespace World
                 if (pc) {
                     foreach (var action in Actions)
                     {
-                        action.Execute(pc);
+                        action.TryExecute(null, pc);
                     }
                 }
             }

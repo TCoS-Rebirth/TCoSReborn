@@ -1,3 +1,4 @@
+using System;
 using Database.Static;
 using Gameplay.Entities;
 using Network;
@@ -8,12 +9,18 @@ namespace Gameplay.Events
     {
         public SBResource Article; //Help_Article
 
-        public override void Execute(PlayerCharacter p)
+        public override bool CanExecute(Entity obj, Entity subject)
         {
-            base.Execute(p);
+            if (!(subject as PlayerCharacter)) return false;
+            else return true;
 
+        }
+
+        protected override void Execute(Entity obj, Entity subject)
+        {
+            var playerSubj = subject as PlayerCharacter;
             Message m = PacketCreator.S2C_GAME_GUI_SV2CL_SHOWTUTORIAL(Article);
-            p.SendToClient(m);
+            playerSubj.SendToClient(m);
         }
     }
 }

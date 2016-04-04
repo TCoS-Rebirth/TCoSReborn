@@ -3,6 +3,7 @@ using Gameplay.Quests.QuestTargets;
 using System.Collections.Generic;
 using UnityEngine;
 using Network;
+using World;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -13,8 +14,6 @@ namespace Gameplay.Entities.Interactives
     public class InteractiveLevelElement : Entity
     {
 
-        public ECollisionType collisionType;
-        public bool isEnabled;
         public int levelObjectID;
 
         /// <summary>
@@ -24,8 +23,29 @@ namespace Gameplay.Entities.Interactives
         /// </summary>
         public bool isDummy = false;
 
-        [SerializeField]
+        [ReadOnly]
+        public EILECategory ileType;
+
+        [ReadOnly]
         public List<ILEAction> Actions;
+
+        [ReadOnly]
+        public bool IsActivated;
+
+        [SerializeField]
+        int currentOptionIndex = -1;
+
+        [SerializeField]
+        ERadialMenuOptions currentOption;
+
+        [SerializeField]
+        int currentSubAction;
+
+        [SerializeField]
+        PlayerCharacter targetPawn;
+
+        [SerializeField]
+        bool reverse;
 
         public void AssignRelID()
         {
@@ -38,70 +58,153 @@ namespace Gameplay.Entities.Interactives
             set { levelObjectID = value; }
         }
 
-        public bool IsEnabled
+        protected InteractionComponent currentComponent
         {
-            get { return isEnabled; }
-            set { isEnabled = value; }
+            get { return Actions[currentOptionIndex].StackedActions[currentSubAction]; }
         }
 
-        public ECollisionType CollisionType
+        protected int curCompStackSize
         {
-            get { return collisionType; }
-            set { collisionType = value; }
+            get { return Actions[currentOptionIndex].StackedActions.Count; }
         }
 
-        public void onUse(PlayerCharacter source, ERadialMenuOptions menuOption)
+        public void SetActivated(bool active)
+        {
+            IsActivated = active;
+            Message m = PacketCreator.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_UPDATENETISACTIVATED(this, IsActivated);
+            BroadcastRelevanceMessage(m);
+        }
+
+        public void StartClientSubAction()
+        {
+            Message m = PacketCreator.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION(this, currentOptionIndex, currentSubAction, reverse, targetPawn);
+            BroadcastRelevanceMessage(m);
+
+            //currentComponent.onStart(this, targetPawn, reverse);
+        }
+
+        [ContextMenu("Force CancelClientSubAction")]
+        public void CancelClientSubAction()
+        {
+            Message m = PacketCreator.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_CANCELCLIENTSUBACTION(this, currentOptionIndex, currentSubAction);
+            BroadcastRelevanceMessage(m);
+
+            //currentComponent.onCancel(this, targetPawn);
+        }
+
+        [ContextMenu("Force EndClientSubAction")]
+        public void EndClientSubAction()
+        {
+            Message m = PacketCreator.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION(this, currentOptionIndex, currentSubAction, reverse);
+            BroadcastRelevanceMessage(m);
+
+            //currentComponent.onEnd(this, targetPawn, reverse);
+        }
+
+        public void StartOptionActions()
+        {
+            SetActivated(true);
+
+            if (targetPawn)
+            {
+                reverse = false;
+                currentSubAction = 0;
+            }
+
+            currentComponent.onStart(targetPawn, reverse);
+        }
+
+        [ContextMenu("Force CancelOptionActions")]
+        public void CancelOptionActions()
+        {
+            if (IsActivated)
+            {
+                currentComponent.onCancel(targetPawn);
+            }
+
+            EndOptionActions();
+        }
+
+        public void NextSubAction()
+        {
+            if (IsActivated)
+            {
+                currentComponent.onEnd(targetPawn, reverse);
+            }
+
+            if (!reverse)
+            {
+                if (currentSubAction < (curCompStackSize - 1))
+                {
+                    currentSubAction++;
+                    currentComponent.onStart(targetPawn, reverse);
+                }
+                else
+                {
+                    EndOptionActions();
+                }
+            }
+            else
+            {
+
+            }
+        }
+        
+        public void EndOptionActions()
+        {
+            //Do the reverse actions
+            reverse = true;
+
+            var subactions = Actions[currentOptionIndex].StackedActions;
+
+            while (currentSubAction > -1)
+            {
+                var subaction = subactions[currentSubAction];
+                if (subaction.Reverse)
+                {
+                    subaction.onStart(targetPawn, reverse);
+                    subaction.onEnd(targetPawn, reverse);
+                }
+                currentSubAction--;
+            }
+            
+            currentOptionIndex = -1;
+            currentSubAction = -1;
+            reverse = false;
+            SetActivated(false);
+        }
+        
+
+        public bool onRadialMenuOption(PlayerCharacter source, ERadialMenuOptions menuOption)
         {
             if (!isDummy)
             {
-                #region Actions
-                //Iterate through actions list
-                foreach (var action in Actions)
+                if (!Enabled || IsActivated) { return false; }
+
+                currentOptionIndex = -1;
+
+                for (int n = 0; n < Actions.Count; n++)
                 {
-                    if (action.menuOption != menuOption) continue;  //Skip if non-matching menu option
-                                                                    //if (action.Actions.Count == 0) continue;        //Skip if no events to execute
-
-                    //Requirements check - unecessary if client-side?
-                    /*
-                    bool reqsMet = true;
-                    foreach (var req in action.Requirements)
+                    var action = Actions[n];
+                    if (action.menuOption == menuOption
+                        && action.isEligible(source))
                     {
-                        if (!req.isMet(source))
-                        {
-                            reqsMet = false;
-                            break;
-                        }
-                    }
-                    if (!reqsMet) continue; //If a req failed, skip to next action
-                    */
-
-                    //Execute actions
-                    foreach (var ev in action.Actions)
-                    {
-                        ev.Execute(source);
-                    }
-
-                    //Handle quest target interactions
-
-                    if (action is ILEQTAction)
-                    {
-                        var qtAction = action as ILEQTAction;
-
-                        switch (qtAction.menuOption)
-                        {
-                            case ERadialMenuOptions.RMO_LOOT:
-                                //QT_Take
-                                doQTTake(source, qtAction);
-                                break;
-
-                            case ERadialMenuOptions.RMO_USE:
-                                //TODO
-                                break;
-                        }
+                        currentOptionIndex = n;
+                        break;
                     }
                 }
-                #endregion
-            }            
+
+                if (!Actions[currentOptionIndex].isEligible(source))
+                {
+                    return false;
+                }
+
+                targetPawn = source;
+                currentOption = menuOption;
+                StartOptionActions();
+                return true;
+            }
+        
             else
             {
                 #region Assign dummy ID to real ILE
@@ -116,6 +219,7 @@ namespace Gameplay.Entities.Interactives
                         closestIE = ie;
                     }
 
+                    //TODO: Refine this to avoid linking the wrong ILE(e.g. Hawksmouth Academy doors)
                     //compares distances
                     if (    Vector3.Distance(source.transform.position, ie.transform.position) 
                         <=  Vector3.Distance(source.transform.position, closestIE.transform.position))
@@ -127,7 +231,7 @@ namespace Gameplay.Entities.Interactives
                 if (closestIE == null)
                 {
                     Debug.Log("InteractiveLevelElement.onUse : failed to get ILE closest to player");
-                    return;
+                    return false;
                 }
 
                 //Assign to real object
@@ -138,28 +242,22 @@ namespace Gameplay.Entities.Interactives
                 //Re-assign the dummy's relevance ID to the new IE
                 closestIE.RelevanceID = RelevanceID;
 
-                //Call onUse on the real object
-                closestIE.onUse(source, menuOption);
+                //Now act on the real object
+                bool success = closestIE.onRadialMenuOption(source, menuOption);
 
                 //Remove this ILE and game object
                 source.ActiveZone.RemoveFromZone(this);
-                Destroy(this.gameObject);
+                Destroy(gameObject);
                 Destroy(this);
+
+                return success;
 
                 #endregion
             }
 
         }
 
-        protected void lootItem(PlayerCharacter source)
-        {
-            /*var tag = Name;
-            
-            //Get current quests, look for tag
-            source.quest
-            */
-        }
-
+        /*
         protected void doQTTake(PlayerCharacter source, ILEQTAction qtAction)
         {
             var qtTake = qtAction.Quest.targets[qtAction.TargetIndex] as QT_Take;
@@ -174,6 +272,7 @@ namespace Gameplay.Entities.Interactives
                 Debug.Log("InteractiveLevelElement.onUse : failed to progress a qtTake target");
             }                        
         }
+        */
         
         public void assignLOIDAndSave(int newID, string zoneName)
         {            
@@ -212,6 +311,18 @@ namespace Gameplay.Entities.Interactives
             }
 
 #endif
+        }
+
+        //Update interaction components
+        public override void UpdateEntity()
+        {
+            //Update components of current non-null index
+            if (currentOptionIndex == -1 || !IsActivated || reverse) return;
+            var curAction = Actions[currentOptionIndex];
+            foreach (var comp in curAction.StackedActions)
+            {
+                comp.Update();
+            }
         }
     }
 }

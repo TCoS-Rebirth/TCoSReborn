@@ -267,7 +267,7 @@ namespace PackageExtractor.Adapter
             SBProperty prop;
             if (obj.sbObject.Properties.TryGetValue(propName, out prop))
             {
-                if (TryParse(prop.Value, out value))
+                if (float.TryParse(prop.Value, out value))
                 {
                     return true;
                 }
@@ -678,9 +678,9 @@ namespace PackageExtractor.Adapter
                 case "Req_PersistentValue":
                     Req_PersistentValue reqpv = ScriptableObject.CreateInstance<Req_PersistentValue>();
 
-                    //Valshaaran - experimental mapID as context ID
-                    //ReadString(reqObj, "context", out reqpv.context);
-                    reqpv.context = (int)getCurMapID();
+                    //Valshaaran - experimenting with player's active zone 
+                    //as contextID for now
+                    //reqpv.context = (int)getCurMapID();
 
                     ReadInt(reqObj, "VariableID", out reqpv.VariableID);
                     ReadInt(reqObj, "Value", out reqpv.Value);
@@ -842,7 +842,7 @@ namespace PackageExtractor.Adapter
 
         #region Events
 
-        protected Content_Event ExtractEvent(WrappedPackageObject eventObject, SBResources res, PackageWrapper pW, UnityEngine.Object assetObj)
+        protected Content_Event ExtractEvent(WrappedPackageObject eventObject, SBResources res, SBLocalizedStrings locStrings, PackageWrapper pW, UnityEngine.Object assetObj)
         {
             switch (eventObject.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty))
             {
@@ -858,7 +858,9 @@ namespace PackageExtractor.Adapter
                     return evcle;
                 case "EV_Conversation":
                     var evco = ScriptableObject.CreateInstance<EV_Conversation>();
-                    ReadString(eventObject, "Conversation", out evco.Conversation);
+                    var convWPO = findWPOFromObjProp(eventObject, "Conversation");
+                    evco.Conversation = getConvTopicFull(convWPO, res, locStrings, pW);
+                    AssetDatabase.AddObjectToAsset(evco.Conversation, assetObj);
                     return evco;
                 case "EV_Die":
                     var evdie = ScriptableObject.CreateInstance<EV_Die>();
@@ -950,7 +952,7 @@ namespace PackageExtractor.Adapter
                     if (eventName != null)
                     {
                         var npcEvObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(eventName.GetValue<string>());
-                        evnpc.NPCAction = ExtractEvent(npcEvObj, res, pW, assetObj);
+                        evnpc.NPCAction = ExtractEvent(npcEvObj, res, locStrings, pW, assetObj);
                     }
                     ReadFloat(eventObject, "Radius", out evnpc.Radius);
                     return evnpc;
@@ -964,7 +966,7 @@ namespace PackageExtractor.Adapter
                     if (otheractionName != null)
                     {
                         var otherActionObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(otheractionName.GetValue<string>());
-                        evother.OtherAction = ExtractEvent(otherActionObj, res, pW, assetObj);
+                        evother.OtherAction = ExtractEvent(otherActionObj, res, locStrings, pW, assetObj);
                     }
                     return evother;
                 case "EV_Party":
@@ -987,12 +989,12 @@ namespace PackageExtractor.Adapter
                     if (paAction != null)
                     {
                         var paActionObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(paAction.GetValue<string>());
-                        evpa.PartyAction = ExtractEvent(paActionObj, res, pW, assetObj);
+                        evpa.PartyAction = ExtractEvent(paActionObj, res, locStrings, pW, assetObj);
                     }
                     return evpa;
                 case "EV_PartyProgress":
                     var evpp = ScriptableObject.CreateInstance<EV_PartyProgress>();
-                    ReadString(eventObject, "quest", out evpp.quest);
+                    ReadObject(eventObject, "quest", res, out evpp.quest);
                     ReadInt(eventObject, "ObjectiveNr", out evpp.ObjectiveNr);
                     return evpp;
                 case "EV_PartyTeleport":
@@ -1003,16 +1005,16 @@ namespace PackageExtractor.Adapter
                 case "EV_PersistentValue":
                     var evpv = ScriptableObject.CreateInstance<EV_PersistentValue>();
 
-                    //Valshaaran - experimental mapID as context ID
-                    //ReadString(eventObject, "context", out evpv.context);
-                    evpv.context = (int)getCurMapID();
+                    //Valshaaran - experimenting with player's active zone 
+                    //as contextID for now
+                    //evpv.context = (int)getCurMapID();
 
                     ReadInt(eventObject, "VariableID", out evpv.VariableID);
                     ReadInt(eventObject, "Value", out evpv.Value);
                     return evpv;
                 case "EV_QuestProgress":
                     var evqp = ScriptableObject.CreateInstance<EV_QuestProgress>();
-                    ReadString(eventObject, "quest", out evqp.quest);
+                    ReadObject(eventObject, "quest", res, out evqp.quest);
                     ReadInt(eventObject, "TargetNr", out evqp.TargetNr);
                     ReadInt(eventObject, "Progress", out evqp.Progress);
                     return evqp;
@@ -1073,7 +1075,7 @@ namespace PackageExtractor.Adapter
                     if (slfActionProp != null)
                     {
                         var alfAcObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(slfActionProp.GetValue<string>());
-                        evslf.SelfAction = ExtractEvent(alfAcObj, res, pW, assetObj);
+                        evslf.SelfAction = ExtractEvent(alfAcObj, res, locStrings, pW, assetObj);
                     }
                     return evslf;
                 case "EV_SetClass":
@@ -1096,7 +1098,7 @@ namespace PackageExtractor.Adapter
                     return evst;
                 case "EV_Sit":
                     var evsit = ScriptableObject.CreateInstance<EV_Sit>();
-                    ReadString(eventObject, "Chair", out evsit.Chair);
+                    //ReadString(eventObject, "Chair", out evsit.Chair);
                     ReadVector3(eventObject, "Offset", out evsit.Offset);
                     return evsit;
                 case "EV_Skill":
@@ -1133,7 +1135,7 @@ namespace PackageExtractor.Adapter
                     if (swAcProp != null)
                     {
                         var swAcObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(swAcProp.GetValue<string>());
-                        evsw.SwappedAction = ExtractEvent(swAcObj, res, pW, assetObj);
+                        evsw.SwappedAction = ExtractEvent(swAcObj, res, locStrings, pW, assetObj);
                     }
                     return evsw;
                 case "EV_Teleport":

@@ -1,22 +1,83 @@
+using Common;
+using Gameplay.Entities;
 using UnityEngine;
+using Gameplay.Entities.Interactives;
+using Network;
 
 namespace Gameplay.Events
 {
     public class EV_Sit : Content_Event
     {
-        public string Chair;
-        public Vector3 Offset;
+        public Vector3 Offset;  //chair to character position offset
+
+        public override bool CanExecute(Entity obj, Entity subject)
+        {
+            var charSubj = subject as Character;
+            if (!charSubj) return false;
+
+            //var ileSubj = subject as InteractiveLevelElement;
+            //if (ileSubj && ileSubj.ileType == EILECategory.ILE_Chair)
+            //    return true;
+
+            //TODO: if not idle return false - EControllerState
+            else return true;
+        }
+
+        protected override void Execute(Entity obj, Entity subject)
+        {
+
+            var playerSubj = subject as PlayerCharacter;
+            if (playerSubj)
+            {
+                playerSubj.ReceiveChatMessage("", "Interactive chairs are currently WIP", EGameChatRanges.GCR_SYSTEM);
+            }
+            //Valshaaran - WIP
+            //Interactive Chair objects mostly lack Rotation property
+            //will need resolving somehow to enable most chairs
+            /*
+            var charSubj = subject as Character;
+            var ileObj = obj as InteractiveLevelElement;
+            var playerSubj = charSubj as PlayerCharacter;
+
+            if (ileObj && ileObj.ileType == EILECategory.ILE_Chair)
+            {
+                //Move to chair
+                //charObj.TeleportTo(ileSubj.Position, ileSubj.Rotation);
+                charSubj.Position = ileObj.Position + Offset;  
+                              
+                if (playerSubj)
+                {
+                    var mMove = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(charSubj.Position, new Vector3(), EPhysics.PHYS_SitChair);
+                    var mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(true);
+
+                    //TODO:Placeholder - chair should be relevant to player
+                    playerSubj.SendToClient(mMove);
+                    playerSubj.SendToClient(mSit);
+                    //playerSubj.ReceiveRelevanceMessage(ileObj, mMove);
+                    //playerSubj.ReceiveRelevanceMessage(ileObj, mSit);
+                }                
+            }
+            else
+            {
+                if (playerSubj)
+                {
+                    var mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(false);
+                    playerSubj.SendToClient(mSit);
+                }
+            }
+            */
+        }
         /*
-        * CanExecute() =>
-        local Actor chairActor;
-        if (string(Chair) != "None") {                                              //0000 : 07 36 00 7B 39 57 01 C0 60 FF 13 1F 4E 6F 6E 65 00 16
-        chairActor = FindClosestActor(Class'Actor',aObject,Chair);                //0012 : 0F 00 20 65 FF 13 1B DC 0F 00 00 20 F8 8B C1 00 00 F8 63 FF 13 01 C0 60 FF 13 16
-        return chairActor != None;                                                //002D : 04 77 00 20 65 FF 13 2A 16
-        }
-        if (!Game_Controller(aObject.Controller).IsIdle()) {                        //0036 : 07 5A 00 81 19 2E 10 0E 5B 01 19 00 F8 63 FF 13 05 00 04 01 00 6E 6C 0F 06 00 04 1B 9C 05 00 00 16 16
-        return False;                                                             //0058 : 04 28
-        }
-        return True;
-        */
+* CanExecute() =>
+local Actor chairActor;
+if (string(Chair) != "None") {                                              //0000 : 07 36 00 7B 39 57 01 C0 60 FF 13 1F 4E 6F 6E 65 00 16
+chairActor = FindClosestActor(Class'Actor',aObject,Chair);                //0012 : 0F 00 20 65 FF 13 1B DC 0F 00 00 20 F8 8B C1 00 00 F8 63 FF 13 01 C0 60 FF 13 16
+return chairActor != None;                                                //002D : 04 77 00 20 65 FF 13 2A 16
+}
+if (!Game_Controller(aObject.Controller).IsIdle()) {                        //0036 : 07 5A 00 81 19 2E 10 0E 5B 01 19 00 F8 63 FF 13 05 00 04 01 00 6E 6C 0F 06 00 04 1B 9C 05 00 00 16 16
+return False;                                                             //0058 : 04 28
+}
+return True;
+*/
     }
 }

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Gameplay.Entities;
 using Gameplay.Skills.Effects;
 
 namespace Gameplay.Events
@@ -12,5 +14,15 @@ namespace Gameplay.Events
         public bool SubjectEffectIsPermanent;
         public string Tag;
         public List<string> temporaryEffectsNames = new List<string>();
+
+        public override bool CanExecute(Entity obj, Entity subject)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void Execute(Entity obj, Entity subject)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

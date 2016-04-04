@@ -43,7 +43,10 @@ namespace Gameplay.Entities
         ENPCMovementFlags _movementFlags = ENPCMovementFlags.ENMF_Walking;
 
         [SerializeField]
-        NPCBehaviour behaviour;
+        NPCBehaviour curBehaviour;
+
+        [SerializeField]
+        NPCBehaviour defaultBehaviour;
 
         Vector3 focusLocation;
 
@@ -136,7 +139,9 @@ namespace Gameplay.Entities
             //TODO: Make AI state machine an enumerated flag for efficiency(Killer, passive etc.)
             if (    RespawnInfo.referenceAiStateMachine != null
                 &&  RespawnInfo.referenceAiStateMachine.Contains("Kill")) {
-                gameObject.AddComponent<KillerBehaviour>();
+                defaultBehaviour = gameObject.AddComponent<KillerBehaviour>();
+                
+                
             }
             else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
             {
@@ -146,15 +151,15 @@ namespace Gameplay.Entities
                 if (RespawnInfo.referenceAiStateMachine != null
                 &&  RespawnInfo.referenceAiStateMachine.Contains("Critter"))
                 {
-                    gameObject.AddComponent<CritterBehaviour>();
+                    defaultBehaviour = gameObject.AddComponent<CritterBehaviour>();
                 }
                 else {
-                    gameObject.AddComponent<KillerBehaviour>();
+                    defaultBehaviour = gameObject.AddComponent<KillerBehaviour>();
                 }
             }
             else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Deployer)
             {
-                gameObject.AddComponent<GroupBehaviour>();
+                defaultBehaviour = gameObject.AddComponent<GroupBehaviour>();
             }
 
             //Attach pathing if appropriate
@@ -178,65 +183,71 @@ namespace Gameplay.Entities
         {
             base.UpdateEntity();
             HandleMovement();
-            if (!ReferenceEquals(behaviour, null) && behaviour.enabled)
+            if (!ReferenceEquals(curBehaviour, null) && curBehaviour.enabled)
             {
-                behaviour.UpdateBehaviour();
+                curBehaviour.UpdateBehaviour();
             }
         }
 
         public void AttachBehaviour(NPCBehaviour b)
         {
-            behaviour = b;
+            curBehaviour = b;
         }
 
         public void DeAttachBehaviour()
         {
-            if (behaviour != null)
+            if (curBehaviour != null)
             {
-                Destroy(behaviour);
+                Destroy(curBehaviour);
             }
+        }
+
+        public void DefaultBehaviour()
+        {
+            DeAttachBehaviour();
+            curBehaviour = defaultBehaviour;
         }
 
         protected override void OnDamageReceived(SkillApplyResult sap)
         {
             base.OnDamageReceived(sap);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnDamage(sap.skillSource, sap.appliedSkill, sap.damageCaused);
+                curBehaviour.OnDamage(sap.skillSource, sap.appliedSkill, sap.damageCaused);
             }
         }
 
         protected override void OnHealReceived(SkillApplyResult sap)
         {
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnHeal(sap.skillSource, sap.healCaused);
+                curBehaviour.OnHeal(sap.skillSource, sap.healCaused);
             }
         }
 
         public override void OnEntityBecameRelevant(Entity rel)
         {
             base.OnEntityBecameRelevant(rel);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnLearnedRelevance(rel);
+                curBehaviour.OnLearnedRelevance(rel);
             }
         }
 
         public override void OnEntityBecameIrrelevant(Entity rel)
         {
             base.OnEntityBecameIrrelevant(rel);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnReleasedRelevance(rel);
+                curBehaviour.OnReleasedRelevance(rel);
             }
         }
 
         protected override void OnEndCastSkill(SkillContext s)
         {
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnEndedCast(s.ExecutingSkill);
+                curBehaviour.OnEndedCast(s.ExecutingSkill);
             }
         }
 
@@ -268,9 +279,9 @@ namespace Gameplay.Entities
         public override void TeleportTo(Vector3 newPos, Quaternion newRot)
         {
             base.TeleportTo(newPos, newRot);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnTeleported();
+                curBehaviour.OnTeleported();
             }
         }
 

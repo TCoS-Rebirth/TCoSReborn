@@ -45,8 +45,8 @@ namespace ZoneScripts
                 var ie = go.AddComponent<InteractiveLevelElement>();
                 ie.LevelObjectID = i;
                 ie.Name = "Unknown";
-                ie.CollisionType = ECollisionType.COL_Blocking;
-                ie.IsEnabled = true;
+                ie.InitColl = ECollisionType.COL_Colliding;
+                ie.InitEnabled = true;
                 ie.isDummy = true;
                 ie.AssignRelID();
                 AttachedZone.AddToZone(ie);
@@ -55,15 +55,15 @@ namespace ZoneScripts
 
         public override void OnPlayerEntered(PlayerCharacter pc)
         {
-            ActivateAllInteractiveElements(pc);
+            ActivateAllDummyElements(pc);
         }
 
-        void ActivateAllInteractiveElements(PlayerCharacter pc)
+        void ActivateAllDummyElements(PlayerCharacter pc)
         {
             for (var i = AttachedZone.InteractiveElements.Count; i-- > 0;)
             {
                 var ie = AttachedZone.InteractiveElements[i];
-                if (ie.LevelObjectID >= 0)
+                if (ie.LevelObjectID >= 0 && ie.isDummy)
                 {
                     var m = PacketCreator.S2C_INTERACTIVELEVELELEMENT_ADD(ie);
                     pc.SendToClient(m);

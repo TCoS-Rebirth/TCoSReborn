@@ -157,7 +157,7 @@ namespace Gameplay.Entities
             BroadcastRelevanceMessage(m);
 
             //kill player if below zone killY
-            if (    ActiveZone.killY != 0 
+            if (ActiveZone && ActiveZone.killY != 0 
                 &&  pos.y < ActiveZone.killY 
                 &&  PawnState != EPawnStates.PS_DEAD)
             {
@@ -667,6 +667,8 @@ namespace Gameplay.Entities
             Message mUpdateFamePoints = PacketCreator.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(this);
             SendToClient(mUpdateFamePoints);
 
+            ReceiveChatMessage("", "Gained " + points + " fame", EGameChatRanges.GCR_SYSTEM);
+
             //Return if max level
             if (FameLevel >= GameConfiguration.CharacterDefaults.MaxFame) return;
 
@@ -887,8 +889,15 @@ namespace Gameplay.Entities
             }
             #endregion
 
-            #region Grant PEP
-            //TODO
+            #region Grant Fame, PEP
+            //Valshaaran - placeholder formula, feel free to improve
+            int nFame = npc.FameLevel;
+            int baseKillPoints = 10;
+            float weightedKillPoints = (baseKillPoints*nFame*nFame) / FameLevel;
+            GiveFame((int)weightedKillPoints);
+
+            //TODO: PEP
+
             #endregion
         }
 
@@ -924,7 +933,8 @@ namespace Gameplay.Entities
             var element = rel as InteractiveLevelElement;
             if (element != null)
             {
-                Debug.Log("TODO sync interactiveElements");
+                SendToClient(PacketCreator.S2C_INTERACTIVELEVELELEMENT_ADD(element));
+                return;
             }
         }
 
@@ -937,7 +947,9 @@ namespace Gameplay.Entities
             base.OnEntityBecameIrrelevant(rel);
             if (contained)
             {
-                SendToClient(PacketCreator.S2C_BASE_PAWN_REMOVE(rel));
+                var ile = rel as InteractiveLevelElement;
+                if (ile) SendToClient(PacketCreator.S2C_LEVELOBJECT_REMOVE(ile));
+                else SendToClient(PacketCreator.S2C_BASE_PAWN_REMOVE(rel));
             }
         }
 
@@ -1089,7 +1101,6 @@ namespace Gameplay.Entities
             }
             return false;
         }
-
         public bool HasUnfinishedTargets(Quest_Type quest)
         {
             PlayerQuestProgress questProgress = null;
@@ -1148,6 +1159,21 @@ namespace Gameplay.Entities
            // Message mQuestRemove = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(quest.resourceID);
             SendToClient(mQuestFinish);
             //SendToClient(mQuestRemove);
+        }
+        public void CompleteQT(Quest_Type quest, int targetIndex)
+        {
+            int completedValue = quest.targets[targetIndex].GetCompletedProgressValue();
+            questData.UpdateQuest(quest.resourceID, targetIndex, completedValue);
+            Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(
+                quest.resourceID, targetIndex, completedValue);
+            SendToClient(m);
+        }
+        public void SetQTProgress(int questID, int targetIndex, int progress)
+        {
+            questData.UpdateQuest(questID, targetIndex, progress);
+            Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(
+                questID, targetIndex, progress);
+            SendToClient(m);
         }
 
         /// <summary>

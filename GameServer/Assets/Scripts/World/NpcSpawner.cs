@@ -85,7 +85,7 @@ namespace World
             if (spawns.Count == 0)
             {
                 var newSI = new SpawnInfo();
-                newSI.setupFromSpawner(this);
+                newSI.setupFromSpawner(this,transform.position,Quaternion.ToEulerAngles(transform.rotation));
 
                 //Valshaaran - experimental raycast spawning to address mid-air ConditionalEnemy spawns
                 //var rayCast = zone.Raycast(transform.position, Vector3.down, 20f);
@@ -100,6 +100,9 @@ namespace World
                 if (newNPC.Faction == null)
                     newNPC.Faction = GameData.Get.factionDB.defaultFaction;
 
+                newNPC.InitEnabled = true;
+                newNPC.InitColl = ECollisionType.COL_Colliding;
+
                 if (z.AddToZone(newNPC))
                 {
                     spawns.Add(newNPC);
@@ -111,6 +114,7 @@ namespace World
             }
         }
 
+        [ContextMenu("Despawn")]
         public virtual void DespawnAll(Zone z)
         {
             foreach (var spawn in spawns)

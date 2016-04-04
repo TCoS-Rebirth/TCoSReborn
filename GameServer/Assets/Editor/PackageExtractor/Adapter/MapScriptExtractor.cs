@@ -86,7 +86,7 @@ namespace PackageExtractor.Adapter
                 else if (wpo.sbObject.ClassName.EndsWith("Content_Trigger"))
                 {
                     
-                    if(!getContentTrigger(wpo, resources, pW))
+                    if(!getContentTrigger(wpo, resources, localizedStrings, pW))
                     {
                         Log("Failed to extract ContentTrigger " + wpo.Name, Color.red);
                     }
@@ -193,7 +193,7 @@ namespace PackageExtractor.Adapter
         }
 
 
-        protected bool getContentTrigger(WrappedPackageObject wpo, SBResources resources, PackageWrapper pW)
+        protected bool getContentTrigger(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings locStrings, PackageWrapper pW)
         {
 
             var go = new GameObject(wpo.Name.Replace("\0", string.Empty));
@@ -223,7 +223,7 @@ namespace PackageExtractor.Adapter
                     foreach (var eventProp in prop.IterateInnerProperties())
                     {
                         var evWPO = FindReferencedObject(eventProp);
-                        trigger.Actions.Add(ExtractEvent(evWPO, resources, pW, null));
+                        trigger.Actions.Add(ExtractEvent(evWPO, resources, locStrings, pW, null));
                     }
                 }
             }
@@ -251,6 +251,7 @@ namespace PackageExtractor.Adapter
         protected bool loadCols()
         {
             //Load NPC collections
+            npcCols.Clear();
             var files = Directory.GetFiles(Application.dataPath + "/GameData/NPCs/");
             foreach (var f in files)
             {
@@ -262,6 +263,7 @@ namespace PackageExtractor.Adapter
             }
             if (npcCols.Count == 0) return false;
             //Quests
+            questCols.Clear();
             files = Directory.GetFiles(Application.dataPath + "/GameData/Quests/");
             foreach (var f in files)
             {

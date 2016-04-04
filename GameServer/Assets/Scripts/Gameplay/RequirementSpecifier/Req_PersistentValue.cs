@@ -13,7 +13,7 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            var perVar = p.persistentVars.GetValue(context, VariableID);
+            var perVar = p.persistentVars.GetValue((int)p.ActiveZone.ID, VariableID);
             return SBOperator.Operate(perVar, Operator, Value);
         }
 

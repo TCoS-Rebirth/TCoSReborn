@@ -4,6 +4,7 @@ using Database.Static;
 using Gameplay.Events;
 using UnityEngine;
 using Gameplay.Entities;
+using Common;
 
 namespace Gameplay.Quests.QuestTargets
 {
@@ -27,7 +28,7 @@ namespace Gameplay.Quests.QuestTargets
         /// <param name="progressValue"></param>
         public void onAdvance(PlayerCharacter p, int progressValue)
         {
-            if (isComplete(progressValue)) onComplete(p);
+            if (isComplete(progressValue)) { tryComplete(p); }
         }
 
         public bool isComplete(int progressValue)
@@ -37,14 +38,21 @@ namespace Gameplay.Quests.QuestTargets
         }
 
         /// <summary>
-        /// Execute all the target's Complete Events
+        /// Try to execute all the target's Complete Events
         /// </summary>
-        protected void onComplete(PlayerCharacter p)
+        protected bool tryComplete(PlayerCharacter p)
         {
+            bool success = true;
             foreach (var completeEvent in CompleteEvents)
             {
-                completeEvent.Execute(p);                
+                if (!completeEvent.TryExecute(null, p))
+                {
+                    p.ReceiveChatMessage(completeEvent.name, "Failed to execute completion event!", EGameChatRanges.GCR_SYSTEM);
+                    success = false;
+                }
             }
+
+            return success;
         }
 
         //ConversationTopic attachedTopic;

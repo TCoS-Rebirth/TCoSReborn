@@ -28,6 +28,7 @@ namespace Gameplay.Entities
         EPhysics _physics = EPhysics.PHYS_Walking;
 
         int _shiftableAppearance;
+        public bool IsShifted { get { return ShiftableAppearance > 0; } }
 
         Vector3 _velocity;
 
@@ -505,6 +506,7 @@ namespace Gameplay.Entities
         {
             var result = new SkillApplyResult(source, this, s);
             result.damageCaused = Mathf.Abs((int) SetHealth(Health - amount));
+            OnDamageReceived(result);
 
             //Valshaaran - added not already dead condition
             if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Health, 0))
@@ -512,7 +514,6 @@ namespace Gameplay.Entities
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(source);
             }
-            OnDamageReceived(result);
             return result;
         }
 
@@ -526,6 +527,8 @@ namespace Gameplay.Entities
                     BroadcastRelevanceMessage(m);
                 }
             }
+
+            IsInteracting = false;
         }
 
         public virtual void OnDamageCaused(SkillApplyResult sap)
@@ -680,6 +683,8 @@ namespace Gameplay.Entities
         #endregion
 
         #region Interaction
+
+        public bool IsInteracting;
 
         public virtual void Interact(PlayerCharacter source, ERadialMenuOptions menuOption)
         {

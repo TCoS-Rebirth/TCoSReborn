@@ -1,3 +1,5 @@
+using System;
+using Gameplay.Entities;
 using Gameplay.Entities.NPCs;
 
 namespace Gameplay.Events
@@ -9,5 +11,15 @@ namespace Gameplay.Events
         public int npcID;
         public float Radius;
         public string temporaryNPCname;
+
+        public override bool CanExecute(Entity obj, Entity subject)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void Execute(Entity obj, Entity subject)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

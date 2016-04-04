@@ -1,4 +1,5 @@
-﻿using Database.Static;
+﻿using Common;
+using Database.Static;
 using Gameplay.Entities;
 using Gameplay.Entities.NPCs;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace World
         public float RespawnVariation;
         public int SpawnMax;
         public int SpawnMin;
+        public static float DefaultThreatRange = 5.0f;
         public float ThreatRange;
         public bool UseAbsoluteAmounts;
         public float VisualRange;
@@ -33,6 +35,7 @@ namespace World
         public override void TriggerSpawn(Zone z)
         {
             int spawnNum;
+            
             if (SpawnMax > 1)
             {
                 spawnNum = (int)(spawnNumMult * Random.Range(SpawnMin, SpawnMax));
@@ -56,7 +59,7 @@ namespace World
                 var rndRot = new Vector3(0, randRotY, 0);
 
                 var newSI = new SpawnInfo();
-                newSI.setupFromSpawner(this);
+                newSI.setupFromSpawner(this, rayCast, rndRot);
 
             
 
@@ -70,6 +73,9 @@ namespace World
                     //Roll level if not specified
                     if (newNPC.FameLevel == 0)
                         newNPC.FameLevel = Random.Range(LevelMin, LevelMax);
+
+                    newNPC.InitEnabled = true;
+                    newNPC.InitColl = ECollisionType.COL_Colliding;
 
                     if (z.AddToZone(newNPC))
                     {
@@ -108,7 +114,7 @@ namespace World
                 }
                 else { respawnTimer -= Time.deltaTime; }
             }
-            else if (liveSpawns() < (int)(spawnNumMult * SpawnMin))
+            else if (liveSpawns() == 0 || liveSpawns() < (int)(spawnNumMult * SpawnMin))
             {
                 respawnPending = true;
                 respawnTimer = RespawnTime * Random.Range(1.0f - RespawnVariation, 1.0f + RespawnVariation);

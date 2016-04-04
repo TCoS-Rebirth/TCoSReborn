@@ -164,13 +164,17 @@ namespace Network
             return m;
         }
 
-        public static Message S2R_GAME_ACTOR_SV2CLREL_SETENABLED(Entity ro)
+        public static Message S2C_USER_LEVELUP()
         {
-            var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SETENABLED);
-            m.WriteInt32(ro.RelevanceID);
-            m.WriteInt32(0);
+            //TODO
+            Message m = new Message(GameHeader.S2C_USER_LEVELUP);
+
+            m.WriteInt32(0);    //Unknown
+            m.WriteInt32(0);    //Unknown
+            m.WriteInt32(0);    //Unknown
+
             return m;
-        }        
+        }
 
         public static Message S2C_GAME_CHAT_SV2CL_ONMESSAGE(string sender, string message, EGameChatRanges channel)
         {
@@ -305,6 +309,52 @@ namespace Network
 
         #endregion
 
+        #region Actors
+
+        public static Message S2R_GAME_ACTOR_SV2CLREL_SETENABLED(Entity ro, bool enabled)
+        {
+            var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SETENABLED);
+            m.WriteInt32(ro.RelevanceID);
+            m.WriteInt32(enabled ? 1 : 0);
+            return m;
+        }
+
+        public static Message S2R_GAME_ACTOR_SV2CLREL_SHOW(Entity ro, bool show, float fadeTimer = 0.0f)
+        {
+            var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SHOW);
+            m.WriteInt32(ro.RelevanceID);
+            m.WriteInt32(show ? 1 : 0);
+            m.WriteFloat(fadeTimer);
+            return m;
+        }
+
+        public static Message S2R_GAME_ACTOR_SV2CLREL_SETCOLLISIONTYPE(Entity ro, ECollisionType col)
+        {
+            var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SETCOLLISIONTYPE);
+            m.WriteInt32(ro.RelevanceID);
+            m.WriteByte((byte)col);
+            return m;
+        }
+
+        public static Message S2C_GAME_ACTOR_MOVE(Entity actor, Vector3 newPos, Quaternion newRot)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_ACTOR_MOVE);
+            m.WriteInt32(actor.RelevanceID);
+            m.WriteInt32(0); //unknown!
+            m.WriteVector3(UnitConversion.ToUnreal(newPos));
+            m.WriteRotator(UnitConversion.ToUnreal(newRot));
+            return m;
+        }
+
+        public static Message S2C_LEVELOBJECT_REMOVE(InteractiveLevelElement ie)
+        {
+            var m = new Message(GameHeader.S2C_LEVELOBJECT_REMOVE);
+            m.WriteInt32(ie.RelevanceID);
+            m.WriteInt32(ie.LevelObjectID); //Experimental?
+            return m;
+        }
+
+        #endregion
 
         #region Interactives
 
@@ -313,7 +363,7 @@ namespace Network
             var m = new Message(GameHeader.S2C_INTERACTIVELEVELELEMENT_ADD);
             m.WriteInt32(ie.RelevanceID); //element relevanceID
             m.WriteInt32(ie.LevelObjectID); //leveObjectID
-            m.WriteInt32(ie.IsEnabled ? 1 : 0); //isEnabled
+            m.WriteInt32(ie.Enabled ? 1 : 0); //isEnabled
             m.WriteInt32(ie.Invisible ? 1 : 0); //isHidden
             m.WriteRotator(UnitConversion.ToUnreal(ie.Rotation)); //NetRotation
             m.WriteVector3(UnitConversion.ToUnreal(ie.Position)); //NetLocation
@@ -322,26 +372,45 @@ namespace Network
             return m;
         }
 
-        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION(InteractiveLevelElement ie, ERadialMenuOptions mainOpt, ERadialMenuOptions subOpt, Character c)
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION(InteractiveLevelElement ie, int menuOptInd, int subActInd, bool reverse, Character c)
         {
             var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION);
 
             m.WriteInt32(ie.RelevanceID);   //element relevance ID?
-            m.WriteInt32((int)mainOpt);     //option index?
-            m.WriteInt32((int)subOpt);      //suboption index?
-            m.WriteInt32(0);                //bool aReverse?
+            m.WriteInt32(menuOptInd);     //option index?
+            m.WriteInt32(subActInd);        //suboption index?
+            m.WriteInt32(reverse ? 1 : 0);          //bool aReverse?
             m.WriteInt32(c.RelevanceID);    //interacting pawn relevance ID?                              
             return m;
         }
 
-        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION(InteractiveLevelElement ie, ERadialMenuOptions mainOpt, ERadialMenuOptions subOpt, Character c)
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_CANCELCLIENTSUBACTION(InteractiveLevelElement ie, int menuOptInd, int subActInd)
+        {
+            var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_CANCELCLIENTSUBACTION);
+
+            m.WriteInt32(ie.RelevanceID);
+            m.WriteInt32(menuOptInd);
+            m.WriteInt32(subActInd);
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION(InteractiveLevelElement ie, int menuOptInd, int subActInd, bool reverse)
         {
             var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION);
 
             m.WriteInt32(ie.RelevanceID);   //element relevance ID?
-            m.WriteInt32((int)mainOpt);     //option index?
-            m.WriteInt32((int)subOpt);      //suboption index?
-            m.WriteInt32(0);                //bool aReverse?                           
+            m.WriteInt32(menuOptInd);     //option index?
+            m.WriteInt32(subActInd);      //suboption index?
+            m.WriteInt32(reverse ? 1 : 0);  //bool aReverse?                           
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_UPDATENETISACTIVATED(InteractiveLevelElement ie, bool activated)
+        {
+            Message m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_UPDATENETISACTIVATED);
+            m.WriteInt32(ie.RelevanceID);
+            int activatedInt = activated ? 1 : 0;
+            m.WriteInt32(activatedInt);
             return m;
         }
 
@@ -389,6 +458,24 @@ namespace Network
         #endregion        
 
         #region Pawns
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Vector3 position, Vector3 velocity, EPhysics physics)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT);
+            m.WriteVector3(UnitConversion.ToUnreal(position));
+            m.WriteVector3(UnitConversion.ToUnreal(velocity));
+            m.WriteByte((byte)physics);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(bool onChair)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN);
+            int onChairInt = onChair ? 1 : 0;
+            m.WriteInt32(onChairInt);
+            return m;
+             
+        }
 
         public static Message S2R_GAME_NPCPAWN_SV2REL_FOCUSLOCATION(NpcCharacter character)
         {
@@ -544,6 +631,14 @@ namespace Network
             var m = new Message(GameHeader.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE);
             m.WriteInt32(ch.RelevanceID);
             m.WriteByte((byte)ch.PawnState);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_CLIENTSIDETRIGGER(string eventTag, PlayerCharacter instigator)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_CLIENTSIDETRIGGER);
+            m.WriteString(eventTag);
+            m.WriteInt32(instigator.RelevanceID);
             return m;
         }
 

@@ -27,16 +27,17 @@ namespace Gameplay.Entities.NPCs
         public string referenceAiStateMachine;
         public List<string> referencelinkedScripts = new List<string>();
         public float respawnInterval;
+        public float aggroRadius;
         public ESpawnerCategory spawnerCategory;
 
         [Header("Runtime"), ReadOnly] public float timeOfDespawn;
 
         public NPC_Type typeRef;
 
-        public void setupFromSpawner(NpcSpawner spawner)
+        public void setupFromSpawner(NpcSpawner spawner, Vector3 pos, Vector3 rot)
         {
-            initialSpawnPoint = spawner.transform.position;
-            initialSpawnRotation = spawner.transform.rotation.eulerAngles;
+            initialSpawnPoint = pos;
+            initialSpawnRotation = rot;
 
             linkedPatrolPoint = spawner.linkedPatrolPoint;
             referenceAiStateMachine = spawner.referenceAiStatemachineName;
@@ -47,15 +48,20 @@ namespace Gameplay.Entities.NPCs
 
         }
 
-        public void setupFromSpawner(WildlifeSpawner spawner)
+        public void setupFromSpawner(WildlifeSpawner spawner, Vector3 pos, Vector3 rot)
         {
-            setupFromSpawner((NpcSpawner) spawner);
+            setupFromSpawner((NpcSpawner) spawner, pos, rot);
 
             levelMax = spawner.LevelMax;
             levelMin = spawner.LevelMin;
             maxSpawnDistance = spawner.MaxSpawnDistance;
             respawnInterval = spawner.RespawnTime;
-            spawnerCategory = ESpawnerCategory.Wildlife;            
+            spawnerCategory = ESpawnerCategory.Wildlife;
+
+            if (spawner.ThreatRange > 0.0f)
+                aggroRadius = spawner.ThreatRange;
+            else
+                aggroRadius = WildlifeSpawner.DefaultThreatRange;    
             
         }
 

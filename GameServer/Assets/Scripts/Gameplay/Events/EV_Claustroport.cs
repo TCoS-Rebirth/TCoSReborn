@@ -8,18 +8,24 @@ namespace Gameplay.Events
         public float MaxDistance;
         public bool UseOrientation;
 
-        public override void Execute(PlayerCharacter p)
+        public override bool CanExecute(Entity obj, Entity subject)
         {
-            base.Execute(p);
+            if (subject as Character && subject.ActiveZone.FindTravelDestination(DestinationTag)) return true;
+            else return false;
+        }
+
+        protected override void Execute(Entity obj, Entity subject)
+        {
+            var charSubj = subject as Character;
 
             //Match dest tag
-            var dest = p.ActiveZone.FindTravelDestination(DestinationTag);
+            var dest = charSubj.ActiveZone.FindTravelDestination(DestinationTag);
 
             //port player to dest
             if (UseOrientation)
-                p.TeleportTo(dest.Position, dest.Rotation);
+                charSubj.TeleportTo(dest.Position, dest.Rotation);
             else
-                p.TeleportTo(dest.Position, p.Rotation);
+                charSubj.TeleportTo(dest.Position, charSubj.Rotation);
         }
     }
 }

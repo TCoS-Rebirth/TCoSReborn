@@ -8,8 +8,22 @@ namespace Gameplay.Entities.Interactives
 {
     public class ILEAction : ScriptableObject
     {
-        public List<Content_Event> Actions;
+        public List<InteractionComponent> StackedActions = new List<InteractionComponent>();
         public ERadialMenuOptions menuOption;
-        public List<Content_Requirement> Requirements;
+        public List<Content_Requirement> Requirements = new List<Content_Requirement>();
+
+        public bool isEligible(Character c)
+        {
+            var pc = c as PlayerCharacter;
+            var nc = c as NpcCharacter;
+
+            foreach (var req in Requirements)
+            {
+                if (pc && !req.isMet(pc)) { return false; }
+                if (nc && !req.isMet(nc)) { return false; }
+            }
+            return true;
+            
+        }
     }
 }
