@@ -137,7 +137,7 @@ namespace Database.Dynamic.Internal
             {
                 _saveNewCharacterCommand =
                     new MySqlCommand(
-                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,HealthMaxHealth,BMF,PMC,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@famepoints,@hmh,@bmf,@pmc,@money,@bmfaep,@skilldeck);",
+                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,FamePoints,HealthMaxHealth,BMF,PMC,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@famepoints,@hmh,@bmf,@pmc,@money,@bmfaep,@skilldeck);",
                         connection);
                 AddCharacterCommandParameters(_saveNewCharacterCommand, pc);
                 _saveNewCharacterCommand.Prepare();

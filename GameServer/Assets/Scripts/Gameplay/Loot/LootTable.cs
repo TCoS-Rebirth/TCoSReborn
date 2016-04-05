@@ -1,17 +1,33 @@
 ﻿using System.Collections.Generic;
 using Gameplay.Items;
 using UnityEngine;
+using Common;
 
 namespace Gameplay.Loot
 {
     public class LootTable : ScriptableObject
     {
-        [SerializeField] List<LootTableEntry> entries = new List<LootTableEntry>();
+        [ReadOnly]
+        public string Name;
+        [ReadOnly]
+        ETableType TableType;
+        [ReadOnly]
+        int MinDropQuantity;
+        [ReadOnly]
+        int MaxDropQuantity;
+        [ReadOnly]
+        int MoneyBase;
+        [ReadOnly]
+        int MoneyPerLevel;
+
+        [ReadOnly]
+        public List<LootTableEntry> Entries = new List<LootTableEntry>();
+
 
         public Game_Item GenerateLoot()
         {
             Debug.LogWarning("TODO (calculate it properly)");
-            if (entries.Count == 0)
+            if (Entries.Count == 0)
             {
                 return null;
             }

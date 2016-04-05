@@ -455,7 +455,23 @@ namespace Network
             return m;
         }
 
-        #endregion        
+        #endregion
+
+        #region Looting
+
+        /*
+        public static Message S2C_GAME_LOOTING_SV2CL_CHANGELOOTMODE
+
+        public static Message S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED
+
+        public static Message S2C_GAME_LOOTING_SV2CL_REMOVEITEM()
+
+        public static Message S2C_GAME_LOOTING_SV2CL_ENDTRANSACTION
+
+        public static Message S2C_GAME_LOOTING_SV2CL_INITLOOTOFFER
+        */
+
+        #endregion
 
         #region Pawns
 
