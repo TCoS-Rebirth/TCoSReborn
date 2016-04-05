@@ -377,7 +377,11 @@ namespace Gameplay.Entities
             foreach (var col in cols)
             {
                 var c = col.GetComponent<Character>();
-                if (c != null && c != this && relevantObjects.Contains(c))
+                if (    c != null 
+                    &&  c != this 
+                    &&  c.PawnState != EPawnStates.PS_DEAD 
+                    && !faction.Likes(c.Faction) 
+                    && relevantObjects.Contains(c))
                 {
                     if (IsFacing(c.Position, range.angle))
                         queriedTargets.Add(c);
@@ -393,7 +397,11 @@ namespace Gameplay.Entities
             foreach (var col in cols)
             {
                 var c = col.GetComponent<Character>();
-                if (c != null && c != this && relevantObjects.Contains(c))
+                if (    c != null 
+                    &&  c != this 
+                    && c.PawnState != EPawnStates.PS_DEAD 
+                    && !faction.Likes(c.Faction) 
+                    && relevantObjects.Contains(c))
                 {
                     if (IsFacing(c.Position, range.angle))
                         queriedTargets.Add(c);

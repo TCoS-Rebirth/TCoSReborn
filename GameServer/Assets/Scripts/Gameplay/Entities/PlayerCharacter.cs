@@ -64,6 +64,8 @@ namespace Gameplay.Entities
             pc.SetupFromDBRef();
             pc.SetupCollision();
             pc.InitializeStats();
+            pc.InitEnabled = true;
+            pc.InitColl = ECollisionType.COL_Colliding;
             return pc;
         }
 
@@ -1117,11 +1119,11 @@ namespace Gameplay.Entities
                 return true;
             }
 
-            Debug.Log("Player.hasUnfinishedTargets : TODO - Compare each target progress to what its completed value should be");
-            //TODO: Placeholder - returns true if any targets have progress value 0, returns false otherwise
-            foreach (var targetValue in questProgress.targetProgress)
+            //Returns true if any target has a value less than its completed progress value
+            for (int n = 0; n < questProgress.targetProgress.Count;n++)
             {
-                if (targetValue == 0) { return true; }
+                var targetValue = questProgress.targetProgress[n];
+                if (targetValue < quest.targets[n].GetCompletedProgressValue()) return true;
             }
 
             return false;

@@ -21,8 +21,6 @@ namespace World
         public bool UseAbsoluteAmounts;
         public float VisualRange;
 
-        public bool respawnPending;
-
         //Valshaaran - experimental factor by which to multiple spawnmin, spawnmax, so the numbers are more reasonable!
         const float spawnNumMult = 0.2f;
 
