@@ -39,6 +39,8 @@ namespace World
         public bool triggeredRespawn;
         public bool triggeredSpawn;
 
+        public bool respawnPending;
+
         protected Zone zone;
 
         public virtual void Initialize(Zone z)
@@ -148,6 +150,27 @@ namespace World
                 if (spawn.PawnState == EPawnStates.PS_ALIVE) output++;
             }
             return output;
+        }
+
+        void FixedUpdate()
+        {
+            if (!initialized || triggeredSpawn) return;
+
+            if (respawnPending)
+            {
+                if (respawnTimer <= 0)
+                {
+                    ClearDead(zone);
+                    Spawn();
+                    respawnPending = false;
+                }
+                else { respawnTimer -= Time.deltaTime; }
+            }
+            else if (liveSpawns() == 0)
+            {
+                respawnPending = true;
+                respawnTimer = respawnTimeout;
+            }
         }
 
         //        {
