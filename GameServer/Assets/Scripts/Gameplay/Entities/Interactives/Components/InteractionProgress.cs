@@ -83,9 +83,9 @@ namespace Gameplay.Entities.Interactives
             base.onEnd(instigator, reverse);
         }
 
-        public override void Update()
+        public override void OnZoneUpdate()
         {
-            base.Update();
+            base.OnZoneUpdate();
 
             if (instigatorPlayer && instigatorPlayer.IsInteracting)
             {

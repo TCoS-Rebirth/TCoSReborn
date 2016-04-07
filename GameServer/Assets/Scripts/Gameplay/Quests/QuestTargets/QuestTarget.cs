@@ -47,7 +47,7 @@ namespace Gameplay.Quests.QuestTargets
             {
                 if (!completeEvent.TryExecute(null, p))
                 {
-                    p.ReceiveChatMessage(completeEvent.name, "Failed to execute completion event!", EGameChatRanges.GCR_SYSTEM);
+                    p.ReceiveChatMessage(completeEvent.name, "Failed to execute completion event" + completeEvent.name, EGameChatRanges.GCR_SYSTEM);
                     success = false;
                 }
             }

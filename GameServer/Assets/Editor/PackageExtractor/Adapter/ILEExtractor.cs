@@ -204,7 +204,7 @@ namespace PackageExtractor.Adapter
                     #endregion
 
                         output.InitEnabled = true;
-                        output.InitColl = ECollisionType.COL_Colliding;
+                        output.InitColl = ECollisionType.COL_Blocking;
 
                 }
             }

@@ -45,7 +45,7 @@ namespace ZoneScripts
                 var ie = go.AddComponent<InteractiveLevelElement>();
                 ie.LevelObjectID = i;
                 ie.Name = "Unknown";
-                ie.InitColl = ECollisionType.COL_Colliding;
+                ie.InitColl = ECollisionType.COL_Blocking;
                 ie.InitEnabled = true;
                 ie.isDummy = true;
                 ie.AssignRelID();

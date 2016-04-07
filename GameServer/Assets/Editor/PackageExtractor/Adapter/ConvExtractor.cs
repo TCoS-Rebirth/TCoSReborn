@@ -64,7 +64,7 @@ namespace PackageExtractor.Adapter
                 if (wpo.sbObject.ClassName.Contains("CT_"))
                 {
                     //Extract the full topic
-                    var newTopic = getConvTopicFull(wpo, resourcesProp, locStrings, pW);
+                    var newTopic = getConvTopicFull(wpo, resourcesProp, locStrings, pW, convCol);
                     convCol.topics.Add(newTopic);
                     AssetDatabase.AddObjectToAsset(newTopic, convCol);
                 }

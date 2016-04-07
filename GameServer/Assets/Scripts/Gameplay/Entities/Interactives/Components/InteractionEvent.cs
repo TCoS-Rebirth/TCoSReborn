@@ -14,17 +14,22 @@
             {
                 owner.TriggerScriptedEvent(EventTag, owner, instigator);
 
-                //TODO: should the event be waited for?
+                //TODO : move this to update() when scripted events implemented
                 owner.NextSubAction();
             }
             else
             {
-                owner.UntriggerScriptedEvent(EventTag,instigator);
+                owner.UntriggerScriptedEvent(EventTag, instigator);
             }
 
-            
+
 
         }
-    }
 
+        public override void OnZoneUpdate()
+        {
+            base.OnZoneUpdate();
+            //TODO : Go to next subaction when triggered script is complete
+        }
+    }
 }

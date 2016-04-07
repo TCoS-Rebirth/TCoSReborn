@@ -536,6 +536,7 @@ namespace Gameplay.Entities
                     switch (option2)
                     {
                         case ERadialMenuOptions.RMO_CONVERSATION:
+                            SetFocusLocation(source.Position);
                             NewTopic(source, chooseBestTopic(source));
                             break;
                     }
@@ -559,6 +560,13 @@ namespace Gameplay.Entities
 
                 var m = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, newTopic, bestNode, topicsToGive);
                 source.ReceiveRelevanceMessage(this, m);
+
+                //Execute topic events
+                foreach (var ev in newTopic.Events)
+                {
+                    ev.TryExecute(this, source);
+                }
+
             }
             else
             {
@@ -608,18 +616,8 @@ namespace Gameplay.Entities
                         {
                             if (qtTalk.TopicID.ID == srcConv.curTopic.resource.ID)
                             {
-                                //get target index
-                                int tarInd = curQuest.getTargetIndex(target.resource.ID);
-
-                                //Update quest data array
-                                source.questData.UpdateQuest(curQuest.resourceID, tarInd, 1);
-
-                                //send progress update packet
-                                var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(curQuest.resourceID, tarInd, 1);
-                                source.ReceiveRelevanceMessage(this, m);
-
-                                //QuestTarget.onAdvance()
-                                target.onAdvance(source, 1);
+                                //Update quest data
+                                source.TryAdvanceTarget(curQuest, target);
                                 break;
                             }
                         }
@@ -723,6 +721,7 @@ namespace Gameplay.Entities
             foreach (var qTopic in typeRef.QuestTopics)
             {
                 ConversationTopic fullTopic = GameData.Get.convDB.GetTopic(qTopic);
+                if (!fullTopic.requirementsMet(p)) continue;
 
                 if (p.currentConv != null)
                 {
@@ -752,8 +751,7 @@ namespace Gameplay.Entities
 
                                 if (qtTalk.TopicID.ID == qTopic.ID)
                                 {
-                                    if ((p.PreTargetsComplete(target, qtTalkParentQuest))
-                                        && fullTopic.requirementsMet(p))    //If all pretargets and completed and requirements are met
+                                    if (p.PreTargetsComplete(target, qtTalkParentQuest))    //If all pretargets and completed and requirements are met
                                         topicRefs.Add(qTopic);
                                 }
                             }
@@ -775,7 +773,7 @@ namespace Gameplay.Entities
                         && (!p.QuestIsComplete(parentQuest.resourceID))              //and they haven't already completed quest
                     )
                 {
-                    if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                    topicRefs.Add(qTopic);
                 }
                 #endregion
 
@@ -786,7 +784,7 @@ namespace Gameplay.Entities
                         && (p.HasUnfinishedTargets(parentQuest))                 //and at least 1 quest target remains incomplete                                                        
                         )
                 {
-                    if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                    topicRefs.Add(qTopic);
                 }
                 #endregion
 
@@ -811,10 +809,8 @@ namespace Gameplay.Entities
                                 )
                             {
                                 //Complete the target
-                                int tarIndex = parentQuest.getTargetIndex(tar.resource.ID);
-                                p.questData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
-                                var mNullQTTalk = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
-                                p.ReceiveRelevanceMessage(this, mNullQTTalk);
+                                p.TryAdvanceTarget(parentQuest, tar);
+
                                 break;
                             }
 
@@ -826,17 +822,15 @@ namespace Gameplay.Entities
                                 //TODO : Proper serverside inventory check needed?
                                 ) {
 
-                                int tarIndex = parentQuest.getTargetIndex(tar.resource.ID);
-                                p.questData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
-                                var mNullQTFedex = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
-                                p.ReceiveRelevanceMessage(this, mNullQTFedex);
+                                //Complete the target
+                                p.TryAdvanceTarget(parentQuest, tar);
                                 break;
                             }
                         }
 
                         if (!p.HasUnfinishedTargets(parentQuest))  //all quest targets must be complete)  
                         {
-                            if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                            topicRefs.Add(qTopic);
                         }
                     }
                 }

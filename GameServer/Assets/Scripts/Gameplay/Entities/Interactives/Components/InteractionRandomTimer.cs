@@ -28,9 +28,9 @@ namespace Gameplay.Entities.Interactives
             timer = 0.0f;
         }
 
-        public override void Update()
+        public override void OnZoneUpdate()
         {
-            base.Update();
+            base.OnZoneUpdate();
 
             if (timer > 0.0f)
             {

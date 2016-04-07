@@ -45,9 +45,9 @@ namespace Gameplay.Entities.Interactives
             base.onEnd(instigator, reverse);
         }
 
-        public override void Update()
+        public override void OnZoneUpdate()
         {
-            base.Update();
+            base.OnZoneUpdate();
             //TODO: Check exactly how this is timed, change if needed
 
             if (timer < LoopDuration)

@@ -483,7 +483,6 @@ namespace Gameplay.Entities
                     EGameChatRanges.GCR_SYSTEM
                 );
             }
-            throw new NotImplementedException();
         }
 
         public void UntriggerScriptedEvent(string eventName, Entity untriggerer)
@@ -497,7 +496,6 @@ namespace Gameplay.Entities
                 EGameChatRanges.GCR_SYSTEM
             );
             }
-            throw new NotImplementedException();
         }
 
         public void UntriggerEvent(Character instigator)

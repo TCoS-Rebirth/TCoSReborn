@@ -29,7 +29,7 @@ namespace Gameplay.Entities.Interactives
 
         public virtual void onEnd(PlayerCharacter instigator, bool reverse) { }
 
-        public virtual void Update()
+        public virtual void OnZoneUpdate()
         {
             if (cancelled)
             {

@@ -24,32 +24,27 @@ namespace World
 
         protected override void OnEnteredTrigger(Character ch)
         {
-            base.OnEnteredTrigger(ch);
-
-            var pc = ch as PlayerCharacter;
-            if (pc == null) return;
-
-            if (PlayerCount == 0)
-                AttachedSpawner.TriggerSpawn(pc.ActiveZone);
-
-            else if (AttachedSpawner.spawns.Count == 0)
+            refreshChars();
+            if (reqsMet(ch))
             {
-                //Handle other players attached, but spawner spawns are empty
-                AttachedSpawner.TriggerSpawn(pc.ActiveZone);
-            }
-
+                CharsInside.Add(ch);
+                if (CharsInside.Count == 1)
+                    AttachedSpawner.TriggerSpawn(ch.ActiveZone);
+                else if (AttachedSpawner.liveSpawns() == 0)
+                {
+                    //Handle other players attached, but spawner spawns are empty
+                    AttachedSpawner.TriggerSpawn(ch.ActiveZone);
+                }
+            }            
         }
 
         protected override void OnLeftTrigger(Character ch)
         {
             base.OnLeftTrigger(ch);
 
-            var pc = ch as PlayerCharacter;
-            if (pc == null) return;
-
-            if (PlayerCount == 0)
+            if (CharsInside.Count == 0)
             {
-                AttachedSpawner.DespawnAll(pc.ActiveZone);
+                AttachedSpawner.DespawnAll(ch.ActiveZone);
             }
         }        
 

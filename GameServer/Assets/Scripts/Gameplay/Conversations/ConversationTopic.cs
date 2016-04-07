@@ -33,11 +33,10 @@ namespace Gameplay.Conversations
         //var (Banner) byte Emote;
         EContentEmote Emote;
 
-#pragma warning disable 0414
         [Header("Other")]
         //var (Events) editinline array<Content_Event> Events;
-        List<Content_Event> Events = new List<Content_Event>();
-#pragma warning restore 0414
+        public List<Content_Event> Events = new List<Content_Event>();
+
         public string internalName;
 
         //var (Conversation) int ButtonImage;

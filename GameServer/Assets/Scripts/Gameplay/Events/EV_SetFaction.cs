@@ -1,13 +1,12 @@
 using System;
 using Gameplay.Entities;
+using Database.Static;
 
 namespace Gameplay.Events
 {
     public class EV_SetFaction : Content_Event
     {
-        public Taxonomy DesiredFaction;
-        public int taxonomyID;
-        public string temporaryFactionName;
+        public SBResource Taxonomy;
 
         public override bool CanExecute(Entity obj, Entity subject)
         {

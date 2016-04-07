@@ -112,9 +112,15 @@ namespace Gameplay.Entities.NPCs.Behaviours
                     {
                         var targetPos = _targetPosition;
                         targetPos.y = _currentPosition.y;
-                        owner.Rotation = Quaternion.LookRotation(targetPos - _currentPosition, Vector3.up);
-                        owner.SetFocusLocation(_targetPosition);
-                        lastRotation = Time.time;
+
+                        Quaternion newRot = Quaternion.LookRotation(targetPos - _currentPosition, Vector3.up);
+                        if (newRot != owner.Rotation)
+                        {
+                            owner.Rotation = newRot;
+                            owner.SetFocusLocation(_targetPosition);
+                            lastRotation = Time.time;
+                        }                                               
+                        
                     }
                     distanceSquaredToCurrentTarget = VectorMath.SqrDistanceXZ(_targetPosition, _currentPosition);
                     if (Vector3.SqrMagnitude(_targetPosition - startPosition) > homeRadius*homeRadius)

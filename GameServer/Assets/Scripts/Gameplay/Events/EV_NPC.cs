@@ -1,16 +1,15 @@
 using System;
 using Gameplay.Entities;
 using Gameplay.Entities.NPCs;
+using Database.Static;
 
 namespace Gameplay.Events
 {
     public class EV_NPC : Content_Event
     {
-        public NPC_Type NPC;
-        public Content_Event NPCAction;
-        public int npcID;
+        public SBResource NPCRes;
+        public Content_Event Action;
         public float Radius;
-        public string temporaryNPCname;
 
         public override bool CanExecute(Entity obj, Entity subject)
         {

@@ -15,6 +15,7 @@ using Utility;
 using World;
 using Gameplay.Quests.QuestTargets;
 using Gameplay.Entities.Interactives;
+using Gameplay.Quests.QuestConditions;
 
 namespace Gameplay.Entities
 {
@@ -1172,7 +1173,10 @@ namespace Gameplay.Entities
         }
         public void SetQTProgress(int questID, int targetIndex, int progress)
         {
+            //Server quest data
             questData.UpdateQuest(questID, targetIndex, progress);
+
+            //Dispatch packet
             Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(
                 questID, targetIndex, progress);
             SendToClient(m);
@@ -1189,25 +1193,43 @@ namespace Gameplay.Entities
             var playerTarProgress = questData.getProgress(quest.resourceID);
             int tarIndex = quest.getTargetIndex(target.resource.ID);
             int newValue = -1;
-            //TODO
-            //Handle other target type value setting
-            if (target is QT_Hunt
-                || target is QT_Exterminate
-                || target is QT_Destroy
-                || target is QT_Take)
+
+            //If the objective is already completed, return false;
+            if (playerTarProgress.targetProgress[tarIndex] >= target.GetCompletedProgressValue())
+            {
+                return false;
+            }
+
+            #region Update and check QuestConditions
+            //Get condition targets
+            for (int n = 0; n < quest.targets.Count;n++)
+            {
+                var t = quest.targets[n];
+
+                var qc = t as QuestCondition;
+                if (qc)
                 {
-                newValue = playerTarProgress.targetProgress[tarIndex] + 1;
+                    //If this is a final target of the QC, update QC, 
+                    //and don't advance this target if not true
+                    if (qc.HasFinalTarget(target.resource))
+                    {
+
+                        //If QC not fulfilled, return false
+                        if (!qc.UpdateAndCheck(this, quest)) return false;
+                    }
+                    //Otherwise just update the QC status
+                    else {
+                        qc.UpdateAndCheck(this, quest);
+                    }
                 }
+            }
+            #endregion
+            newValue = playerTarProgress.targetProgress[tarIndex] + 1;
 
             //Do the update
             if (newValue != -1) {
 
-                //Server quest data
-                questData.UpdateQuest(quest.resourceID, tarIndex, newValue);
-
-                //Dispatch packet
-                Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
-                SendToClient(m);
+                SetQTProgress(quest.resourceID, tarIndex, newValue);
 
                 //target onAdvance
                 target.onAdvance(this, newValue);

@@ -36,9 +36,6 @@ namespace Gameplay.Entities.Interactives
         int currentOptionIndex = -1;
 
         [SerializeField]
-        ERadialMenuOptions currentOption;
-
-        [SerializeField]
         int currentSubAction;
 
         [SerializeField]
@@ -144,10 +141,6 @@ namespace Gameplay.Entities.Interactives
                     EndOptionActions();
                 }
             }
-            else
-            {
-
-            }
         }
         
         public void EndOptionActions()
@@ -200,7 +193,6 @@ namespace Gameplay.Entities.Interactives
                 }
 
                 targetPawn = source;
-                currentOption = menuOption;
                 StartOptionActions();
                 return true;
             }
@@ -321,7 +313,7 @@ namespace Gameplay.Entities.Interactives
             var curAction = Actions[currentOptionIndex];
             foreach (var comp in curAction.StackedActions)
             {
-                comp.Update();
+                comp.OnZoneUpdate();
             }
         }
     }
