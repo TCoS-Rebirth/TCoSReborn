@@ -226,6 +226,7 @@ namespace PackageExtractor.Adapter
                         }
                     }
                     var likeArray = wpo.FindProperty("Likes");
+                    t.likes = new List<Taxonomy>();
                     if (likeArray != null)
                     {
                         foreach (var like in likeArray.IterateInnerProperties())
@@ -239,6 +240,7 @@ namespace PackageExtractor.Adapter
                         }
                     }
                     var dislikeArray = wpo.FindProperty("Dislikes");
+                    t.dislikes = new List<Taxonomy>();
                     if (dislikeArray != null)
                     {
                         foreach (var dlike in dislikeArray.IterateInnerProperties())
@@ -247,10 +249,17 @@ namespace PackageExtractor.Adapter
                             var dlt = FindTaxonomy(dlikeName);
                             if (dlt != null)
                             {
-                                t.likes.Add(dlt);
+                                t.dislikes.Add(dlt);    //Valshaaran : corrected this line  from t.likes to t.dislikes
                             }
                         }
                     }
+
+                    //Duplicate like/dislike removal
+                    //t.likes = removeDuplicates(t.likes);
+                    //t.dislikes = removeDuplicates(t.dislikes);
+
+
+
                     EditorUtility.SetDirty(t);
 
                     #endregion

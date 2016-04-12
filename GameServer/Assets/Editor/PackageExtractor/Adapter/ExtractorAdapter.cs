@@ -1628,6 +1628,32 @@ namespace PackageExtractor.Adapter
             return id;
         }
 
+        /// <summary>
+        /// Helper which returns the input list with any duplicates of list items removed
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        protected List<T> removeDuplicates<T>(List<T> list) where T : UnityEngine.Object
+        {
+            for (int n = 0; n < list.Count; n++)
+            {
+                var item = list[n];
+
+                for (int m = n + 1; m < list.Count; m++)
+                {
+                    var otherItem = list[m];
+
+                    if (item == otherItem)
+                    {
+                        list.Remove(otherItem);
+                        m--;
+                    }
+                }
+            }
+
+            return list;
+        }
+
 
         #endregion
     }
