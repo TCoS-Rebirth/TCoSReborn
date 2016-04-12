@@ -23,6 +23,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         float lastQuery;
 
         float lastRotation;
+        const float rotationUpdate = 0.75f;
 
         [SerializeField] float maxDistanceToMoveTarget = 3f;
 
@@ -114,7 +115,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
                         targetPos.y = _currentPosition.y;
 
                         Quaternion newRot = Quaternion.LookRotation(targetPos - _currentPosition, Vector3.up);
-                        if (newRot != owner.Rotation)
+                        if (newRot != owner.Rotation && Time.time - lastRotation > rotationUpdate)
                         {
                             owner.Rotation = newRot;
                             owner.SetFocusLocation(_targetPosition);
@@ -193,7 +194,12 @@ namespace Gameplay.Entities.NPCs.Behaviours
                 }
                     break;
                 case NpcCharacter.MoveResult.SearchingPath:
-                    owner.SetFocusLocation(rndTargetPos);
+                    if (Time.time - lastRotation > rotationUpdate)
+                    {
+                        owner.SetFocusLocation(rndTargetPos);
+                        lastRotation = Time.time;
+                    }
+
                     break;
                 default:
                     nextRndPath = Time.time + Random.Range(1f, 2f); //prevent too frequent updates

@@ -23,6 +23,7 @@ using Utility;
 using World;
 using System.Linq;
 using Gameplay.Quests.QuestTargets;
+using Gameplay.Items;
 
 namespace Gameplay.Entities
 {
@@ -537,6 +538,7 @@ namespace Gameplay.Entities
                     {
                         case ERadialMenuOptions.RMO_CONVERSATION:
                             SetFocusLocation(source.Position);
+                            isConversing = true;
                             NewTopic(source, chooseBestTopic(source));
                             break;
                     }
@@ -548,6 +550,9 @@ namespace Gameplay.Entities
         #endregion
 
         #region Conversations
+
+        [ReadOnly]
+        public bool isConversing;
 
         public void NewTopic(PlayerCharacter source, ConversationTopic newTopic)
         {
@@ -664,9 +669,7 @@ namespace Gameplay.Entities
 
                 //No matching nodes or topics - end the conversation
                 Debug.Log("NpcCharacter.Converse : ... failed to get any new node, ending conversation");
-                var mEndConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                source.currentConv = null;
-                source.ReceiveRelevanceMessage(this, mEndConverse);
+                EndConversation(source);
                 return;
             }
 
@@ -683,8 +686,7 @@ namespace Gameplay.Entities
             //TODO : Valshaaran - experimental
             if ((responseID == 0) && (source.currentConv != null)) //Response ID 0 ends conversation
             {
-                var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                source.SendToClient(endConv);
+                EndConversation(source);
             }
             else {
                 var mConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, srcConv.curTopic, srcConv.curNode,
@@ -895,6 +897,15 @@ namespace Gameplay.Entities
                 return null;
             }
         }
+
+        public void EndConversation(PlayerCharacter p)
+        {
+            isConversing = false;
+            var mEndConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+            p.currentConv = null;
+            p.SendToClient(mEndConverse);
+            SetFocusLocation(transform.position + transform.forward);
+        }
         #endregion
 
         #region Quests
@@ -930,19 +941,15 @@ namespace Gameplay.Entities
                     p.questData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
 
                     var mQuestAccept = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(quest.resourceID, tarProgressArray);
-                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                    p.currentConv = null;
                     p.ReceiveRelevanceMessage(this, mQuestAccept);
-                    p.ReceiveRelevanceMessage(this, endConv);
+                    EndConversation(p);
+
                     return true;
 #if BLOCK_DISABLED_QUESTS                    
                 }
 
                 else {
-
-                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                    p.currentConv = null;
-                    p.ReceiveRelevanceMessage(this, endConv);
+                    EndConversation(p);
                     p.ReceiveChatMessage("", "Quest is disabled in this build!", EGameChatRanges.GCR_SYSTEM);
                     return false;
                 }
@@ -953,9 +960,7 @@ namespace Gameplay.Entities
         public void handleQuestDeclined(PlayerCharacter p)
         {
             //TODO: Placeholder implementation just closes the conversation window (return to start node?)            
-            var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-            p.currentConv = null;
-            p.ReceiveRelevanceMessage(this, endConv);
+            EndConversation(p);
         }
 
         public List<int> getRelatedQuestIDs()
@@ -974,6 +979,25 @@ namespace Gameplay.Entities
                 {
                     Debug.Log("NpcCharacter.getRelatedQuestIDs : Couldn't find a parent quest of topic " + questTopic.Name);
                 }
+            }
+            return output;
+        }
+
+        #endregion
+
+        #region Loot
+
+        public int DropMoney()
+        {
+            int output = 0;
+            foreach(var lt in Faction.Loot)
+            {
+                output += lt.GenerateMoney(FameLevel);
+            }
+
+            foreach(var lt in typeRef.Loot)
+            {
+                output += lt.GenerateMoney(FameLevel);
             }
             return output;
         }

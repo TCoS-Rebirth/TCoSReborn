@@ -9,6 +9,7 @@ using Lidgren.Network;
 using UnityEngine;
 using Utility;
 using World;
+using Gameplay.Loot;
 
 namespace Network
 {
@@ -171,6 +172,9 @@ namespace Network
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTION, HandleSwirlyOption);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_ABANDONQUEST, HandleAbandonQuest);
             _dispatchTable.Add(GameHeader.C2S_GAME_TRAVEL_CL2SV_TRAVELTO, HandleTravelTo);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_SELECTITEMS, HandleLootSelectItems);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_ENDTRANSACTIONS, HandleLootEndTransactions);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_ENDTRANSACTION, HandleLootEndTransaction);
 
         }
 
@@ -897,6 +901,36 @@ namespace Network
             */
         }
 
+        #endregion
+
+        #region Loot
+
+        void HandleLootSelectItems(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionIDs =  new List<int>(m.ReadIntArray());
+            var lootItemIDs = new List<int>(m.ReadIntArray());
+            var pc = m.GetAssociatedCharacter();
+
+            LootManager.Get.GiveItems(pc, transactionIDs, lootItemIDs);
+        }
+
+        void HandleLootEndTransactions(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionIDs = new List<int>(m.ReadIntArray());
+
+            LootManager.Get.EndTransactions(transactionIDs);
+        }
+
+        void HandleLootEndTransaction(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionID = m.ReadInt32();
+            var tIDs = new List<int>();
+            tIDs.Add(transactionID);
+            LootManager.Get.EndTransactions(tIDs);
+        }
         #endregion
     }
 

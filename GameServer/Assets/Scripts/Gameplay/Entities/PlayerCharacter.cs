@@ -16,6 +16,7 @@ using World;
 using Gameplay.Quests.QuestTargets;
 using Gameplay.Entities.Interactives;
 using Gameplay.Quests.QuestConditions;
+using Gameplay.Loot;
 
 namespace Gameplay.Entities
 {
@@ -209,6 +210,22 @@ namespace Gameplay.Entities
         {
             base.SetMoveSpeed(newSpeed);
             SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMOVEMENTSPEED(this));
+        }
+
+        public override bool SitDown(bool onChairFlag = false)
+        {
+            if (base.SitDown(onChairFlag))
+            {
+
+                Message mMove = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Position, Velocity, Physics);
+                SendToClient(mMove);
+
+                Message mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(onChairFlag);
+                SendToClient(mSit);
+
+                return true;
+            }
+            else return false;
         }
 
         #endregion
@@ -593,9 +610,10 @@ namespace Gameplay.Entities
         public void GiveInventory(Content_Inventory cInv)
         {
             foreach (var cItem in cInv.Items)
-            {   
-                
-                Game_Item gi = new Game_Item(cItem);
+            {
+
+                Game_Item gi = ScriptableObject.CreateInstance<Game_Item>();
+                gi.SetupFromCItem(cItem);
 
                 //TODO: Handle attuned status?
                 //if (attuned) { gi.Attuned = 1; }
@@ -630,6 +648,7 @@ namespace Gameplay.Entities
 
         public void GiveMoney(int amount)
         {
+            if (amount == 0) return;
             amount = Mathf.Abs(amount);
             money = money + amount;
             Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
@@ -831,7 +850,7 @@ namespace Gameplay.Entities
                 var questObj = GameData.Get.questDB.GetQuest(curQuest.questID);
 
                 //Look for Destroy/Exterminate/Hunt/Kill targets
-                for (int n = 0; n < questObj.targets.Count;n++)
+                for (int n = 0; n < questObj.targets.Count; n++)
                 {
                     var target = questObj.targets[n];
                     //Break if target completed...
@@ -877,7 +896,8 @@ namespace Gameplay.Entities
                     else if (target is QT_Kill)
                     {
                         var tKill = (QT_Kill)target;
-                        foreach (var killType in tKill.NpcTargetIDs) {
+                        foreach (var killType in tKill.NpcTargetIDs)
+                        {
                             if (npct.resourceID == killType.ID)
                             {
                                 if (!TryAdvanceQTKill(questObj, target, npct))
@@ -896,10 +916,49 @@ namespace Gameplay.Entities
             //Valshaaran - placeholder formula, feel free to improve
             int nFame = npc.FameLevel;
             int baseKillPoints = 10;
-            float weightedKillPoints = (baseKillPoints*nFame*nFame) / FameLevel;
+            float weightedKillPoints = (baseKillPoints * nFame * nFame) / FameLevel;
             GiveFame((int)weightedKillPoints);
 
             //TODO: PEP
+
+            #endregion
+
+            #region Loot
+
+            var lootTables = npc.Faction.Loot;
+            lootTables.AddRange(npc.typeRef.Loot);
+
+            if (Team == null)
+            {
+                #region Single player
+                var receivers = new List<PlayerCharacter>();
+                receivers.Add(this);
+
+                LootManager.Get.CreateTransaction(lootTables, receivers);
+                GiveMoney(npc.DropMoney());
+                #endregion
+            }
+            else
+            {
+                #region Team
+                var creditMembers = new List<PlayerCharacter>();
+                creditMembers.Add(this);
+                foreach (var tm in Team.Members)
+                {
+                    if (tm != this && tm.ObjectIsRelevant(npc))
+                    {
+                        creditMembers.Add(tm);
+                    }
+                }
+                LootManager.Get.CreateTransaction(lootTables, creditMembers, Team.CurLootMode);
+
+                foreach (var cm in creditMembers)
+                {
+                    cm.GiveMoney(npc.DropMoney() / creditMembers.Count);
+                }
+
+                #endregion                
+            }
 
             #endregion
         }
@@ -908,9 +967,9 @@ namespace Gameplay.Entities
 
         #region Relevance
 
-        /// <summary>
-        ///     <see cref="Entity.OnEntityBecameRelevant" />
-        /// </summary>
+            /// <summary>
+            ///     <see cref="Entity.OnEntityBecameRelevant" />
+            /// </summary>
         public override void OnEntityBecameRelevant(Entity rel)
         {
             base.OnEntityBecameRelevant(rel);

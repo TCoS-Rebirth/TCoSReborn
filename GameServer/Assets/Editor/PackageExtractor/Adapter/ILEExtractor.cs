@@ -114,15 +114,11 @@ namespace PackageExtractor.Adapter
                         if (output.Actions == null) output.Actions = new List<ILEAction>();
                         output.Actions.Add(sitAction);
                         sitAction.menuOption = ERadialMenuOptions.RMO_SIT;
-
-                        var sitEvent = ScriptableObject.CreateInstance<EV_Sit>();
-                        if (!ReadVector3(wpo, "ActionPositionOffset", out sitEvent.Offset))
-                            sitEvent.Offset = new Vector3();
-                        else
-                            sitEvent.Offset = UnitConversion.ToUnity(sitEvent.Offset);
-
-                        //TODO: Reimplement
-                        //sitAction.Actions.Add(sitEvent);
+                        var sitComp = ScriptableObject.CreateInstance<InteractionSit>();
+                        sitComp.owner = output;
+                        ReadVector3(wpo, "ActionPositionOffset", out sitComp.Offset);
+                        sitComp.Offset = UnitConversion.ToUnity(sitComp.Offset);
+                        sitAction.StackedActions.Add(sitComp);
 
                     }
                     if (wpo.Name.StartsWith("InteractiveMailbox")) output.ileType = EILECategory.ILE_Mailbox;

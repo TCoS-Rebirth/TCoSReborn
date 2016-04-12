@@ -44,6 +44,23 @@ namespace Network
             return arr;
         }
 
+        public int[] ReadIntArray()
+        {
+            var arraySize = ReadUInt32();
+            var arr = new int[arraySize];
+            if (position + arraySize > buffer.Length)
+            {
+                LogOverflow();
+                return arr;
+            }
+            for (var i = 0; i < arraySize; i++)
+            {
+                arr[i] = ReadInt32();
+            }
+            return arr;
+
+        }
+
         public ushort ReadUInt16()
         {
             if (position + 2 > buffer.Length)

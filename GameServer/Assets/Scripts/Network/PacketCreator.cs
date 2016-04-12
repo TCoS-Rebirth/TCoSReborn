@@ -13,6 +13,7 @@ using World;
 using Gameplay.Quests;
 using Database.Static;
 using Gameplay.Entities.Interactives;
+using Gameplay.Loot;
 
 namespace Network
 {
@@ -459,21 +460,85 @@ namespace Network
 
         #region Looting
 
+        //Declarations found in Game_Looting.uc in SDK, but with different names
+
         /*
         public static Message S2C_GAME_LOOTING_SV2CL_CHANGELOOTMODE
-
-        public static Message S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED
-
-        public static Message S2C_GAME_LOOTING_SV2CL_REMOVEITEM()
-
-        public static Message S2C_GAME_LOOTING_SV2CL_ENDTRANSACTION
-
-        public static Message S2C_GAME_LOOTING_SV2CL_INITLOOTOFFER
         */
+
+        public static Message S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED(int transID, int lootItemID, ELootRejectedReason reason)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED);
+
+            m.WriteInt32(transID);
+            m.WriteInt32(lootItemID);
+            m.WriteInt32((int)reason);
+
+            return m;
+        }
+
+
+        public static Message S2C_GAME_LOOTING_SV2CL_REMOVEITEM(int transID, int lootItemID)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_REMOVEITEM);
+
+            m.WriteInt32(transID);
+            m.WriteInt32(lootItemID);
+            return m;
+        }
+        
+        public static Message S2C_GAME_LOOTING_SV2CL_ENDTRANSACTION(int transID)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_ENDTRANSACTION);
+            m.WriteInt32(transID);
+            return m;            
+        }
+        
+
+        public static Message S2C_GAME_LOOTING_SV2CL_INITLOOTOFFER(int transID, float timerValue, ELootMode lootMode, List<ReplicatedLootItem> lootItems, List<PlayerCharacter> eligibleMembers)
+        {
+
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_INITLOOTOFFER);
+
+            m.WriteInt32(transID);          //Transaction ID
+            m.WriteFloat(timerValue);       //TimerValue(float)
+            m.WriteByte((byte)lootMode);  //Loot mode
+            
+
+            //aLootItems
+            m.WriteInt32(lootItems.Count);
+            foreach(var li in lootItems)
+            {
+                //TODO - Experimental
+                
+                m.WriteInt32(li.ResourceId); //Item Type?
+                m.WriteInt32(li.LootItemID);
+                m.WriteInt32(li.Quantity);
+            }
+
+            //aEligibleMembers
+            m.WriteInt32(eligibleMembers.Count);
+            foreach(var member in eligibleMembers)
+            {
+                m.WriteInt32(member.RelevanceID);
+            }
+
+            return m;
+        }
+
+        
 
         #endregion
 
         #region Pawns
+        
+        public static Message S2R_BASE_PAWN_SV2CL_GOTOSTATE(Character c, string stateString)
+        {
+            var m = new Message(GameHeader.S2R_BASE_PAWN_SV2CL_GOTOSTATE);
+            m.WriteInt32(c.RelevanceID);
+            m.WriteString(stateString);
+            return m;
+        }
 
         public static Message S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Vector3 position, Vector3 velocity, EPhysics physics)
         {
@@ -1182,6 +1247,14 @@ namespace Network
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATESTATERANKSHIFT);
             m.WriteInt32(ch.RelevanceID);
             m.WriteFloat(ch.StateRank);
+            return m;
+        }
+
+        public static Message S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEFROZENFLAGS(Character c, byte frozenFlags)
+        {
+            var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEFROZENFLAGS);
+            m.WriteInt32(c.RelevanceID);
+            m.WriteByte(frozenFlags);
             return m;
         }
 

@@ -15,10 +15,6 @@ namespace Gameplay.Events
             var charSubj = subject as Character;
             if (!charSubj) return false;
 
-            //var ileSubj = subject as InteractiveLevelElement;
-            //if (ileSubj && ileSubj.ileType == EILECategory.ILE_Chair)
-            //    return true;
-
             //TODO: if not idle return false - EControllerState
             else return true;
         }
@@ -26,46 +22,32 @@ namespace Gameplay.Events
         protected override void Execute(Entity obj, Entity subject)
         {
 
-            var playerSubj = subject as PlayerCharacter;
-            if (playerSubj)
+            /*
+            var playerObj = obj as PlayerCharacter;
+            if (playerObj)
             {
-                playerSubj.ReceiveChatMessage("", "Interactive chairs are currently WIP", EGameChatRanges.GCR_SYSTEM);
+                playerObj.ReceiveChatMessage("", "Interactive chairs are currently WIP", EGameChatRanges.GCR_SYSTEM);
             }
+            */
+
             //Valshaaran - WIP
             //Interactive Chair objects mostly lack Rotation property
             //will need resolving somehow to enable most chairs
-            /*
-            var charSubj = subject as Character;
-            var ileObj = obj as InteractiveLevelElement;
-            var playerSubj = charSubj as PlayerCharacter;
+            
+            var charObj = obj as Character;
+            var ileSubj = subject as InteractiveLevelElement;
 
-            if (ileObj && ileObj.ileType == EILECategory.ILE_Chair)
+            if (ileSubj && ileSubj.ileType == EILECategory.ILE_Chair)
             {
                 //Move to chair
-                //charObj.TeleportTo(ileSubj.Position, ileSubj.Rotation);
-                charSubj.Position = ileObj.Position + Offset;  
-                              
-                if (playerSubj)
-                {
-                    var mMove = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(charSubj.Position, new Vector3(), EPhysics.PHYS_SitChair);
-                    var mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(true);
-
-                    //TODO:Placeholder - chair should be relevant to player
-                    playerSubj.SendToClient(mMove);
-                    playerSubj.SendToClient(mSit);
-                    //playerSubj.ReceiveRelevanceMessage(ileObj, mMove);
-                    //playerSubj.ReceiveRelevanceMessage(ileObj, mSit);
-                }                
+                charObj.Move(ileSubj.Position + Offset, ileSubj.Rotation);
+                charObj.Sit(true, true);                         
             }
             else
             {
-                if (playerSubj)
-                {
-                    var mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(false);
-                    playerSubj.SendToClient(mSit);
-                }
+                charObj.Sit(true, false);
             }
-            */
+            
         }
         /*
 * CanExecute() =>

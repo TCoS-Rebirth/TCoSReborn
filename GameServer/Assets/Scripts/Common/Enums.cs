@@ -893,12 +893,23 @@
         LC_LOOT = 3
     }
 
+    /// <summary>
+    /// Warning - this  changes between different builds!
+    /// </summary>
     public enum ELootMode
     {
-        LM_GROUP = 0,
-        LM_MASTER = 1,
-        LM_FREE_FOR_ALL = 2,
-        LM_SINGLE_PLAYER = 3
+        
+        LM_GROUP = 1,
+        LM_MASTER = 2,
+        LM_FREE_FOR_ALL = 0,
+        LM_NR_OPTIONS = 3
+    }
+
+    public enum ELootRejectedReason
+    {
+        LIR_ALREADY_TAKEN = 0,
+        LIR_INV_FULL = 1
+
     }
 
     public enum EBodySlotMode

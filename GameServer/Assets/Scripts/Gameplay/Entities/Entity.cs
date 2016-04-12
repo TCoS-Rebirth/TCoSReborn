@@ -440,28 +440,43 @@ namespace Gameplay.Entities
         #endregion
 
         #region Movement
-        public void SetLocation(Vector3 newPosition)
+        public virtual void SetLocation(Vector3 newPosition)
         {
             //Revisit this - using a S2C packet as relevance broadcast isn't ideal
             Position = newPosition;
             Message m = PacketCreator.S2C_GAME_ACTOR_MOVE(this, newPosition, Rotation);
             BroadcastRelevanceMessage(m);
+            var pc = this as PlayerCharacter;
+            if (pc)
+            {
+                pc.SendToClient(m);
+            }
 
         }
-        public void SetRotation(Quaternion newRotation)
+        public virtual void SetRotation(Quaternion newRotation)
         {
             //Revisit this - using a S2C packet as relevance broadcast isn't ideal
             Rotation = newRotation;
             Message m = PacketCreator.S2C_GAME_ACTOR_MOVE(this, Position, newRotation);
             BroadcastRelevanceMessage(m);
+            var pc = this as PlayerCharacter;
+            if (pc)
+            {
+                pc.SendToClient(m);
+            }
         }
-        public void Move(Vector3 newPosition, Quaternion newRotation)
+        public virtual void Move(Vector3 newPosition, Quaternion newRotation)
         {
             //Revisit this - using a S2C packet as relevance broadcast isn't ideal
             Position = newPosition;
             Rotation = newRotation;
             Message m = PacketCreator.S2C_GAME_ACTOR_MOVE(this, newPosition, newRotation);
             BroadcastRelevanceMessage(m);
+            var pc = this as PlayerCharacter;
+            if (pc)
+            {
+                pc.SendToClient(m);
+            }
 
         }
         #endregion
