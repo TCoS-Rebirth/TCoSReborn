@@ -135,7 +135,7 @@ namespace Gameplay.Entities.Players
                 }
             }
 
-            pc.QuestData = this;
+            pc.questData = this;
         }
 
         public List<DBQuestTarget> SaveForPlayer()

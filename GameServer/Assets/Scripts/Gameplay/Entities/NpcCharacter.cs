@@ -23,6 +23,7 @@ using Utility;
 using World;
 using System.Linq;
 using Gameplay.Quests.QuestTargets;
+using Gameplay.Items;
 
 namespace Gameplay.Entities
 {
@@ -43,7 +44,10 @@ namespace Gameplay.Entities
         ENPCMovementFlags _movementFlags = ENPCMovementFlags.ENMF_Walking;
 
         [SerializeField]
-        NPCBehaviour behaviour;
+        NPCBehaviour curBehaviour;
+
+        [SerializeField]
+        NPCBehaviour defaultBehaviour;
 
         Vector3 focusLocation;
 
@@ -98,8 +102,10 @@ namespace Gameplay.Entities
         {
             RespawnInfo.typeRef = typeRef;
             ClassType = typeRef.NPCClassClassification;
-            //Name = typeRef.ShortName;
-            Name = typeRef.name;
+           // if (typeRef.ShortName != null) transform.name = Name = typeRef.ShortName;
+            //else if (typeRef.LongName != null) transform.name = Name = typeRef.LongName;
+            transform.name = Name = typeRef.name;
+
             //NPC_Type with level 0 indicates random level generation by spawner
             if (typeRef.FameLevel != 0)
             {
@@ -131,15 +137,30 @@ namespace Gameplay.Entities
                 ActiveSkillDeck.LoadForNPC(this);
             }
 
-            //TODO: Attach behaviour corresponding to referenced AI state machine (Killer, passive etc.)
-
-            if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
+            //TODO: Make AI state machine an enumerated flag for efficiency(Killer, passive etc.)
+            if (    RespawnInfo.referenceAiStateMachine != null
+                &&  RespawnInfo.referenceAiStateMachine.Contains("Kill")) {
+                defaultBehaviour = gameObject.AddComponent<KillerBehaviour>();
+                
+                
+            }
+            else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
             {
-                gameObject.AddComponent<KillerBehaviour>();
+                
+                //If AI state machine reference is critter machine, set critter
+                //Pacifies the killer bunny rabbits =p
+                if (RespawnInfo.referenceAiStateMachine != null
+                &&  RespawnInfo.referenceAiStateMachine.Contains("Critter"))
+                {
+                    defaultBehaviour = gameObject.AddComponent<CritterBehaviour>();
+                }
+                else {
+                    defaultBehaviour = gameObject.AddComponent<KillerBehaviour>();
+                }
             }
             else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Deployer)
             {
-                gameObject.AddComponent<GroupBehaviour>();
+                defaultBehaviour = gameObject.AddComponent<GroupBehaviour>();
             }
 
             //Attach pathing if appropriate
@@ -163,65 +184,71 @@ namespace Gameplay.Entities
         {
             base.UpdateEntity();
             HandleMovement();
-            if (!ReferenceEquals(behaviour, null) && behaviour.enabled)
+            if (!ReferenceEquals(curBehaviour, null) && curBehaviour.enabled)
             {
-                behaviour.UpdateBehaviour();
+                curBehaviour.UpdateBehaviour();
             }
         }
 
         public void AttachBehaviour(NPCBehaviour b)
         {
-            behaviour = b;
+            curBehaviour = b;
         }
 
         public void DeAttachBehaviour()
         {
-            if (behaviour != null)
+            if (curBehaviour != null)
             {
-                Destroy(behaviour);
+                Destroy(curBehaviour);
             }
+        }
+
+        public void DefaultBehaviour()
+        {
+            DeAttachBehaviour();
+            curBehaviour = defaultBehaviour;
         }
 
         protected override void OnDamageReceived(SkillApplyResult sap)
         {
             base.OnDamageReceived(sap);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnDamage(sap.skillSource, sap.appliedSkill, sap.damageCaused);
+                curBehaviour.OnDamage(sap.skillSource, sap.appliedSkill, sap.damageCaused);
             }
         }
 
         protected override void OnHealReceived(SkillApplyResult sap)
         {
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnHeal(sap.skillSource, sap.healCaused);
+                curBehaviour.OnHeal(sap.skillSource, sap.healCaused);
             }
         }
 
         public override void OnEntityBecameRelevant(Entity rel)
         {
             base.OnEntityBecameRelevant(rel);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnLearnedRelevance(rel);
+                curBehaviour.OnLearnedRelevance(rel);
             }
         }
 
         public override void OnEntityBecameIrrelevant(Entity rel)
         {
             base.OnEntityBecameIrrelevant(rel);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnReleasedRelevance(rel);
+                curBehaviour.OnReleasedRelevance(rel);
             }
         }
 
         protected override void OnEndCastSkill(SkillContext s)
         {
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnEndedCast(s.ExecutingSkill);
+                curBehaviour.OnEndedCast(s.ExecutingSkill);
             }
         }
 
@@ -234,23 +261,39 @@ namespace Gameplay.Entities
             {
                 var sourcePlayer = source as PlayerCharacter;
                 sourcePlayer.OnNPCKill(this);
+
+                //If player has team, dispatch to relevant team members other than player
+                if (sourcePlayer.Team != null)
+                {
+                    foreach (var teamMember in sourcePlayer.Team.Members)
+                    {
+                        if (teamMember.RelevanceID == sourcePlayer.RelevanceID) continue;   //not self
+                        if (source.ObjectIsRelevant(this))
+                        {
+                            teamMember.OnNPCKill(this);
+                        }
+                    }
+                }
             }
         }
 
         public override void TeleportTo(Vector3 newPos, Quaternion newRot)
         {
             base.TeleportTo(newPos, newRot);
-            if (behaviour && behaviour.enabled)
+            if (curBehaviour && curBehaviour.enabled)
             {
-                behaviour.OnTeleported();
+                curBehaviour.OnTeleported();
             }
         }
 
         protected override void OnEnterZone(Zone z)
         {
             base.OnEnterZone(z);
+
             //drop to ground and fixate rotation
+            /*Valshaaran - experimentally done in spawners to prevent dropping in from air
             Position = z.Raycast(transform.position, Vector3.down, 10f) + Vector3.up * BodyCenterHeight;
+            */
             _destination = Position;
             SetFocusLocation(transform.position + transform.forward);
         }
@@ -494,6 +537,8 @@ namespace Gameplay.Entities
                     switch (option2)
                     {
                         case ERadialMenuOptions.RMO_CONVERSATION:
+                            SetFocusLocation(source.Position);
+                            isConversing = true;
                             NewTopic(source, chooseBestTopic(source));
                             break;
                     }
@@ -506,6 +551,9 @@ namespace Gameplay.Entities
 
         #region Conversations
 
+        [ReadOnly]
+        public bool isConversing;
+
         public void NewTopic(PlayerCharacter source, ConversationTopic newTopic)
         {
             if (newTopic != null)
@@ -517,6 +565,13 @@ namespace Gameplay.Entities
 
                 var m = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, newTopic, bestNode, topicsToGive);
                 source.ReceiveRelevanceMessage(this, m);
+
+                //Execute topic events
+                foreach (var ev in newTopic.Events)
+                {
+                    ev.TryExecute(this, source);
+                }
+
             }
             else
             {
@@ -566,24 +621,18 @@ namespace Gameplay.Entities
                         {
                             if (qtTalk.TopicID.ID == srcConv.curTopic.resource.ID)
                             {
-                                //get target index
-                                int tarInd = curQuest.getTargetIndex(target.resource.ID);
-
-                                //Update quest data array
-                                source.QuestData.UpdateQuest(curQuest.resourceID, tarInd, 1);
-
-                                //send progress update packet
-                                var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(curQuest.resourceID, tarInd, 1);
-                                source.ReceiveRelevanceMessage(this, m);
-
-                                //QuestTarget.onAdvance()
-                                target.onAdvance(1);
+                                //Update quest data
+                                source.TryAdvanceTarget(curQuest, target);
                                 break;
                             }
                         }
                     }
                 }
             }
+            #endregion
+
+            #region QT_Fedex
+
             #endregion
 
             #region Finish topic
@@ -620,9 +669,7 @@ namespace Gameplay.Entities
 
                 //No matching nodes or topics - end the conversation
                 Debug.Log("NpcCharacter.Converse : ... failed to get any new node, ending conversation");
-                var mEndConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                source.currentConv = null;
-                source.ReceiveRelevanceMessage(this, mEndConverse);
+                EndConversation(source);
                 return;
             }
 
@@ -639,8 +686,7 @@ namespace Gameplay.Entities
             //TODO : Valshaaran - experimental
             if ((responseID == 0) && (source.currentConv != null)) //Response ID 0 ends conversation
             {
-                var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                source.SendToClient(endConv);
+                EndConversation(source);
             }
             else {
                 var mConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(this, srcConv.curTopic, srcConv.curNode,
@@ -677,6 +723,7 @@ namespace Gameplay.Entities
             foreach (var qTopic in typeRef.QuestTopics)
             {
                 ConversationTopic fullTopic = GameData.Get.convDB.GetTopic(qTopic);
+                if (!fullTopic.requirementsMet(p)) continue;
 
                 if (p.currentConv != null)
                 {
@@ -706,14 +753,17 @@ namespace Gameplay.Entities
 
                                 if (qtTalk.TopicID.ID == qTopic.ID)
                                 {
-                                    if ((p.PreTargetsComplete(target, qtTalkParentQuest))
-                                        && fullTopic.requirementsMet(p))    //If all pretargets and completed and requirements are met
+                                    if (p.PreTargetsComplete(target, qtTalkParentQuest))    //If all pretargets and completed and requirements are met
                                         topicRefs.Add(qTopic);
                                 }
                             }
                         }
                     }
                 }
+                #endregion
+
+                #region QT_Fedex Thanks handling
+                //TODO
                 #endregion
 
                 #region Provide
@@ -725,7 +775,7 @@ namespace Gameplay.Entities
                         && (!p.QuestIsComplete(parentQuest.resourceID))              //and they haven't already completed quest
                     )
                 {
-                    if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                    topicRefs.Add(qTopic);
                 }
                 #endregion
 
@@ -736,7 +786,7 @@ namespace Gameplay.Entities
                         && (p.HasUnfinishedTargets(parentQuest))                 //and at least 1 quest target remains incomplete                                                        
                         )
                 {
-                    if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                    topicRefs.Add(qTopic);
                 }
                 #endregion
 
@@ -750,9 +800,10 @@ namespace Gameplay.Entities
                     {
                         //check player currently has quest
 
-                        //Null-topic QT_Talk is handled here so that is is fulfilled when the quest targets are checked below
+                        
                         foreach (var tar in parentQuest.targets)
                         {
+                            //Null-topic QT_Talk is handled here so that is is fulfilled when the quest targets are checked below
                             var qtTalk = tar as QT_Talk;
                             if ((qtTalk != null)
                                 && (qtTalk.TopicID.ID == 0)
@@ -760,17 +811,28 @@ namespace Gameplay.Entities
                                 )
                             {
                                 //Complete the target
-                                int tarIndex = parentQuest.getTargetIndex(tar.resource.ID);
-                                p.QuestData.UpdateQuest(parentQuest.resourceID, tarIndex, 1);
-                                var mNullQTTalk = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(parentQuest.resourceID, tarIndex, 1);
-                                p.ReceiveRelevanceMessage(this, mNullQTTalk);
+                                p.TryAdvanceTarget(parentQuest, tar);
+
+                                break;
+                            }
+
+                            //Null-recipient QT_Fedex Thanks
+                            var qtFedex = tar as QT_Fedex;
+                            if ((qtFedex != null)
+                                && (qtFedex.NpcRecipientID.ID == 0)
+                                && (p.PreTargetsComplete(tar, parentQuest))
+                                //TODO : Proper serverside inventory check needed?
+                                ) {
+
+                                //Complete the target
+                                p.TryAdvanceTarget(parentQuest, tar);
                                 break;
                             }
                         }
 
                         if (!p.HasUnfinishedTargets(parentQuest))  //all quest targets must be complete)  
                         {
-                            if (fullTopic.requirementsMet(p)) topicRefs.Add(qTopic);
+                            topicRefs.Add(qTopic);
                         }
                     }
                 }
@@ -792,7 +854,16 @@ namespace Gameplay.Entities
             //Retrieve non-quest topics
             var choices = GameData.Get.convDB.GetTopics(typeRef.Topics);
 
-            //Pick a topic of type Chat
+            //Talk topic (QT_Talk?)
+            foreach (var topic in choices)
+            {
+                if (topic.TopicType == EConversationType.ECT_Talk)
+                {
+                    return topic;
+                }
+            }
+
+            //Otherwise pick a topic of type Chat
             var freeTopics = new List<ConversationTopic>();
             foreach (var topic in choices)
             {
@@ -816,14 +887,6 @@ namespace Gameplay.Entities
                 }
             }
 
-            //Otherwise talk topic (QT_Talk?)
-            foreach (var topic in choices)
-            {
-                if (topic.TopicType == EConversationType.ECT_Talk)
-                {
-                    return topic;
-                }
-            }
 
             //TODO : Placeholder - Otherwise preparetopics[0]
             List<ConversationTopic> prepareTopics = PrepareTopics(p);
@@ -833,6 +896,15 @@ namespace Gameplay.Entities
                 Debug.Log("NpcCharacter.chooseBestTopic : Couldn't choose any suitable topic");
                 return null;
             }
+        }
+
+        public void EndConversation(PlayerCharacter p)
+        {
+            isConversing = false;
+            var mEndConverse = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
+            p.currentConv = null;
+            p.SendToClient(mEndConverse);
+            SetFocusLocation(transform.position + transform.forward);
         }
         #endregion
 
@@ -866,22 +938,18 @@ namespace Gameplay.Entities
                         tarProgressArray.Add(0);
                     }
 
-                    p.QuestData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
+                    p.questData.curQuests.Add(new PlayerQuestProgress(quest.resourceID, tarProgressArray));
 
                     var mQuestAccept = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(quest.resourceID, tarProgressArray);
-                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                    p.currentConv = null;
                     p.ReceiveRelevanceMessage(this, mQuestAccept);
-                    p.ReceiveRelevanceMessage(this, endConv);
+                    EndConversation(p);
+
                     return true;
 #if BLOCK_DISABLED_QUESTS                    
                 }
 
                 else {
-
-                    var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-                    p.currentConv = null;
-                    p.ReceiveRelevanceMessage(this, endConv);
+                    EndConversation(p);
                     p.ReceiveChatMessage("", "Quest is disabled in this build!", EGameChatRanges.GCR_SYSTEM);
                     return false;
                 }
@@ -892,9 +960,7 @@ namespace Gameplay.Entities
         public void handleQuestDeclined(PlayerCharacter p)
         {
             //TODO: Placeholder implementation just closes the conversation window (return to start node?)            
-            var endConv = PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(this);
-            p.currentConv = null;
-            p.ReceiveRelevanceMessage(this, endConv);
+            EndConversation(p);
         }
 
         public List<int> getRelatedQuestIDs()
@@ -913,6 +979,25 @@ namespace Gameplay.Entities
                 {
                     Debug.Log("NpcCharacter.getRelatedQuestIDs : Couldn't find a parent quest of topic " + questTopic.Name);
                 }
+            }
+            return output;
+        }
+
+        #endregion
+
+        #region Loot
+
+        public int DropMoney()
+        {
+            int output = 0;
+            foreach(var lt in Faction.Loot)
+            {
+                output += lt.GenerateMoney(FameLevel);
+            }
+
+            foreach(var lt in typeRef.Loot)
+            {
+                output += lt.GenerateMoney(FameLevel);
             }
             return output;
         }

@@ -201,7 +201,7 @@ namespace PackageExtractor.Adapter
                     if (component != null)
                     {
                         var floatingAssets = new List<ScriptableObject>();
-                        var ic = ExtractComponent(component, res, floatingAssets);
+                        var ic = ExtractComponent(component, res, strings, floatingAssets);
                         if (ic != null)
                         {
                             ic.name = component.Name;
@@ -258,7 +258,7 @@ namespace PackageExtractor.Adapter
             return obj;
         }
 
-        Item_Component ExtractComponent(WrappedPackageObject componentObject, SBResources res, List<ScriptableObject> refFloatingAssets)
+        Item_Component ExtractComponent(WrappedPackageObject componentObject, SBResources res, SBLocalizedStrings locStrings, List<ScriptableObject> refFloatingAssets)
         {
             PackageWrapper pW = extractorWindowRef.ActiveWrapper;
 
@@ -434,7 +434,7 @@ namespace PackageExtractor.Adapter
                             var eventObject = extractorWindowRef.ActiveWrapper.FindObjectWrapper(eventProp.GetValue<string>());
                             if (eventObject != null)
                             {
-                                var ce = ExtractEvent(eventObject, res, pW, itc);
+                                var ce = ExtractEvent(eventObject, res, locStrings, pW, itc);
                                 if (ce != null)
                                 {
                                     ce.name = eventObject.Name;

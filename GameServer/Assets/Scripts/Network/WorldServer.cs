@@ -9,6 +9,7 @@ using Lidgren.Network;
 using UnityEngine;
 using Utility;
 using World;
+using Gameplay.Loot;
 
 namespace Network
 {
@@ -170,6 +171,11 @@ namespace Network
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTIONPAWN, HandleSwirlyOptionPawn);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTION, HandleSwirlyOption);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_ABANDONQUEST, HandleAbandonQuest);
+            _dispatchTable.Add(GameHeader.C2S_GAME_TRAVEL_CL2SV_TRAVELTO, HandleTravelTo);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_SELECTITEMS, HandleLootSelectItems);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_ENDTRANSACTIONS, HandleLootEndTransactions);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_ENDTRANSACTION, HandleLootEndTransaction);
+
         }
 
         IEnumerator UpdateQueues()
@@ -590,7 +596,29 @@ namespace Network
 
         void HandleInteractiveElementInteraction(Message m)
         {
-            Debug.Log(Helper.ByteArrayToHex(m.Buffer));
+            //Debug.Log(Helper.ByteArrayToHex(m.Buffer));
+
+            var pc = m.GetAssociatedCharacter();
+            var elementRelID = m.ReadInt32();  //IE relevance ID
+            m.ReadInt32();  //player relevance ID
+            var menuOption = (ERadialMenuOptions)m.ReadInt32();
+
+            Debug.Log("WorldServer.HandleInteractiveElementInteraction : ");
+            Debug.Log("elementRelID = " + elementRelID);
+            //Debug.Log("playerRelID = " + playerRelID);
+            Debug.Log("menuOption = " + menuOption);
+
+            if (pc != null)
+            {
+                var ile = pc.ActiveZone.GetILE(elementRelID);
+                if (ile != null)
+                {
+                    Debug.Log("LevelObjectID = " + ile.LevelObjectID);
+                    //pc.OnInteract(ile, menuOption);
+                    ile.onRadialMenuOption(pc, menuOption);
+                }
+            }
+            
         }
 
         #endregion
@@ -856,6 +884,53 @@ namespace Network
             }
         }
 
+        #endregion
+
+        #region Travel
+
+        void HandleTravelTo(Message m)
+        {
+            throw new NotImplementedException();
+            /*
+            int relID = m.ReadInt32(); //Prob relID
+            string npcName = m.ReadString();
+            string destination = m.ReadString();
+            bool joinCrew = m.ReadInt32() > 0 ? true : false;
+
+            var pc = m.GetAssociatedCharacter();
+            */
+        }
+
+        #endregion
+
+        #region Loot
+
+        void HandleLootSelectItems(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionIDs =  new List<int>(m.ReadIntArray());
+            var lootItemIDs = new List<int>(m.ReadIntArray());
+            var pc = m.GetAssociatedCharacter();
+
+            LootManager.Get.GiveItems(pc, transactionIDs, lootItemIDs);
+        }
+
+        void HandleLootEndTransactions(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionIDs = new List<int>(m.ReadIntArray());
+
+            LootManager.Get.EndTransactions(transactionIDs);
+        }
+
+        void HandleLootEndTransaction(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionID = m.ReadInt32();
+            var tIDs = new List<int>();
+            tIDs.Add(transactionID);
+            LootManager.Get.EndTransactions(tIDs);
+        }
         #endregion
     }
 

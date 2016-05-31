@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Database.Static;
 using Gameplay.Events;
 using UnityEngine;
+using Gameplay.Entities;
+using Common;
 
 namespace Gameplay.Quests.QuestTargets
 {
@@ -24,9 +26,9 @@ namespace Gameplay.Quests.QuestTargets
         /// and if the target is complete, calls onComplete();
         /// </summary>
         /// <param name="progressValue"></param>
-        public void onAdvance(int progressValue)
+        public void onAdvance(PlayerCharacter p, int progressValue)
         {
-            if (isComplete(progressValue)) onComplete();
+            if (isComplete(progressValue)) { tryComplete(p); }
         }
 
         public bool isComplete(int progressValue)
@@ -36,14 +38,21 @@ namespace Gameplay.Quests.QuestTargets
         }
 
         /// <summary>
-        /// NYI - will execute all the target's Complete Events
+        /// Try to execute all the target's Complete Events
         /// </summary>
-        protected void onComplete()
+        protected bool tryComplete(PlayerCharacter p)
         {
+            bool success = true;
             foreach (var completeEvent in CompleteEvents)
             {
-                //TODO : Implement event execution
+                if (!completeEvent.TryExecute(null, p))
+                {
+                    p.ReceiveChatMessage(completeEvent.name, "Failed to execute completion event" + completeEvent.name, EGameChatRanges.GCR_SYSTEM);
+                    success = false;
+                }
             }
+
+            return success;
         }
 
         //ConversationTopic attachedTopic;

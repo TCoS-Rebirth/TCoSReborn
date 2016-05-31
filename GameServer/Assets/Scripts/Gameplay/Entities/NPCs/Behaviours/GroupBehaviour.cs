@@ -25,6 +25,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         float lastQuery;
 
         float lastRotation;
+        const float rotationUpdate = 0.75f;
 
         [SerializeField] float maxDistanceToMoveTarget = 3f;
 
@@ -104,7 +105,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
                         state = NpcStates.Fleeing;
                         return;
                     }
-                    if (Time.time - lastRotation > 0.5f)
+                    if (Time.time - lastRotation > rotationUpdate)
                     {
                         var targetPos = _targetPosition;
                         targetPos.y = _currentPosition.y;
@@ -183,9 +184,15 @@ namespace Gameplay.Entities.NPCs.Behaviours
                     rndTargetPos = startPosition + new Vector3(Random.Range(-maxDist, maxDist), 0f, Random.Range(-maxDist, maxDist));
                 }
                     break;
+
                 case NpcCharacter.MoveResult.SearchingPath:
-                    owner.SetFocusLocation(rndTargetPos);
+                    if (Time.time - lastRotation > rotationUpdate)
+                    {
+                        owner.SetFocusLocation(rndTargetPos);
+                        lastRotation = Time.time;
+                    }
                     break;
+
                 default:
                     nextRndPath = Time.time + Random.Range(1f, 2f); //prevent too frequent updates
                     break;

@@ -9,14 +9,20 @@ namespace Gameplay.Quests.QuestTargets
 {
     public class QT_Take : QuestTarget
     {
-        int Amount; //Amount to take?
+        public int Amount = 1; //Amount to take?
 
         public Content_Inventory Cargo;
         public ERadialMenuOptions Option; //Radial menu option?
         public SBLocalizedString SourceDescription;
         public string SourceTag;
 
-        public override int GetCompletedProgressValue() { return 1; }
+        public override int GetCompletedProgressValue() {
+            if (Amount > 0)
+            {
+                return Amount;
+            }
+            else { return 1; }
+        }
     }
 }
 

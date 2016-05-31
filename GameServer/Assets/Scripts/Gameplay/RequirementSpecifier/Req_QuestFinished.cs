@@ -1,6 +1,7 @@
 using System;
 using Gameplay.Entities;
 using Database.Static;
+using UnityEngine;
 
 namespace Gameplay.RequirementSpecifier
 {
@@ -11,12 +12,30 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            foreach (var questID in p.QuestData.completedQuestIDs)
+            //TODO: Implement properly for multiple quest finishes
+            //When that value is stored for players (in DB)
+
+            foreach (var questID in p.questData.completedQuestIDs)
             {
-                if (questID == RequiredQuest.ID) { return true; }
+                if (questID == RequiredQuest.ID)
+                {
+                    switch (TimesFinished)
+                    {
+                        case 0:
+                            return false;
+
+                        case 1:
+                            return true;
+
+                    }
+                    //TODO
+                    Debug.Log("Req_QuestFinished : Multiple quest finishes NYI!");
+                    return false;
+                }
             }
 
-            return false;
+            if (TimesFinished == 0) return true;
+            else return false;
         }
 
         public override bool isMet(NpcCharacter n)

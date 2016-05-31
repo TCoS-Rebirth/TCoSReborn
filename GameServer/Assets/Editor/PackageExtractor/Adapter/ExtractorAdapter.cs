@@ -267,7 +267,7 @@ namespace PackageExtractor.Adapter
             SBProperty prop;
             if (obj.sbObject.Properties.TryGetValue(propName, out prop))
             {
-                if (TryParse(prop.Value, out value))
+                if (float.TryParse(prop.Value, out value))
                 {
                     return true;
                 }
@@ -531,7 +531,8 @@ namespace PackageExtractor.Adapter
                         var condPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(condProp.GetValue<string>());
                         recc.Condition = getReq(condPropObj, resources, pW, assetObj);
                         recc.Condition.name = reqObj.Name + "." + condPropObj.Name;
-                        AssetDatabase.AddObjectToAsset(recc.Condition, assetObj);
+                        if (assetObj != null)
+                            AssetDatabase.AddObjectToAsset(recc.Condition, assetObj);
                     }
                     var recReqProp = reqObj.FindProperty("Requirement");
                     if (recReqProp != null)
@@ -539,7 +540,8 @@ namespace PackageExtractor.Adapter
                         var recReqPropObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(recReqProp.GetValue<string>());
                         recc.Requirement = getReq(recReqPropObj, resources, pW, assetObj);
                         recc.Requirement.name = reqObj.Name + "." + recReqPropObj.Name;
-                        AssetDatabase.AddObjectToAsset(recc.Requirement, assetObj);
+                        if (assetObj != null)
+                            AssetDatabase.AddObjectToAsset(recc.Requirement, assetObj);
                     }
                     output = recc;
                     break;
@@ -621,7 +623,8 @@ namespace PackageExtractor.Adapter
                         var reqnotObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqNotProp.GetValue<string>());
                         reqnot.Requirement = getReq(reqnotObj, resources, pW, assetObj);
                         reqnot.Requirement.name = reqObj.Name + "." + reqnotObj.Name;
-                        AssetDatabase.AddObjectToAsset(reqnot.Requirement, assetObj);
+                        if (assetObj != null)
+                            AssetDatabase.AddObjectToAsset(reqnot.Requirement, assetObj);
                     }
                     output = reqnot;
                     break;
@@ -655,10 +658,12 @@ namespace PackageExtractor.Adapter
                         foreach (var reqOrProp in reqorArrProp.IterateInnerProperties())
                         {
                             var reqorObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(reqOrProp.GetValue<string>());
+                            if (reqorObj == null) continue;
                             var reqListItem = getReq(reqorObj, resources, pW, assetObj);
                             reqListItem.name = reqObj.Name + "." + reqorObj.Name;
                             reqor.Requirements.Add(reqListItem);
-                            AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
+                            if (assetObj != null)
+                                AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
                         }
                     }
                     output = reqor;
@@ -673,7 +678,11 @@ namespace PackageExtractor.Adapter
 
                 case "Req_PersistentValue":
                     Req_PersistentValue reqpv = ScriptableObject.CreateInstance<Req_PersistentValue>();
-                    ReadString(reqObj, "context", out reqpv.context);
+
+                    //Valshaaran - experimenting with player's active zone 
+                    //as contextID for now
+                    //reqpv.context = (int)getCurMapID();
+
                     ReadInt(reqObj, "VariableID", out reqpv.VariableID);
                     ReadInt(reqObj, "Value", out reqpv.Value);
                     ReadEnum(reqObj, "Operator", out reqpv.Operator);
@@ -690,6 +699,8 @@ namespace PackageExtractor.Adapter
                     string tempQAName;
                     ReadString(reqObj, "RequiredQuest", out tempQAName);
                     reqqa.RequiredQuest = resources.GetResource(pW.Name, tempQAName);
+                    if (reqqa.RequiredQuest == null)
+                        reqqa.RequiredQuest = resources.GetResource(tempQAName);
                     output = reqqa;
                     break;
 
@@ -698,6 +709,8 @@ namespace PackageExtractor.Adapter
                     string tempQFName;
                     ReadString(reqObj, "RequiredQuest", out tempQFName);
                     reqqf.RequiredQuest = resources.GetResource(pW.Name, tempQFName);
+                    if (reqqf.RequiredQuest == null)
+                        reqqf.RequiredQuest = resources.GetResource(tempQFName);
                     ReadInt(reqObj, "TimesFinished", out reqqf.TimesFinished);
                     output = reqqf;
                     break;
@@ -707,6 +720,8 @@ namespace PackageExtractor.Adapter
                     string tempQRName;
                     ReadString(reqObj, "quest", out tempQRName);                    
                     reqqr.Quest = resources.GetResource(pW.Name, tempQRName);
+                    if (reqqr.Quest == null)
+                        reqqr.Quest = resources.GetResource(tempQRName);
                     ReadBool(reqObj, "Repeatable", out reqqr.Repeatable);
                     output = reqqr;
                     break;
@@ -716,6 +731,8 @@ namespace PackageExtractor.Adapter
                     string tempQReqName;
                     ReadString(reqObj, "quest", out tempQReqName);
                     reqqreq.quest = resources.GetResource(pW.Name, tempQReqName);
+                    if (reqqreq.quest == null)
+                        reqqreq.quest = resources.GetResource(tempQReqName);
                     output = reqqreq;
                     break;
 
@@ -730,6 +747,8 @@ namespace PackageExtractor.Adapter
                     string tempTA;
                     ReadString(reqObj, "quest", out tempTA);
                     reqta.quest = resources.GetResource(pW.Name, tempTA);
+                    if (reqta.quest == null)
+                        reqta.quest = resources.GetResource(tempTA);
                     ReadInt(reqObj, "objective", out reqta.objective);
                     output = reqta;
                     break;
@@ -738,7 +757,9 @@ namespace PackageExtractor.Adapter
                     Req_TargetProgress reqpr = ScriptableObject.CreateInstance<Req_TargetProgress>();
                     string tempTP;
                     ReadString(reqObj, "quest", out tempTP);
-                    reqpr.quest = resources.GetResource(tempTP);
+                    reqpr.quest = resources.GetResource(pW.Name,tempTP);
+                    if (reqpr.quest == null)
+                        reqpr.quest = resources.GetResource(tempTP);
                     ReadInt(reqObj, "objective", out reqpr.objective);
                     ReadInt(reqObj, "Progress", out reqpr.Progress);
                     ReadEnum(reqObj, "Operator", out reqpr.Operator);
@@ -782,6 +803,7 @@ namespace PackageExtractor.Adapter
             ReadInt(reqObj, "ControlLocationX", out output.ControlLocationX);
             ReadInt(reqObj, "ControlLocationY", out output.ControlLocationY);
 
+            output.name = reqObj.Name;
             return output;
         }
         /*
@@ -818,7 +840,8 @@ namespace PackageExtractor.Adapter
                     var newReq = getReq(randReqObj, resources, pW, assetObj);
                     newReq.name = reqObj.Name + "." + randReqObj.Name;
                     output.Requirements.Add(newReq);
-                    AssetDatabase.AddObjectToAsset(newReq, assetObj);
+                    if (assetObj != null)
+                        AssetDatabase.AddObjectToAsset(newReq, assetObj);
                 }
             }
             return output;
@@ -828,8 +851,9 @@ namespace PackageExtractor.Adapter
 
         #region Events
 
-        protected Content_Event ExtractEvent(WrappedPackageObject eventObject, SBResources res, PackageWrapper pW, UnityEngine.Object assetObj)
+        protected Content_Event ExtractEvent(WrappedPackageObject eventObject, SBResources res, SBLocalizedStrings locStrings, PackageWrapper pW, UnityEngine.Object assetObj)
         {
+
             switch (eventObject.sbObject.ClassName.Replace("\0", string.Empty).Replace("SBGamePlay.", string.Empty))
             {
                 case "EV_Claustroport":
@@ -844,7 +868,9 @@ namespace PackageExtractor.Adapter
                     return evcle;
                 case "EV_Conversation":
                     var evco = ScriptableObject.CreateInstance<EV_Conversation>();
-                    ReadString(eventObject, "Conversation", out evco.Conversation);
+                    var convWPO = findWPOFromObjProp(eventObject, "Conversation");
+                    evco.Conversation = getConvTopicFull(convWPO, res, locStrings, pW, assetObj);
+                    AssetDatabase.AddObjectToAsset(evco.Conversation, assetObj);
                     return evco;
                 case "EV_Die":
                     var evdie = ScriptableObject.CreateInstance<EV_Die>();
@@ -878,7 +904,7 @@ namespace PackageExtractor.Adapter
                     return evemo;
                 case "EV_FinishQuest":
                     var evfq = ScriptableObject.CreateInstance<EV_FinishQuest>();
-                    ReadString(eventObject, "quest", out evfq.quest);
+                    ReadObject(eventObject, "quest",res, out evfq.quest);
                     return evfq;
                 case "EV_GiveItem":
                     var evgi = ScriptableObject.CreateInstance<EV_GiveItem>();
@@ -928,21 +954,30 @@ namespace PackageExtractor.Adapter
                     ReadString(eventObject, "Skill", out evgsk.temporarySkillName);
                     evgsk.skillID = res.GetResourceID(evgsk.temporarySkillName);
                     return evgsk;
+                case "EV_GiveQuest":
+                    var evgqst = ScriptableObject.CreateInstance<EV_GiveQuest>();
+                    ReadObject(eventObject, "quest",res, out evgqst.quest);
+                    return evgqst;
+
+                case "EV_GiveMoney":
+                    var evgmny = ScriptableObject.CreateInstance<EV_GiveMoney>();
+                    ReadInt(eventObject, "Amount", out evgmny.Amount);
+                    return evgmny;
+
                 case "EV_NPC":
                     var evnpc = ScriptableObject.CreateInstance<EV_NPC>();
-                    ReadString(eventObject, "NPC", out evnpc.temporaryNPCname);
-                    evnpc.npcID = res.GetResourceID(evnpc.temporaryNPCname);
+                    ReadObject(eventObject, "NPC",res, out evnpc.NPCRes);
                     var eventName = eventObject.FindProperty("NPCAction");
                     if (eventName != null)
                     {
                         var npcEvObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(eventName.GetValue<string>());
-                        evnpc.NPCAction = ExtractEvent(npcEvObj, res, pW, assetObj);
+                        evnpc.Action = ExtractEvent(npcEvObj, res, locStrings, pW, assetObj);
                     }
                     ReadFloat(eventObject, "Radius", out evnpc.Radius);
                     return evnpc;
                 case "EV_ObtainQuest":
                     var evoq = ScriptableObject.CreateInstance<EV_ObtainQuest>();
-                    ReadString(eventObject, "quest", out evoq.quest);
+                    ReadObject(eventObject, "quest",res, out evoq.quest);
                     return evoq;
                 case "EV_Other":
                     var evother = ScriptableObject.CreateInstance<EV_Other>();
@@ -950,7 +985,7 @@ namespace PackageExtractor.Adapter
                     if (otheractionName != null)
                     {
                         var otherActionObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(otheractionName.GetValue<string>());
-                        evother.OtherAction = ExtractEvent(otherActionObj, res, pW, assetObj);
+                        evother.OtherAction = ExtractEvent(otherActionObj, res, locStrings, pW, assetObj);
                     }
                     return evother;
                 case "EV_Party":
@@ -965,19 +1000,20 @@ namespace PackageExtractor.Adapter
                             var reqListItem = getReq(reqInfoObj, res, pW, assetObj);
                             reqListItem.name = eventObject.Name + "." + reqInfoObj.Name;
                             evpa.Requirements.Add(reqListItem);
-                            AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
+                            if (assetObj != null)
+                                AssetDatabase.AddObjectToAsset(reqListItem, assetObj);
                         }
                     }
                     var paAction = eventObject.FindProperty("PartyAction");
                     if (paAction != null)
                     {
                         var paActionObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(paAction.GetValue<string>());
-                        evpa.PartyAction = ExtractEvent(paActionObj, res, pW, assetObj);
+                        evpa.PartyAction = ExtractEvent(paActionObj, res, locStrings, pW, assetObj);
                     }
                     return evpa;
                 case "EV_PartyProgress":
                     var evpp = ScriptableObject.CreateInstance<EV_PartyProgress>();
-                    ReadString(eventObject, "quest", out evpp.quest);
+                    ReadObject(eventObject, "quest", res, out evpp.quest);
                     ReadInt(eventObject, "ObjectiveNr", out evpp.ObjectiveNr);
                     return evpp;
                 case "EV_PartyTeleport":
@@ -987,13 +1023,17 @@ namespace PackageExtractor.Adapter
                     return evpt;
                 case "EV_PersistentValue":
                     var evpv = ScriptableObject.CreateInstance<EV_PersistentValue>();
-                    ReadString(eventObject, "context", out evpv.context);
+
+                    //Valshaaran - experimenting with player's active zone 
+                    //as contextID for now
+                    //evpv.context = (int)getCurMapID();
+
                     ReadInt(eventObject, "VariableID", out evpv.VariableID);
                     ReadInt(eventObject, "Value", out evpv.Value);
                     return evpv;
                 case "EV_QuestProgress":
                     var evqp = ScriptableObject.CreateInstance<EV_QuestProgress>();
-                    ReadString(eventObject, "quest", out evqp.quest);
+                    ReadObject(eventObject, "quest", res, out evqp.quest);
                     ReadInt(eventObject, "TargetNr", out evqp.TargetNr);
                     ReadInt(eventObject, "Progress", out evqp.Progress);
                     return evqp;
@@ -1054,7 +1094,7 @@ namespace PackageExtractor.Adapter
                     if (slfActionProp != null)
                     {
                         var alfAcObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(slfActionProp.GetValue<string>());
-                        evslf.SelfAction = ExtractEvent(alfAcObj, res, pW, assetObj);
+                        evslf.SelfAction = ExtractEvent(alfAcObj, res, locStrings, pW, assetObj);
                     }
                     return evslf;
                 case "EV_SetClass":
@@ -1063,8 +1103,7 @@ namespace PackageExtractor.Adapter
                     return evscl;
                 case "EV_SetFaction":
                     var evsf = ScriptableObject.CreateInstance<EV_SetFaction>();
-                    ReadString(eventObject, "DesiredFaction", out evsf.temporaryFactionName);
-                    evsf.taxonomyID = res.GetResourceID(evsf.temporaryFactionName);
+                    ReadObject(eventObject, "DesiredFaction", res, out evsf.Taxonomy);
                     return evsf;
                 case "EV_SetHealth":
                     var evsh = ScriptableObject.CreateInstance<EV_SetHealth>();
@@ -1073,11 +1112,11 @@ namespace PackageExtractor.Adapter
                     return evsh;
                 case "EV_ShowTutorial":
                     var evst = ScriptableObject.CreateInstance<EV_ShowTutorial>();
-                    ReadString(eventObject, "Article", out evst.Article);
+                    ReadObject(eventObject, "Article", res, out evst.Article);
                     return evst;
                 case "EV_Sit":
                     var evsit = ScriptableObject.CreateInstance<EV_Sit>();
-                    ReadString(eventObject, "Chair", out evsit.Chair);
+                    //ReadString(eventObject, "Chair", out evsit.Chair);
                     ReadVector3(eventObject, "Offset", out evsit.Offset);
                     return evsit;
                 case "EV_Skill":
@@ -1114,7 +1153,7 @@ namespace PackageExtractor.Adapter
                     if (swAcProp != null)
                     {
                         var swAcObj = extractorWindowRef.ActiveWrapper.FindObjectWrapper(swAcProp.GetValue<string>());
-                        evsw.SwappedAction = ExtractEvent(swAcObj, res, pW, assetObj);
+                        evsw.SwappedAction = ExtractEvent(swAcObj, res, locStrings, pW, assetObj);
                     }
                     return evsw;
                 case "EV_Teleport":
@@ -1131,6 +1170,16 @@ namespace PackageExtractor.Adapter
                     var evuev = ScriptableObject.CreateInstance<EV_UntriggerEvent>();
                     ReadString(eventObject, "EventTag", out evuev.EventTag);
                     return evuev;
+                case "EV_AIIdle":
+                    var evaii = ScriptableObject.CreateInstance<AIIdle>();
+                    return evaii;
+                case "EV_AIAggro":
+                    var evaia = ScriptableObject.CreateInstance<AIAggro>();
+                    return evaia;
+                case "EV_AIFollow":
+                    var evaif = ScriptableObject.CreateInstance<AIFollow>();
+                    return evaif;
+
             }
             var emptyEvent = ScriptableObject.CreateInstance<Content_Event>();
             emptyEvent.name = "[Empty:NotFound]";
@@ -1150,7 +1199,7 @@ namespace PackageExtractor.Adapter
                 return GetResource(CTObj, resources, pwName);
         }
 
-        protected ConversationTopic getConvTopicFull(WrappedPackageObject CTObj, SBResources resources, SBLocalizedStrings locStrings, PackageWrapper pW)
+        protected ConversationTopic getConvTopicFull(WrappedPackageObject CTObj, SBResources resources, SBLocalizedStrings locStrings, PackageWrapper pW, UnityEngine.Object assetObj)
         {
             ConversationTopic output; // = ScriptableObject.CreateInstance<ConversationTopic>();           
 
@@ -1276,7 +1325,40 @@ namespace PackageExtractor.Adapter
                 }
             }
 
-            //TODO : implement event extractor and use it to populate this topic's events list
+            //Requirements, Events
+            output.Requirements = new List<Content_Requirement>();
+            output.Events = new List<Content_Event>();
+            foreach (var prop in CTObj.sbObject.IterateProperties())
+            {
+                if (prop.Name == "Requirements")
+                {
+                    foreach (var reqProp in prop.IterateInnerProperties())
+                    {
+                        var reqWPO = pW.FindObjectWrapper(pW.Name + "." + reqProp.Value);
+                        if (reqWPO != null)
+                        {
+                            var reqObj = getReq(reqWPO, resources, pW, assetObj);
+                            reqObj.name = pW.Name + "." + reqProp.Value;
+                            output.Requirements.Add(reqObj);
+                            AssetDatabase.AddObjectToAsset(reqObj, assetObj);
+                        }
+                    }
+                }
+                else if (prop.Name == "Events")
+                {
+                    foreach (var evProp in prop.IterateInnerProperties())
+                    {
+                        var evWPO = pW.FindObjectWrapper(pW.Name + "." + evProp.Value);
+                        if (evWPO != null)
+                        {
+                            var evObj = ExtractEvent(evWPO, resources, locStrings, pW, assetObj);
+                            evObj.name = pW.Name + "." + evProp.Value;
+                            output.Events.Add(evObj);
+                            AssetDatabase.AddObjectToAsset(evObj, assetObj);
+                        }
+                    }
+                }
+            }
 
             return output;
         }
@@ -1534,6 +1616,44 @@ namespace PackageExtractor.Adapter
         }
 
         #endregion
+
+        /// <summary>
+        /// Returns a corresponding MapIDs enum if the package is a map file
+        /// Otherwise returns 0
+        /// </summary>
+        /// <returns></returns>
+        protected MapIDs getCurMapID()
+        {
+            MapIDs id = (MapIDs)Enum.Parse(typeof(MapIDs), extractorWindowRef.ActiveWrapper.Name, true);
+            return id;
+        }
+
+        /// <summary>
+        /// Helper which returns the input list with any duplicates of list items removed
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        protected List<T> removeDuplicates<T>(List<T> list) where T : UnityEngine.Object
+        {
+            for (int n = 0; n < list.Count; n++)
+            {
+                var item = list[n];
+
+                for (int m = n + 1; m < list.Count; m++)
+                {
+                    var otherItem = list[m];
+
+                    if (item == otherItem)
+                    {
+                        list.Remove(otherItem);
+                        m--;
+                    }
+                }
+            }
+
+            return list;
+        }
+
 
         #endregion
     }

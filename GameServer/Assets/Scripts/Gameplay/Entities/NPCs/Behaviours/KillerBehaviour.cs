@@ -10,10 +10,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
 {
     internal class KillerBehaviour : NPCBehaviour
     {
-        public float aggroRadius = 10f; //TODO: find good value or get from npc
-
         bool canPath;
 
+        float aggroRadius;
         float distanceSquaredToCurrentTarget;
         float distanceSquaredToHomePoint;
 
@@ -24,6 +23,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         float lastQuery;
 
         float lastRotation;
+        const float rotationUpdate = 0.75f;
 
         [SerializeField] float maxDistanceToMoveTarget = 3f;
 
@@ -53,14 +53,18 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
             if (!ReferenceEquals(owner.ActiveZone, null))
             {
-                owner.Position = owner.ActiveZone.Raycast(_currentPosition + Vector3.up, Vector3.down, 10f);
+                //Valshaaran - amended _currentPosition to owner.Position in 1st parameter
+                //Not sure if _currentPosition ought to be set to this elsewhere?
+                owner.Position = owner.ActiveZone.Raycast(owner.Position + Vector3.up, Vector3.down, 10f);
             }
-            startPosition = _currentPosition;
+            owner.RespawnInfo.initialSpawnPoint = owner.Position;
+            startPosition = owner.Position;
             startOrientation = owner.Rotation;
             owner.SetMoveSpeed(ENPCMovementFlags.ENMF_Walking);
             rndTargetPos = startPosition;
             nextRndPath = Time.time + Random.Range(5f, 15f);
             canPath = owner.ActiveZone != null && owner.ActiveZone.HasCollision;
+            aggroRadius = owner.RespawnInfo.aggroRadius;
         }
 
         public override void OnDamage(Character source, FSkill s, int amount)
@@ -109,9 +113,15 @@ namespace Gameplay.Entities.NPCs.Behaviours
                     {
                         var targetPos = _targetPosition;
                         targetPos.y = _currentPosition.y;
-                        owner.Rotation = Quaternion.LookRotation(targetPos - _currentPosition, Vector3.up);
-                        owner.SetFocusLocation(_targetPosition);
-                        lastRotation = Time.time;
+
+                        Quaternion newRot = Quaternion.LookRotation(targetPos - _currentPosition, Vector3.up);
+                        if (newRot != owner.Rotation && Time.time - lastRotation > rotationUpdate)
+                        {
+                            owner.Rotation = newRot;
+                            owner.SetFocusLocation(_targetPosition);
+                            lastRotation = Time.time;
+                        }                                               
+                        
                     }
                     distanceSquaredToCurrentTarget = VectorMath.SqrDistanceXZ(_targetPosition, _currentPosition);
                     if (Vector3.SqrMagnitude(_targetPosition - startPosition) > homeRadius*homeRadius)
@@ -184,7 +194,12 @@ namespace Gameplay.Entities.NPCs.Behaviours
                 }
                     break;
                 case NpcCharacter.MoveResult.SearchingPath:
-                    owner.SetFocusLocation(rndTargetPos);
+                    if (Time.time - lastRotation > rotationUpdate)
+                    {
+                        owner.SetFocusLocation(rndTargetPos);
+                        lastRotation = Time.time;
+                    }
+
                     break;
                 default:
                     nextRndPath = Time.time + Random.Range(1f, 2f); //prevent too frequent updates
@@ -301,6 +316,12 @@ namespace Gameplay.Entities.NPCs.Behaviours
             InRange,
             Fleeing,
             Dead
+        }
+
+        public void ForceAggro(Character tc)
+        {
+            target = tc;
+            state = NpcStates.Approaching;
         }
     }
 }

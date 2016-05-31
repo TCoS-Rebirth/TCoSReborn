@@ -6,6 +6,8 @@ using UnityEngine;
 
 namespace Gameplay.Entities.Players
 {
+    
+
     [Serializable]
     public class Player_ItemManager
     {
@@ -16,6 +18,8 @@ namespace Gameplay.Entities.Players
         List<Game_Item> items = new List<Game_Item>();
         public ItemChangeNotification OnItemChanged;
 
+        public const int MAX_INV = 200;
+
         public Player_ItemManager(ItemChangeNotification itemChangedCallback)
         {
             OnItemChanged = itemChangedCallback;
@@ -24,7 +28,7 @@ namespace Gameplay.Entities.Players
         int GetFreeItemSlot()
         {
             var i = 0;
-            while (i < 200)
+            while (i < MAX_INV)
             {
                 if (!filledItemSlots.Contains(i))
                 {
@@ -32,11 +36,17 @@ namespace Gameplay.Entities.Players
                 }
                 i++;
             }
-            if (i == 200)
+            if (i == MAX_INV)
             {
                 return -1;
             }
             return i;
+        }
+
+        public bool hasFreeSpace(int slots)
+        {
+            return slots <= (MAX_INV - filledItemSlots.Count);
+
         }
 
         Game_Item CanStackToExisting(Game_Item item)
@@ -223,6 +233,21 @@ namespace Gameplay.Entities.Players
         public void LoadItems(List<Game_Item> unsortedItems)
         {
             items = unsortedItems;
+        }
+
+        public bool HasItemStack(Content_Inventory.ContentItem item)
+        {
+            int count = 0;
+
+            foreach (var i in items)
+            {
+                if (i.Type.resourceID == item.itemID)
+                {
+                    count += i.StackSize;
+                    if (count >= item.StackSize) return true;
+                }
+            }
+            return false;
         }
     }
 }

@@ -87,6 +87,11 @@ namespace PackageExtractor.Adapter
 
             questCol = ScriptableObject.CreateInstance<QuestCollection>();
             //Create new assets
+
+            if (AssetDatabase.LoadAssetAtPath<QuestCollection>(gameDataPath + "Quests/" + saveName + ".asset"))
+            {
+                AssetDatabase.DeleteAsset(gameDataPath + "Quests/" + saveName + ".asset");
+            }
             AssetDatabase.CreateAsset(questCol, gameDataPath + "Quests/" + saveName + ".asset");
 
             //Populate quest collection with quest chain skeletons first (name, localized name ID, quest area)
@@ -511,7 +516,7 @@ namespace PackageExtractor.Adapter
                     //Find event WPO in wrapper
                     //ExtractEvent and add it to completeEvents
                     var eventWPO = pW.FindObjectWrapper(pW.Name + "." + completeEventProp.Value);
-                    Content_Event thisEvent = ExtractEvent(eventWPO, resources, pW, assetObj);
+                    Content_Event thisEvent = ExtractEvent(eventWPO, resources, locStrings, pW, assetObj);
                     thisEvent.name = eventWPO.sbObject.Package + "." + eventWPO.sbObject.Name;
                     output.CompleteEvents.Add(thisEvent);
                     AssetDatabase.AddObjectToAsset(thisEvent, assetObj);
@@ -592,6 +597,8 @@ namespace PackageExtractor.Adapter
         QT_Take getQTTake(WrappedPackageObject tarWPO, SBLocalizedStrings locStrings) {
 
             var qtTake = ScriptableObject.CreateInstance<QT_Take>();
+
+            ReadInt(tarWPO, "Amount", out qtTake.Amount);
 
             //get Content_Inventory class WPO where package contains WPO name
             WrappedPackageObject cargoWPO = findWPOFromObjProp(tarWPO, "Cargo");

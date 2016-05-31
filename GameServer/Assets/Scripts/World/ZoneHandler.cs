@@ -6,6 +6,11 @@ using Common;
 using Gameplay.Entities;
 using Network;
 using UnityEngine;
+using Gameplay.Entities.Interactives;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace World
 {
@@ -256,6 +261,38 @@ namespace World
                 }
             }
         }
+
+        #if UNITY_EDITOR
+        [ContextMenu("Save ILE Data from scene")]
+        void SaveAllILEData()
+        {
+            var ileDataPath = "Assets/GameData/Interactives/";
+            var zones = GameObject.Find("Zones").GetComponent<ZoneHandler>();
+            foreach (var zone in zones.Zones)
+            {
+                var sceneILEs = zone.InteractiveElementHolder.GetComponentsInChildren<InteractiveLevelElement>();
+                if (sceneILEs.Length == 0) continue;
+
+                var iidCol = ScriptableObject.CreateInstance<ILEIDCollection>();
+                AssetDatabase.CreateAsset(iidCol, ileDataPath + zone.name + ".asset");
+
+                foreach (var ile in sceneILEs)
+                {
+                    if (ile.levelObjectID == -1) continue;
+
+                    var ileID = ScriptableObject.CreateInstance<ILEID>();
+                    ileID.gameObjName = ile.name;
+                    ileID.levelObjID = ile.levelObjectID;
+                    //ileID.name = ile.levelObjectID + " - " + ile.name;
+
+                    iidCol.TryAdd(ileID);
+                    //AssetDatabase.AddObjectToAsset(ileID, iidCol);
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+        }
+        #endif
 #endif
 
         #region Helper

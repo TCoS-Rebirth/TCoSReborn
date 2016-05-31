@@ -9,6 +9,8 @@ using Gameplay.Entities.NPCs;
 using Gameplay.Items;
 using Gameplay.Quests;
 using Gameplay.Skills;
+using Gameplay.Entities.Interactives;
+using World;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -93,9 +95,7 @@ namespace Database.Static
                 callback(false);
                 yield break;
             }
-            levelProg = AssetDatabase.LoadAssetAtPath<LevelProgression>(
-                "Assets/GameData/SBResources/LevelProgression.asset"
-            );
+            yield return null;
             if (levelProg == null)
             {
                 Debug.Log("Error while loading level progression data");
@@ -385,7 +385,8 @@ namespace Database.Static
                         }
                     }
                 }
-                throw new Exception("Failed to get ConversationTopic with resource ID " + topicRes.ID);
+                Debug.Log("Failed to get ConversationTopic with resource ID " + topicRes.ID);
+                return null;
             }
 
             public List<ConversationTopic> GetTopics(List<SBResource> topicResList)

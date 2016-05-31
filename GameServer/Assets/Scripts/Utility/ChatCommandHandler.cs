@@ -129,7 +129,7 @@ namespace Utility
                 }
                 return;
             }
-            if (arg.Length == 2)
+            else if (arg.Length == 2)
             {
                 var z = p.ActiveZone;
                 var td = z.FindTravelDestination(arg[1]);
@@ -137,10 +137,39 @@ namespace Utility
                 {
                     GameWorld.Instance.TravelPlayer(p, td);
                 }
+
+                //Find NPC by name
+                var npc = z.FindNpcCharacter(arg[1]);
+                if (npc != null)
+                {
+                    Vector3 teleTarget = npc.Position;
+                    teleTarget.y += 1;
+                    ResponseMessage(p, "Teleporting to " + npc.Name);
+                    p.TeleportTo(teleTarget, npc.Rotation);
+                }
                 else
                 {
-                    ResponseMessage(p, "Error finding teleport location");
+                    ResponseMessage(p, "Error finding teleport target");
                 }
+            }
+            else if (arg.Length == 3)
+            {
+                //Find NPC by name
+                int npcIndex;
+                if (int.TryParse(arg[2], out npcIndex))
+                {
+                    var z = p.ActiveZone;
+                    var npc = z.FindNpcCharacter(arg[1], npcIndex);
+                    if (npc != null)
+                    {
+                        Vector3 teleTarget = npc.Position;
+                        teleTarget.y += 1;
+                        ResponseMessage(p, "Teleporting to " + npc.Name);
+                        p.TeleportTo(teleTarget, npc.Rotation);
+                        return;
+                    }
+                }
+                ResponseMessage(p, "Error finding teleport target");
             }
         }
 

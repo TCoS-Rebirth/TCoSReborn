@@ -242,6 +242,10 @@ namespace Database.Dynamic
                 {
                     return false;
                 }
+                if (!LoadAndAssignPerVars())
+                {
+                    return false;
+                }
                 return true;
             }
 
@@ -513,6 +517,38 @@ namespace Database.Dynamic
                 }
             }
 
+            static bool LoadAndAssignPerVars()
+            {
+                using (var reader = DatabaseHelper.GetCharacterPerVarsLoadCommand(CachedConnection).ExecuteReader())
+                {
+                    try
+                    {
+                        while (reader.Read())
+                        {
+                            var charID = reader.GetInt32("CharacterID");
+                            var contextID = reader.GetInt32("ContextID");
+                            var varID = reader.GetInt32("VarID");
+                            var value = reader.GetInt32("Value");
+                            var p = GetCharacter(charID);
+                            if (p == null)
+                            {
+                                Debug.LogWarning(string.Format("Persistent variable with ID context {0}, var {1} in DB has no matching player character (ID {2})", contextID, varID, charID));
+                                continue;
+                            }
+
+                            var dbv = new DBPersistentVar(contextID, varID, value);
+                            p.PersistentVars.Add(dbv);
+                        }
+                        return true;
+                    }
+                    catch (MySqlException e)
+                    {
+                        Debug.LogError("[LoadAssignPerVars]: " + e.Message);
+                        return false;
+                    }
+                }
+            }
+
             public static bool SaveCharacterLogout(PlayerCharacter pc)
             {
                 var ch = pc.dbRef;
@@ -553,7 +589,8 @@ namespace Database.Dynamic
                     }
                 }
 
-                ch.QuestTargets = pc.QuestData.SaveForPlayer();
+                ch.QuestTargets = pc.questData.SaveForPlayer();
+                ch.PersistentVars = pc.persistentVars.SaveForPlayer();
 
                 return SaveCharacterToDB(ch);
             }
@@ -568,6 +605,7 @@ namespace Database.Dynamic
                         SaveSkills(pc, transaction);
                         SaveItems(pc, transaction);
                         SaveQuests(pc, transaction);
+                        SavePerVars(pc, transaction);
                         if (updateExistingCmd.ExecuteNonQuery() > 0)
                         {
                             transaction.Commit();
@@ -625,6 +663,19 @@ namespace Database.Dynamic
                     if (pc.QuestTargets[i] == null) continue;
                     questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(questSaveCommand.Connection, pc, pc.QuestTargets[i], tr);
                     questSaveCommand.ExecuteNonQuery();
+                }
+            }
+
+            static void SavePerVars(DBPlayerCharacter pc, MySqlTransaction tr)
+            {
+                var clearCmd = DatabaseHelper.GetCharacterPerVarsDeleteCommand(CachedConnection, pc, tr);
+                clearCmd.ExecuteNonQuery();
+                var perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(CachedConnection, pc, null, tr);
+                for (var i = 0; i < pc.PersistentVars.Count; i++)
+                {
+                    if (pc.PersistentVars[i] == null) continue;
+                    perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(perVarSaveCommand.Connection, pc, pc.PersistentVars[i], tr);
+                    perVarSaveCommand.ExecuteNonQuery();
                 }
             }
 
