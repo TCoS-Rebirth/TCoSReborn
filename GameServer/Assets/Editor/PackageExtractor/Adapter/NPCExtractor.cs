@@ -335,7 +335,8 @@ namespace PackageExtractor.Adapter
 
             ReadBool(wpo, "IndividualKillCredit", out npc.IndividualKillCredit);
 
-            #region ConversationTopics
+            #region ConversationTopics 
+            //Polymo: TODO: some are still not correctly extracted (more than needed etc)
 
             //get list of regular topics            
             var topics = wpo.FindProperty("Topics");

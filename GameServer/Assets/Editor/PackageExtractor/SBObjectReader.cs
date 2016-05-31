@@ -493,8 +493,8 @@ namespace PackageExtractor
             }
             else
             {
-                activeProperty.Size = "0";
-                activeProperty.serialSize = 0;
+                activeProperty.Size = "1";
+                activeProperty.serialSize = 1;
             }
             return activeProperty;
         }
