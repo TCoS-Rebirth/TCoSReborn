@@ -51,7 +51,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
             {
                 return;
             }
-            if (_doPatrol && _currentPath.Count > 0)
+            if (_doPatrol && _currentPath.Count > 0 && !owner.isConversing)
             {
                 if (owner.MoveToDirect(_currentPath[_currentPathTargetIndex]) == NpcCharacter.MoveResult.ReachedTarget)
                 {

@@ -14,6 +14,9 @@ using UnityEngine;
 using Utility;
 using World;
 using Gameplay.Quests.QuestTargets;
+using Gameplay.Entities.Interactives;
+using Gameplay.Quests.QuestConditions;
+using Gameplay.Loot;
 
 namespace Gameplay.Entities
 {
@@ -63,6 +66,8 @@ namespace Gameplay.Entities
             pc.SetupFromDBRef();
             pc.SetupCollision();
             pc.InitializeStats();
+            pc.InitEnabled = true;
+            pc.InitColl = ECollisionType.COL_Colliding;
             return pc;
         }
 
@@ -82,6 +87,7 @@ namespace Gameplay.Entities
             Faction = GameData.Get.factionDB.GetFaction(dbRef.Faction);
             FameLevel = dbRef.FamePep[0];
             PepRank = dbRef.FamePep[1];
+            FamePoints = dbRef.FamePoints;
             MaxHealth = dbRef.HealthMaxHealth[1]; //TODO: calculate value instead, later (from level & items etc)
             Health = dbRef.HealthMaxHealth[0];
             LastZoneID = (MapIDs) dbRef.LastZoneID;
@@ -100,8 +106,11 @@ namespace Gameplay.Entities
             ActiveSkillDeck = ScriptableObject.CreateInstance<SkillDeck>();
             ActiveSkillDeck.LoadForPlayer(dbRef.SerializedSkillDeck, this);
 
-            QuestData = ScriptableObject.CreateInstance<QuestDataContainer>();
-            QuestData.LoadForPlayer(dbRef.QuestTargets, this);
+            questData = ScriptableObject.CreateInstance<QuestDataContainer>();
+            questData.LoadForPlayer(dbRef.QuestTargets, this);
+
+            persistentVars = ScriptableObject.CreateInstance<PersistentVarsContainer>();
+            persistentVars.LoadForPlayer(dbRef.PersistentVars, this);
         }
 
         void OnDrawGizmos()
@@ -126,7 +135,7 @@ namespace Gameplay.Entities
         /// </summary>
         public void SendToClient(Message m)
         {
-            Owner.Connection.SendQueued(m);
+            Owner.Connection.SendMessage(m);
         }
 
         #endregion
@@ -150,6 +159,16 @@ namespace Gameplay.Entities
             MoveFrame = frameNr;
             var m = PacketCreator.S2R_PLAYERPAWN_MOVE(this);
             BroadcastRelevanceMessage(m);
+
+            //kill player if below zone killY
+            if (ActiveZone && ActiveZone.killY != 0 
+                &&  pos.y < ActiveZone.killY 
+                &&  PawnState != EPawnStates.PS_DEAD)
+            {
+                Health = 0;
+                SetPawnState(EPawnStates.PS_DEAD);
+                OnDiedThroughDamage(null);                
+            }
         }
 
         /// <summary>
@@ -191,6 +210,22 @@ namespace Gameplay.Entities
         {
             base.SetMoveSpeed(newSpeed);
             SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMOVEMENTSPEED(this));
+        }
+
+        public override bool SitDown(bool onChairFlag = false)
+        {
+            if (base.SitDown(onChairFlag))
+            {
+
+                Message mMove = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Position, Velocity, Physics);
+                SendToClient(mMove);
+
+                Message mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(onChairFlag);
+                SendToClient(mSit);
+
+                return true;
+            }
+            else return false;
         }
 
         #endregion
@@ -572,6 +607,33 @@ namespace Gameplay.Entities
             }
         }
 
+        public void GiveInventory(Content_Inventory cInv)
+        {
+            foreach (var cItem in cInv.Items)
+            {
+
+                Game_Item gi = ScriptableObject.CreateInstance<Game_Item>();
+                gi.SetupFromCItem(cItem);
+
+                //TODO: Handle attuned status?
+                //if (attuned) { gi.Attuned = 1; }
+
+                ItemManager.AddItem(gi);
+            }                            
+        }
+
+        public bool HasInventory(Content_Inventory cInv)
+        {
+            foreach (var cItem in cInv.Items)
+            {
+                if (!ItemManager.HasItemStack(cItem))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         #endregion
 
         #region Currency
@@ -586,26 +648,76 @@ namespace Gameplay.Entities
 
         public void GiveMoney(int amount)
         {
+            if (amount == 0) return;
             amount = Mathf.Abs(amount);
             money = money + amount;
+            Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
+            SendToClient(m);
         }
 
         public void TakeMoney(int amount)
         {
             amount = Mathf.Abs(amount);
             money = Mathf.Clamp(money - amount, 0, amount);
+            Message m = PacketCreator.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(money);
+            SendToClient(m);
         }
 
         #endregion
 
         #region Leveling
 
-        int famePoints;
+        float famePoints;
 
-        public int FamePoints
+        public float FamePoints
         {
             get { return famePoints; }
             set { famePoints = value; }
+        }
+
+        protected override void OnFameChanged()
+        {
+            //TODO: grant attribute points, update stats, etc.
+            Message m = PacketCreator.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(this);
+            BroadcastRelevanceMessage(m);
+            SendToClient(m);
+        }
+
+        public void GiveFame(int points)
+        {
+            famePoints += points;
+            Message mUpdateFamePoints = PacketCreator.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(this);
+            SendToClient(mUpdateFamePoints);
+
+            ReceiveChatMessage("", "Gained " + points + " fame", EGameChatRanges.GCR_SYSTEM);
+
+            //Return if max level
+            if (FameLevel >= GameConfiguration.CharacterDefaults.MaxFame) return;
+
+            //Check for levelup
+            var nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            while (FamePoints >= nextLevelData.requiredFamePoints)
+            {
+                SetFame(FameLevel + 1);
+                nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            }            
+            
+        }
+
+        public void GiveQuestFame(int points, int qpFrac)
+        {
+            
+
+            if (qpFrac <= 0) { GiveFame(points); }
+            else {
+                //TODO
+                //Valshaaran - experimental quest XP formula : (quest points value) * (qpFrac / player fame level)?
+                float multFactor = qpFrac / FameLevel;
+                GiveFame((int)(points * multFactor));
+
+                //This version just gives the unmodified points amount
+                //GiveFame(points);
+            }
         }
 
         int pepPoints;
@@ -727,13 +839,137 @@ namespace Gameplay.Entities
             }
         }
 
+        public void OnNPCKill(NpcCharacter npc)
+        {
+            var npct = npc.typeRef;
+
+            #region Quest progress
+            //Quest progress                
+            foreach (var curQuest in questData.curQuests)
+            {
+                var questObj = GameData.Get.questDB.GetQuest(curQuest.questID);
+
+                //Look for Destroy/Exterminate/Hunt/Kill targets
+                for (int n = 0; n < questObj.targets.Count; n++)
+                {
+                    var target = questObj.targets[n];
+                    //Break if target completed...
+                    if (QuestTargetIsComplete(questObj, n)) continue;
+
+                    //...or if  pretargets unfulfilled
+                    if (!PreTargetsComplete(target, questObj)) continue;
+
+                    if (target is QT_Destroy)
+                    {
+                        var tDest = (QT_Destroy)target;
+                        if (npct.resourceID == tDest.Target.resourceID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Destroy progress advancement failed");
+                            }
+                        }
+                    }
+                    else if (target is QT_Hunt)
+                    {
+                        var tHunt = (QT_Hunt)target;
+                        if (npct.resourceID == tHunt.NpcTargetID.ID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Hunt progress advancement failed");
+                            }
+                        }
+                    }
+
+                    else if (target is QT_Exterminate)
+                    {
+                        var tExt = (QT_Exterminate)target;
+                        if (npct.TaxonomyFaction.ID == tExt.FactionID.ID)
+                        {
+                            if (!TryAdvanceTarget(questObj, target))
+                            {
+                                Debug.Log("PlayerCharacter.OnNPCKill : QT_Exterminate progress advancement failed");
+                            }
+                        }
+                    }
+                    else if (target is QT_Kill)
+                    {
+                        var tKill = (QT_Kill)target;
+                        foreach (var killType in tKill.NpcTargetIDs)
+                        {
+                            if (npct.resourceID == killType.ID)
+                            {
+                                if (!TryAdvanceQTKill(questObj, target, npct))
+                                {
+                                    Debug.Log("PlayerCharacter.OnNPCKill : QT_Kill progress advancement failed");
+                                }
+                                else break; //Ensures only 1 subtarget advances at a time
+                            }
+                        }
+                    }
+                }
+            }
+            #endregion
+
+            #region Grant Fame, PEP
+            //Valshaaran - placeholder formula, feel free to improve
+            int nFame = npc.FameLevel;
+            int baseKillPoints = 10;
+            float weightedKillPoints = (baseKillPoints * nFame * nFame) / FameLevel;
+            GiveFame((int)weightedKillPoints);
+
+            //TODO: PEP
+
+            #endregion
+
+            #region Loot
+
+            var lootTables = npc.Faction.Loot;
+            lootTables.AddRange(npc.typeRef.Loot);
+
+            if (Team == null)
+            {
+                #region Single player
+                var receivers = new List<PlayerCharacter>();
+                receivers.Add(this);
+
+                LootManager.Get.CreateTransaction(lootTables, receivers);
+                GiveMoney(npc.DropMoney());
+                #endregion
+            }
+            else
+            {
+                #region Team
+                var creditMembers = new List<PlayerCharacter>();
+                creditMembers.Add(this);
+                foreach (var tm in Team.Members)
+                {
+                    if (tm != this && tm.ObjectIsRelevant(npc))
+                    {
+                        creditMembers.Add(tm);
+                    }
+                }
+                LootManager.Get.CreateTransaction(lootTables, creditMembers, Team.CurLootMode);
+
+                foreach (var cm in creditMembers)
+                {
+                    cm.GiveMoney(npc.DropMoney() / creditMembers.Count);
+                }
+
+                #endregion                
+            }
+
+            #endregion
+        }
+
         #endregion
 
         #region Relevance
 
-        /// <summary>
-        ///     <see cref="Entity.OnEntityBecameRelevant" />
-        /// </summary>
+            /// <summary>
+            ///     <see cref="Entity.OnEntityBecameRelevant" />
+            /// </summary>
         public override void OnEntityBecameRelevant(Entity rel)
         {
             base.OnEntityBecameRelevant(rel);
@@ -759,7 +995,8 @@ namespace Gameplay.Entities
             var element = rel as InteractiveLevelElement;
             if (element != null)
             {
-                Debug.Log("TODO sync interactiveElements");
+                SendToClient(PacketCreator.S2C_INTERACTIVELEVELELEMENT_ADD(element));
+                return;
             }
         }
 
@@ -772,7 +1009,9 @@ namespace Gameplay.Entities
             base.OnEntityBecameIrrelevant(rel);
             if (contained)
             {
-                SendToClient(PacketCreator.S2C_BASE_PAWN_REMOVE(rel));
+                var ile = rel as InteractiveLevelElement;
+                if (ile) SendToClient(PacketCreator.S2C_LEVELOBJECT_REMOVE(ile));
+                else SendToClient(PacketCreator.S2C_BASE_PAWN_REMOVE(rel));
             }
         }
 
@@ -855,8 +1094,8 @@ namespace Gameplay.Entities
 
         #region Quests
 
-        [SerializeField]
-        public QuestDataContainer QuestData;
+        [SerializeField,ReadOnly]
+        public QuestDataContainer questData;
 
         public bool IsEligibleForQuest(Quest_Type quest)
         {
@@ -882,7 +1121,7 @@ namespace Gameplay.Entities
         }
         public bool HasQuest(int questID)
         {
-            foreach (var questProgress in QuestData.curQuests)
+            foreach (var questProgress in questData.curQuests)
             {
                 if (questProgress.questID == questID) { return true; }
             }
@@ -890,7 +1129,7 @@ namespace Gameplay.Entities
         }
         public bool QuestIsComplete(int questID)
         {
-            foreach (var questSBR in QuestData.completedQuestIDs)
+            foreach (var questSBR in questData.completedQuestIDs)
             {
                 if (questSBR == questID) { return true; }
             }
@@ -914,7 +1153,7 @@ namespace Gameplay.Entities
         {
             int completeThreshold = quest.targets[targetIndex].GetCompletedProgressValue();
 
-            foreach (var questProgress in QuestData.curQuests)
+            foreach (var questProgress in questData.curQuests)
             {
                 if (questProgress.questID == quest.resourceID) {
 
@@ -924,43 +1163,12 @@ namespace Gameplay.Entities
             }
             return false;
         }
-        public void RemoveQuest(int questID)
-        {
-            //int numTargets = QuestData.getNumTargets(questID);
-
-            //Remove quest on game server
-            QuestData.RemoveQuest(questID);
-
-            //Send message to remove from player log
-            var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
-            SendToClient(m);
-            return;
-        }
-        public void FinishQuest(Quest_Type quest)
-        {
-            //Set game server quest data to finished                
-            QuestData.FinishQuest(quest.resourceID);
-
-            //TODO:Give quest rewards to player
-            //Quest points
-
-            //Money
-
-            //Item rewards (Content_Inventory)
-
-            //Send complete quest packet            
-            Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);
-           // Message mQuestRemove = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(quest.resourceID);
-            SendToClient(mQuestFinish);
-            //SendToClient(mQuestRemove);
-        }
-
         public bool HasUnfinishedTargets(Quest_Type quest)
         {
             PlayerQuestProgress questProgress = null;
 
             //get the quest ID's progress values
-            foreach (var qP in QuestData.curQuests)
+            foreach (var qP in questData.curQuests)
             {
                 if (qP.questID == quest.resourceID) { questProgress = qP; }
             }
@@ -971,15 +1179,182 @@ namespace Gameplay.Entities
                 return true;
             }
 
-            Debug.Log("Player.hasUnfinishedTargets : TODO - Compare each target progress to what its completed value should be");
-            //TODO: Placeholder - returns true if any targets have progress value 0, returns false otherwise
-            foreach (var targetValue in questProgress.targetProgress)
+            //Returns true if any target has a value less than its completed progress value
+            for (int n = 0; n < questProgress.targetProgress.Count;n++)
             {
-                if (targetValue == 0) { return true; }
+                var targetValue = questProgress.targetProgress[n];
+                if (targetValue < quest.targets[n].GetCompletedProgressValue()) return true;
             }
 
             return false;
         }
+        public void RemoveQuest(int questID)
+        {
+            //int numTargets = QuestData.getNumTargets(questID);
+
+            //Remove quest on game server
+            questData.RemoveQuest(questID);
+
+            //Send message to remove from player log
+            var m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(questID);
+            SendToClient(m);
+            return;
+        }
+        public void FinishQuest(Quest_Type quest)
+        {
+            //Set game server quest data to finished                
+            questData.FinishQuest(quest.resourceID);
+
+            //Give quest rewards to player
+
+            //Quest points
+            GiveQuestFame(quest.questPoints.QP, quest.questPoints.QPFrac);
+
+            //Money
+            GiveMoney(quest.money);
+
+            //Item rewards (Content_Inventory)
+            GiveInventory(quest.rewardItems);         
+
+            //Send complete quest packet            
+            Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);
+           // Message mQuestRemove = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(quest.resourceID);
+            SendToClient(mQuestFinish);
+            //SendToClient(mQuestRemove);
+        }
+        public void CompleteQT(Quest_Type quest, int targetIndex)
+        {
+            int completedValue = quest.targets[targetIndex].GetCompletedProgressValue();
+            questData.UpdateQuest(quest.resourceID, targetIndex, completedValue);
+            Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(
+                quest.resourceID, targetIndex, completedValue);
+            SendToClient(m);
+        }
+        public void SetQTProgress(int questID, int targetIndex, int progress)
+        {
+            //Server quest data
+            questData.UpdateQuest(questID, targetIndex, progress);
+
+            //Dispatch packet
+            Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(
+                questID, targetIndex, progress);
+            SendToClient(m);
+        }
+
+        /// <summary>
+        /// Attempts to advance a quest target's progress for both server and client 
+        /// </summary>
+        /// <param name="quest"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        public bool TryAdvanceTarget(Quest_Type quest, QuestTarget target)
+        {
+            var playerTarProgress = questData.getProgress(quest.resourceID);
+            int tarIndex = quest.getTargetIndex(target.resource.ID);
+            int newValue = -1;
+
+            //If the objective is already completed, return false;
+            if (playerTarProgress.targetProgress[tarIndex] >= target.GetCompletedProgressValue())
+            {
+                return false;
+            }
+
+            #region Update and check QuestConditions
+            //Get condition targets
+            for (int n = 0; n < quest.targets.Count;n++)
+            {
+                var t = quest.targets[n];
+
+                var qc = t as QuestCondition;
+                if (qc)
+                {
+                    //If this is a final target of the QC, update QC, 
+                    //and don't advance this target if not true
+                    if (qc.HasFinalTarget(target.resource))
+                    {
+
+                        //If QC not fulfilled, return false
+                        if (!qc.UpdateAndCheck(this, quest)) return false;
+                    }
+                    //Otherwise just update the QC status
+                    else {
+                        qc.UpdateAndCheck(this, quest);
+                    }
+                }
+            }
+            #endregion
+            newValue = playerTarProgress.targetProgress[tarIndex] + 1;
+
+            //Do the update
+            if (newValue != -1) {
+
+                SetQTProgress(quest.resourceID, tarIndex, newValue);
+
+                //target onAdvance
+                target.onAdvance(this, newValue);
+
+                return true;
+            }
+            return false;
+        }
+        public bool TryAdvanceQTKill(Quest_Type quest, QuestTarget target, NPC_Type npcKilled)
+        {
+            var playerTarProgress = questData.getProgress(quest.resourceID);
+            int tarIndex = quest.getTargetIndex(target.resource.ID);
+
+            int newValue = -1;
+
+            if (target is QT_Kill)
+            {
+                var qtKill = target as QT_Kill;
+                for (int n = 0; n < qtKill.NpcTargetIDs.Count;n++)
+                {
+                    var targetNPC = qtKill.NpcTargetIDs[n];
+                    if (targetNPC.ID == npcKilled.resourceID)
+                    {
+                        var oldValue = playerTarProgress.targetProgress[tarIndex];
+                        //Valshaaran - try bit flag for each target, experimental
+                        //Bitwise OR with old progress value
+                        newValue = oldValue | (1 << n);
+
+                        //If value unchanged, continue 
+                        //- this will flag other unflagged kill targets of the same type
+                        if (newValue == oldValue)
+                        {
+                            newValue = -1;
+                            continue;
+                        }
+                        else break;
+                    }
+                }
+            }            
+
+            //Do the update
+            if (newValue != -1)
+                {
+
+                //Server quest data
+                questData.UpdateQuest(quest.resourceID, tarIndex, newValue);
+
+                //Dispatch packet
+                Message m = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(quest.resourceID, tarIndex, newValue);
+                SendToClient(m);
+
+                //target onAdvance
+                target.onAdvance(this, newValue);
+
+                return true;
+                }
+            return false;
+        }
+
+        #endregion
+
+        #region Persistent variables
+
+        [SerializeField, ReadOnly]
+        public PersistentVarsContainer persistentVars;
+
         #endregion
     }
 }

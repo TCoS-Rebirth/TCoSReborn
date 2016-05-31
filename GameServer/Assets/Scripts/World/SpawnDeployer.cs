@@ -489,9 +489,12 @@ namespace World
             var randRotY = Random.Range(-180.0f, 180.0f);
             var rndRot = new Vector3(0, randRotY, 0);
 
+            //Valshaaran - experimental raycast spawning
+            var rayCast = zone.Raycast(rndPos, Vector3.down, 20f);
+
             //NPC_Type newMemType = GameData.Get.npcDB.    GetNPCType(npcTypeID);
 
-            var newNPC = NpcCharacter.Create(npcType, rndPos, rndRot, newSI);
+            var newNPC = NpcCharacter.Create(npcType, rayCast, rndRot, newSI);
 
             //TODO: Should be redundant after SpawnInfo alterations, remove once verified
             //if (newNPC.FameLevel == 0)

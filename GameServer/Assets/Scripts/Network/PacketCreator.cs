@@ -4,7 +4,6 @@ using Common.UnrealTypes;
 using Database.Dynamic.Internal;
 using Gameplay.Conversations;
 using Gameplay.Entities;
-using Gameplay.Entities.NPCs;
 using Gameplay.Entities.Players;
 using Gameplay.Items;
 using Gameplay.Skills;
@@ -13,6 +12,8 @@ using Utility;
 using World;
 using Gameplay.Quests;
 using Database.Static;
+using Gameplay.Entities.Interactives;
+using Gameplay.Loot;
 
 namespace Network
 {
@@ -31,38 +32,7 @@ namespace Network
             m.WriteByte(i.Color1); //korrekt
             m.WriteByte(i.Color2); //korrekt
             m.WriteInt32(0); //serial?
-        }
-
-
-        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(Character ch)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON);
-            m.WriteByte((byte) ch.CombatMode);
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SHEATHEWEAPON()
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SHEATHEWEAPON);
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(Character ch)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON);
-            m.WriteByte((byte) ch.equippedWeaponType);
-            return m;
-        }
-
-        public static Message S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON(Character ch)
-        {
-            var m = new Message(GameHeader.S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteByte((byte) ch.CombatMode);
-            m.WriteInt32(0); //possibly mainhand and offhand
-            m.WriteInt32(0);
-            return m;
-        }
+        }        
 
         public static Message S2R_GAME_EMOTES_SV2REL_EMOTE(Character ch, EContentEmote emote)
         {
@@ -73,13 +43,6 @@ namespace Network
                 emote = (EContentEmote) ((int) emote - 1);
             }
             m.WriteByte((byte) emote);
-            return m;
-        }
-
-        public static Message S2R_GAME_COMBATSTATE_SV2REL_SHEATHEWEAPON(Character ch)
-        {
-            var m = new Message(GameHeader.S2R_GAME_COMBATSTATE_SV2REL_SHEATHEWEAPON);
-            m.WriteInt32(ch.RelevanceID);
             return m;
         }
 
@@ -192,28 +155,7 @@ namespace Network
                 m.WriteInt32(npc.Effects[i].resourceID);
             }
             return m;
-        }
-
-        public static Message S2C_INTERACTIVELEVELELEMENT_ADD(InteractiveLevelElement ie)
-        {
-            var m = new Message(GameHeader.S2C_INTERACTIVELEVELELEMENT_ADD);
-            m.WriteInt32(ie.RelevanceID); //relevanceID
-            m.WriteInt32(ie.LevelObjectID); //leveObjectID
-            m.WriteInt32(ie.IsEnabled ? 1 : 0); //isEnabled
-            m.WriteInt32(ie.Invisible ? 1 : 0); //isHidden
-            m.WriteRotator(UnitConversion.ToUnreal(ie.Rotation)); //NetRotation
-            m.WriteVector3(UnitConversion.ToUnreal(ie.Position)); //NetLocation
-            m.WriteByte((byte) ie.CollisionType); //collisionType
-            m.WriteInt32(0);
-            return m;
-        }
-
-        public static Message S2C_BASE_PAWN_REMOVE(Entity ro)
-        {
-            var m = new Message(GameHeader.S2C_BASE_PAWN_REMOVE);
-            m.WriteInt32(ro.RelevanceID);
-            return m;
-        }
+        }       
 
         public static Message S2C_LEVELOBJECT_REMOVE(Entity ro)
         {
@@ -223,11 +165,404 @@ namespace Network
             return m;
         }
 
-        public static Message S2R_GAME_ACTOR_SV2CLREL_SETENABLED(Entity ro)
+        public static Message S2C_USER_LEVELUP()
+        {
+            //TODO
+            Message m = new Message(GameHeader.S2C_USER_LEVELUP);
+
+            m.WriteInt32(0);    //Unknown
+            m.WriteInt32(0);    //Unknown
+            m.WriteInt32(0);    //Unknown
+
+            return m;
+        }
+
+        public static Message S2C_GAME_CHAT_SV2CL_ONMESSAGE(string sender, string message, EGameChatRanges channel)
+        {
+            var m = new Message(GameHeader.S2C_GAME_CHAT_SV2CL_ONMESSAGE);
+            m.WriteString(sender);
+            m.WriteString(message);
+            m.WriteInt32((int) channel);
+            return m;
+        }
+
+        public static Message S2R_GAME_EFFECTS_SV2CLREL_STARTREPLICATED(Character ch, int effectResourceID, int effectHandleID)
+        {
+            var m = new Message(GameHeader.S2R_GAME_EFFECTS_SV2CLREL_STARTREPLICATED);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteInt32(effectResourceID);
+            m.WriteInt32(effectHandleID);
+            return m;
+        }
+
+        public static Message S2R_GAME_EFFECTS_SV2CLREL_STOPREPLICATED(Character ch, int effectHandleID)
+        {
+            var m = new Message(GameHeader.S2R_GAME_EFFECTS_SV2CLREL_STOPREPLICATED);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteInt32(effectHandleID);
+            return m;
+        }
+
+        #region CharacterSelect
+
+        public static Message S2C_CREATE_CHARACTER_ACK(DBPlayerCharacter character)
+        {
+            var msg = new Message(GameHeader.S2C_CS_CREATE_CHARACTER_ACK);
+            msg.WriteInt32((int)MessageStatusCode.NO_ERROR);
+            msg.WriteInt32(character.DBID); //characterID
+            //SD_CHARACTER_DATA
+            msg.WriteByte((byte)character.PawnState); //not dead
+            msg.WriteInt32(character.AccountID);
+            msg.WriteString(character.Name);
+            msg.WriteVector3(UnitConversion.ToUnreal(character.Position));
+            msg.WriteInt32((int)GameConfiguration.Get.player.StartZone);
+            msg.WriteInt32(character.Money);
+            msg.WriteInt32(character.Appearance.AppearancePart1); //appearance1
+            msg.WriteInt32(character.Appearance.AppearancePart2); //appearance2
+            msg.WriteRotator(UnitConversion.ToUnreal(Quaternion.Euler(character.Rotation)));
+            msg.WriteInt32(character.Faction); //factionID
+            msg.WriteInt32(0); //lastUsedTimeStamp
+            //SD_CHARACTER_SHEET_DATA
+            msg.WriteInt32(character.ArcheType);
+            msg.WriteFloat(character.FamePep[0]);
+            msg.WriteFloat(character.FamePep[1]);
+            msg.WriteFloat(character.HealthMaxHealth[0]);
+            msg.WriteInt32(0);
+            msg.WriteByte((byte)character.ExtraBodyMindFocusAttributePoints[0]);
+            msg.WriteByte((byte)character.ExtraBodyMindFocusAttributePoints[1]);
+            msg.WriteByte((byte)character.ExtraBodyMindFocusAttributePoints[2]);
+            msg.WriteByte((byte)character.ExtraBodyMindFocusAttributePoints[3]); //unknown
+            var equipment = character.GetEquipmentList();
+            msg.WriteInt32(equipment.Count);
+            for (var i = 0; i < equipment.Count; i++)
+            {
+                WriteSv2cl_Item(equipment[i], msg);
+            }
+            return msg;
+        }
+
+        public static Message S2C_CS_DELETE_CHARACTER_ACK(int charID, bool success)
+        {
+            var m = new Message(GameHeader.S2C_CS_DELETE_CHARACTER_ACK);
+            if (success)
+            {
+                m.WriteInt32(0); //0 = success, 1 = YouDoNotOwnThisCharacter, 2=passwordIncorrect, 3=internalError
+                m.WriteInt32(charID); //characterID
+            }
+            else
+            {
+                m.WriteInt32(3);
+                m.WriteInt32(-1);
+            }
+            return m;
+        }
+
+        #endregion
+
+        #region Combat state
+        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(Character ch)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON);
+            m.WriteByte((byte)ch.CombatMode);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SHEATHEWEAPON()
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SHEATHEWEAPON);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(Character ch)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON);
+            m.WriteByte((byte)ch.equippedWeaponType);
+            return m;
+        }
+
+        public static Message S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON(Character ch)
+        {
+            var m = new Message(GameHeader.S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteByte((byte)ch.CombatMode);
+            m.WriteInt32(0); //possibly mainhand and offhand
+            m.WriteInt32(0);
+            return m;
+        }
+
+        public static Message S2R_GAME_COMBATSTATE_SV2REL_SHEATHEWEAPON(Character ch)
+        {
+            var m = new Message(GameHeader.S2R_GAME_COMBATSTATE_SV2REL_SHEATHEWEAPON);
+            m.WriteInt32(ch.RelevanceID);
+            return m;
+        }
+
+        #endregion
+
+        #region GUI 
+
+        public static Message S2C_GAME_GUI_SV2CL_SHOWTUTORIAL(SBResource articleRes)
+        {
+            var m = new Message(GameHeader.S2C_GAME_GUI_SV2CL_SHOWTUTORIAL);
+            m.WriteInt32(articleRes.ID);
+            return m;
+        }
+
+        #endregion
+
+        #region Actors
+
+        public static Message S2R_GAME_ACTOR_SV2CLREL_SETENABLED(Entity ro, bool enabled)
         {
             var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SETENABLED);
             m.WriteInt32(ro.RelevanceID);
+            m.WriteInt32(enabled ? 1 : 0);
+            return m;
+        }
+
+        public static Message S2R_GAME_ACTOR_SV2CLREL_SHOW(Entity ro, bool show, float fadeTimer = 0.0f)
+        {
+            var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SHOW);
+            m.WriteInt32(ro.RelevanceID);
+            m.WriteInt32(show ? 1 : 0);
+            m.WriteFloat(fadeTimer);
+            return m;
+        }
+
+        public static Message S2R_GAME_ACTOR_SV2CLREL_SETCOLLISIONTYPE(Entity ro, ECollisionType col)
+        {
+            var m = new Message(GameHeader.S2R_GAME_ACTOR_SV2CLREL_SETCOLLISIONTYPE);
+            m.WriteInt32(ro.RelevanceID);
+            m.WriteByte((byte)col);
+            return m;
+        }
+
+        public static Message S2C_GAME_ACTOR_MOVE(Entity actor, Vector3 newPos, Quaternion newRot)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_ACTOR_MOVE);
+            m.WriteInt32(actor.RelevanceID);
+            m.WriteInt32(0); //unknown!
+            m.WriteVector3(UnitConversion.ToUnreal(newPos));
+            m.WriteRotator(UnitConversion.ToUnreal(newRot));
+            return m;
+        }
+
+        public static Message S2C_LEVELOBJECT_REMOVE(InteractiveLevelElement ie)
+        {
+            var m = new Message(GameHeader.S2C_LEVELOBJECT_REMOVE);
+            m.WriteInt32(ie.RelevanceID);
+            m.WriteInt32(ie.LevelObjectID); //Experimental?
+            return m;
+        }
+
+        #endregion
+
+        #region Interactives
+
+        public static Message S2C_INTERACTIVELEVELELEMENT_ADD(InteractiveLevelElement ie)
+        {
+            var m = new Message(GameHeader.S2C_INTERACTIVELEVELELEMENT_ADD);
+            m.WriteInt32(ie.RelevanceID); //element relevanceID
+            m.WriteInt32(ie.LevelObjectID); //leveObjectID
+            m.WriteInt32(ie.Enabled ? 1 : 0); //isEnabled
+            m.WriteInt32(ie.Invisible ? 1 : 0); //isHidden
+            m.WriteRotator(UnitConversion.ToUnreal(ie.Rotation)); //NetRotation
+            m.WriteVector3(UnitConversion.ToUnreal(ie.Position)); //NetLocation
+            m.WriteByte((byte)ie.CollisionType); //collisionType
             m.WriteInt32(0);
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION(InteractiveLevelElement ie, int menuOptInd, int subActInd, bool reverse, Character c)
+        {
+            var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_STARTCLIENTSUBACTION);
+
+            m.WriteInt32(ie.RelevanceID);   //element relevance ID?
+            m.WriteInt32(menuOptInd);     //option index?
+            m.WriteInt32(subActInd);        //suboption index?
+            m.WriteInt32(reverse ? 1 : 0);          //bool aReverse?
+            m.WriteInt32(c.RelevanceID);    //interacting pawn relevance ID?                              
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_CANCELCLIENTSUBACTION(InteractiveLevelElement ie, int menuOptInd, int subActInd)
+        {
+            var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_CANCELCLIENTSUBACTION);
+
+            m.WriteInt32(ie.RelevanceID);
+            m.WriteInt32(menuOptInd);
+            m.WriteInt32(subActInd);
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION(InteractiveLevelElement ie, int menuOptInd, int subActInd, bool reverse)
+        {
+            var m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_ENDCLIENTSUBACTION);
+
+            m.WriteInt32(ie.RelevanceID);   //element relevance ID?
+            m.WriteInt32(menuOptInd);     //option index?
+            m.WriteInt32(subActInd);      //suboption index?
+            m.WriteInt32(reverse ? 1 : 0);  //bool aReverse?                           
+            return m;
+        }
+
+        public static Message S2R_INTERACTIVELEVELELEMENT_SV2CLREL_UPDATENETISACTIVATED(InteractiveLevelElement ie, bool activated)
+        {
+            Message m = new Message(GameHeader.S2R_INTERACTIVELEVELELEMENT_SV2CLREL_UPDATENETISACTIVATED);
+            m.WriteInt32(ie.RelevanceID);
+            int activatedInt = activated ? 1 : 0;
+            m.WriteInt32(activatedInt);
+            return m;
+        }
+
+        #endregion
+
+        #region Items
+
+        public static Message S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM(Game_Item item, EItemChangeNotification notification)
+        {
+            //Fsv2cl_item
+            var m = new Message(GameHeader.S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM);
+            m.WriteInt32(item.DBID);
+            m.WriteInt32(item.Type.resourceID);
+            m.WriteInt32(item.CharacterID);
+            m.WriteByte((byte)item.LocationType);
+            m.WriteInt32(item.LocationSlot);
+            m.WriteInt32(item.LocationID);
+            m.WriteInt32(item.StackSize);
+            m.WriteByte(item.Color1);
+            m.WriteByte(item.Color2);
+            m.WriteInt32(item.Attuned);
+            m.WriteByte(0); //dummy
+            m.WriteByte((byte)notification);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM(EItemLocationType locationType, int locationSlot, int locationID)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM);
+            m.WriteByte((byte)locationType);
+            m.WriteInt32(locationSlot);
+            m.WriteInt32(locationID);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY(int amount)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCHARACTER_SV2CL_UPDATEMONEY);
+
+            m.WriteInt32(amount);
+
+            return m;
+        }
+
+        #endregion
+
+        #region Looting
+
+        //Declarations found in Game_Looting.uc in SDK, but with different names
+
+        /*
+        public static Message S2C_GAME_LOOTING_SV2CL_CHANGELOOTMODE
+        */
+
+        public static Message S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED(int transID, int lootItemID, ELootRejectedReason reason)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED);
+
+            m.WriteInt32(transID);
+            m.WriteInt32(lootItemID);
+            m.WriteInt32((int)reason);
+
+            return m;
+        }
+
+
+        public static Message S2C_GAME_LOOTING_SV2CL_REMOVEITEM(int transID, int lootItemID)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_REMOVEITEM);
+
+            m.WriteInt32(transID);
+            m.WriteInt32(lootItemID);
+            return m;
+        }
+        
+        public static Message S2C_GAME_LOOTING_SV2CL_ENDTRANSACTION(int transID)
+        {
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_ENDTRANSACTION);
+            m.WriteInt32(transID);
+            return m;            
+        }
+        
+
+        public static Message S2C_GAME_LOOTING_SV2CL_INITLOOTOFFER(int transID, float timerValue, ELootMode lootMode, List<ReplicatedLootItem> lootItems, List<PlayerCharacter> eligibleMembers)
+        {
+
+            Message m = new Message(GameHeader.S2C_GAME_LOOTING_SV2CL_INITLOOTOFFER);
+
+            m.WriteInt32(transID);          //Transaction ID
+            m.WriteFloat(timerValue);       //TimerValue(float)
+            m.WriteByte((byte)lootMode);  //Loot mode
+            
+
+            //aLootItems
+            m.WriteInt32(lootItems.Count);
+            foreach(var li in lootItems)
+            {
+                //TODO - Experimental
+                
+                m.WriteInt32(li.ResourceId); //Item Type?
+                m.WriteInt32(li.LootItemID);
+                m.WriteInt32(li.Quantity);
+            }
+
+            //aEligibleMembers
+            m.WriteInt32(eligibleMembers.Count);
+            foreach(var member in eligibleMembers)
+            {
+                m.WriteInt32(member.RelevanceID);
+            }
+
+            return m;
+        }
+
+        
+
+        #endregion
+
+        #region Pawns
+        
+        public static Message S2R_BASE_PAWN_SV2CL_GOTOSTATE(Character c, string stateString)
+        {
+            var m = new Message(GameHeader.S2R_BASE_PAWN_SV2CL_GOTOSTATE);
+            m.WriteInt32(c.RelevanceID);
+            m.WriteString(stateString);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Vector3 position, Vector3 velocity, EPhysics physics)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT);
+            m.WriteVector3(UnitConversion.ToUnreal(position));
+            m.WriteVector3(UnitConversion.ToUnreal(velocity));
+            m.WriteByte((byte)physics);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(bool onChair)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN);
+            int onChairInt = onChair ? 1 : 0;
+            m.WriteInt32(onChairInt);
+            return m;
+             
+        }
+
+        public static Message S2R_GAME_NPCPAWN_SV2REL_FOCUSLOCATION(NpcCharacter character)
+        {
+            var m = new Message(GameHeader.S2R_GAME_NPCPAWN_SV2REL_FOCUSLOCATION);
+            m.WriteInt32(character.RelevanceID);
+            m.WriteVector3(UnitConversion.ToUnreal(character.FocusLocation));
             return m;
         }
 
@@ -255,7 +590,7 @@ namespace Network
             m.WriteInt32(pc.MoveFrame);
             m.WriteVector3(UnitConversion.ToUnreal(pc.Position));
             m.WriteVector3(UnitConversion.ToUnreal(pc.Velocity));
-            m.WriteByte((byte) pc.Physics);
+            m.WriteByte((byte)pc.Physics);
             return m;
         }
 
@@ -263,7 +598,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_NPCPAWN_SV2REL_MOVE);
             m.WriteInt32(npc.RelevanceID);
-            m.WriteByte((byte) npc.MovementFlags);
+            m.WriteByte((byte)npc.MovementFlags);
             m.WriteVector3(UnitConversion.ToUnreal(npc.Destination));
             return m;
         }
@@ -276,74 +611,10 @@ namespace Network
             return m;
         }
 
-        public static Message S2C_GAME_CHAT_SV2CL_ONMESSAGE(string sender, string message, EGameChatRanges channel)
+        public static Message S2C_BASE_PAWN_REMOVE(Entity ro)
         {
-            var m = new Message(GameHeader.S2C_GAME_CHAT_SV2CL_ONMESSAGE);
-            m.WriteString(sender);
-            m.WriteString(message);
-            m.WriteInt32((int) channel);
-            return m;
-        }
-
-        public static Message S2R_GAME_NPCPAWN_SV2REL_FOCUSLOCATION(NpcCharacter character)
-        {
-            var m = new Message(GameHeader.S2R_GAME_NPCPAWN_SV2REL_FOCUSLOCATION);
-            m.WriteInt32(character.RelevanceID);
-            m.WriteVector3(UnitConversion.ToUnreal(character.FocusLocation));
-            return m;
-        }
-
-        public static Message S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(PlayerCharacter pc, SkillContext s)
-        {
-            var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL);
-            m.WriteInt32(s.ExecutingSkill.resourceID); //skillID
-            m.WriteFloat(s.StartTime); //startTime
-            m.WriteFloat(s.ExecutingSkill.GetSkillDuration(pc)); //(animation duration has to be manually collected)
-            m.WriteFloat(s.ExecutingSkill.attackSpeed); //skillSpeed
-            m.WriteInt32(s.ExecutingSkill.freezePawnMovement ? 1 : 0); //freezeMovement
-            m.WriteInt32(s.ExecutingSkill.freezePawnRotation ? 1 : 0); //freezeRotation
-            m.WriteInt32(s.SourceItemID); //aTokenItemID
-            m.WriteInt32(s.ExecutingSkill.animationVariation); //animVarNr
-            return m;
-        }
-
-        public static Message S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL(Character ch, SkillContext s)
-        {
-            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteInt32(s.ExecutingSkill.resourceID);
-            m.WriteFloat(s.StartTime);
-            m.WriteFloat(s.ExecutingSkill.GetSkillDuration(ch)); // duration of skill
-            m.WriteFloat(s.ExecutingSkill.attackSpeed); //skillSpeed, AnimationSpeed?
-            m.WriteInt32(s.ExecutingSkill.freezePawnMovement ? 1 : 0); //freezemovement
-            m.WriteInt32(s.ExecutingSkill.freezePawnRotation ? 1 : 0); //freezerotation
-            m.WriteInt32(s.SourceItemID); //tokenItemID
-            m.WriteInt32(s.ExecutingSkill.animationVariation); //animvarNr
-            m.WriteVector3(UnitConversion.ToUnreal(s.TargetPosition));
-            m.WriteRotator(UnitConversion.ToUnreal(ch.Rotation)); //TODO viewRotation?
-            return m;
-        }
-
-        public static Message S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(PlayerCharacter pc, FSkill s)
-        {
-            var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL);
-            return m;
-        }
-
-        public static Message S2R_GAME_EFFECTS_SV2CLREL_STARTREPLICATED(Character ch, int effectResourceID, int effectHandleID)
-        {
-            var m = new Message(GameHeader.S2R_GAME_EFFECTS_SV2CLREL_STARTREPLICATED);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteInt32(effectResourceID);
-            m.WriteInt32(effectHandleID);
-            return m;
-        }
-
-        public static Message S2R_GAME_EFFECTS_SV2CLREL_STOPREPLICATED(Character ch, int effectHandleID)
-        {
-            var m = new Message(GameHeader.S2R_GAME_EFFECTS_SV2CLREL_STOPREPLICATED);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteInt32(effectHandleID);
+            var m = new Message(GameHeader.S2C_BASE_PAWN_REMOVE);
+            m.WriteInt32(ro.RelevanceID);
             return m;
         }
 
@@ -351,7 +622,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_PAWN_SV2CLREL_PLAYPAWNEFFECT);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteByte((byte) effectType);
+            m.WriteByte((byte)effectType);
             return m;
         }
 
@@ -367,54 +638,8 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_PAWN_SV2CLREL_STATICPLAYSOUND);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteByte((byte) soundEffect);
+            m.WriteByte((byte)soundEffect);
             m.WriteFloat(1f); //volume?
-            return m;
-        }
-
-        public static Message S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(Character ch, int skillID, int eventID, int flags, Character skillPawn, Character triggerPawn,
-            Character targetPawn, float time)
-        {
-            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteInt32(skillID);
-            m.WriteInt32(eventID);
-            m.WriteInt32(flags); //?
-            m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
-            m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
-            m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);
-            m.WriteFloat(time);
-            return m;
-        }
-
-        public static Message S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(Character ch, int skillID, int eventID, int flags, Character skillPawn, Character triggerPawn,
-            Character targetPawn, Vector3 location, float time)
-        {
-            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteInt32(skillID);
-            m.WriteInt32(eventID);
-            m.WriteInt32(flags); //?
-            m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
-            m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
-            m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);
-            m.WriteVector3(location);
-            m.WriteFloat(time);
-            return m;
-        }
-
-        public static Message S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS(Character ch, List<DuffInfoData> duffs)
-        {
-            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteInt32(duffs.Count);
-            for (var i = 0; i < duffs.Count; i++)
-            {
-                m.WriteInt32(duffs[i].duff.resourceID);
-                m.WriteInt32(duffs[i].stackCount); //stackCount
-                m.WriteFloat(duffs[i].applyTime);
-                m.WriteFloat(duffs[i].duration);
-            }
             return m;
         }
 
@@ -467,9 +692,279 @@ namespace Network
         public static Message S2C_GAME_PAWN_SV2CL_COMBATMESSAGEDEATH(Character killer)
         {
             var m = new Message(GameHeader.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEDEATH);
-            m.WriteInt32(killer.RelevanceID);
+
+            if (killer) m.WriteInt32(killer.RelevanceID);
+            else m.WriteInt32(0);   //Valshaaran - experimental for kill below Y coord
+                 
+            return m;
+
+        }
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(PlayerCharacter p)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN);
+            m.WriteInt32(p.IsResting ? 0 : 0xff);
             return m;
         }
+
+        public static Message S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(Character ch)
+        {
+            var m = new Message(GameHeader.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteByte((byte)ch.PawnState);
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERPAWN_SV2CL_CLIENTSIDETRIGGER(string eventTag, PlayerCharacter instigator)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_CLIENTSIDETRIGGER);
+            m.WriteString(eventTag);
+            m.WriteInt32(instigator.RelevanceID);
+            return m;
+        }
+
+        #endregion
+
+        #region PlayerTeams
+
+        public static Message S2C_REMOVED_FROM_TEAM(int teamID, PlayerCharacter removed, eTeamRemoveMemberCode reason)
+        {
+            var m = new Message(GameHeader.S2C_REMOVED_FROM_TEAM);
+            m.WriteInt32(teamID);
+            m.WriteInt32(removed.RelevanceID);
+            m.WriteInt32(0);
+            m.WriteInt32((int)reason);
+            return m;
+        }
+
+        public static Message S2C_TEAM_LEAVE_ACK(int teamID, eTeamRequestResult result)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_LEAVE_ACK);
+            m.WriteInt32(teamID);
+            m.WriteInt32((int)eTeamRequestResult.TRR_ACCEPT);
+            return m;
+        }
+
+        public static Message S2C_TEAM_KICK_ACK(int teamID, PlayerCharacter kicked, eTeamRequestResult result, PlayerCharacter kicker)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_KICK_ACK);
+            m.WriteInt32(teamID);
+            m.WriteInt32(kicked.RelevanceID);
+            m.WriteInt32((int)result);
+            return m;
+        }
+
+        public static Message S2C_TEAM_LEADER_ACK(int teamID, PlayerCharacter newLead, eTeamRequestResult result)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_LEADER_ACK);
+            m.WriteInt32(teamID);
+            m.WriteInt32(newLead.RelevanceID);
+            m.WriteInt32((int)result);
+            return m;
+        }
+
+        public static Message S2C_TEAM_LOOTMODE_ACK(int teamID, ELootMode lootMode, eTeamRequestResult result)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_LOOTMODE_ACK);
+            m.WriteInt32(teamID);
+            m.WriteInt32((int)lootMode);
+            m.WriteInt32((int)result);
+            return m;
+        }
+
+        public static Message S2C_TEAM_REMOVE_MEMBER(int teamID, PlayerCharacter leaver, eTeamRemoveMemberCode reason)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_REMOVE_MEMBER);
+            m.WriteInt32(teamID); //Team ID?
+            m.WriteInt32(0); //unknown
+            m.WriteInt32(leaver.RelevanceID); //leaver rid?
+            m.WriteInt32((int)reason); //eTeamRemoveMemberCode
+            return m;
+        }
+
+        public static Message S2C_TEAM_DISBAND_ACK()
+        {
+            var m = new Message(GameHeader.S2C_TEAM_DISBAND_ACK);
+            m.WriteInt32(0); //unknown
+            m.WriteInt32(0); //unknown
+            m.WriteInt32(0); //unknown
+            return m;
+        }
+
+        public static Message S2C_TEAM_ADD_MEMBER(int teamID, PlayerCharacter newMember, bool isLeader)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_ADD_MEMBER);
+
+            m.WriteInt32(teamID); //eTeamRequestResult?
+            m.WriteInt32(0); //Probably teamID
+
+            //memberData
+            m.WriteByte((byte)(isLeader ? 1 : 0)); //+isLeader
+            m.WriteByte(0);
+            m.WriteByte(0);
+            m.WriteInt32((int)newMember.LastZoneID); //+memberworld
+            m.WriteInt32(0);
+            m.WriteInt32(newMember.RelevanceID); //+memberRID
+            m.WriteString(newMember.Name); //+membername
+            //memberData end
+            return m;
+        }
+
+        public static Message S2C_GET_TEAM_INFO_ACK(PlayerTeam team, eTeamRequestResult result, PlayerCharacter target)
+        {
+            var m = new Message(GameHeader.S2C_GET_TEAM_INFO_ACK);
+
+            m.WriteInt32((int)result); //Unknown, 0 = party frame but with no stats
+
+            if (team != null)
+                m.WriteInt32(team.TeamID); //teamID
+            else
+                m.WriteInt32(0);
+
+            m.WriteInt32(0); //Unknown
+
+            if (result != eTeamRequestResult.TRR_GET_TEAM_INFO_FAILED)
+            {
+                //Debug.Log ("Compiling team info");
+                //teamMembersVec
+                var numOtherMembers = team.memberCount - 1;
+                if (numOtherMembers < 0)
+                {
+                    numOtherMembers = 0;
+                }
+                m.WriteInt32(numOtherMembers); // Size of memberdata array, teamMembersVec
+
+                foreach (var p in team.Members)
+                {
+                    if (p != target)
+                    {
+                        //memberData
+                        m.WriteByte((byte)(p == team.Leader ? 1 : 0)); //+isLeader
+                        m.WriteByte(0);
+                        m.WriteByte(0);
+                        m.WriteInt32((int)p.LastZoneID); //+memberworld
+                        m.WriteInt32(0);
+                        m.WriteInt32(p.RelevanceID); //+memberRID
+                        m.WriteString(p.Name); //+membername
+                        //memberData end
+                    }
+                }
+                //teamMembersVec end
+            }
+
+            return m;
+        }
+
+        public static Message S2C_TEAM_CHARACTER_STATS_BASE(int teamID, PlayerCharacter statsOwner)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_CHARACTER_STATS_BASE);
+            m.WriteInt32(teamID); //Unknown?
+            m.WriteInt32(statsOwner.RelevanceID);
+            m.WriteInt32((int)statsOwner.LastZoneID);
+            var pos = UnitConversion.ToUnreal(statsOwner.Position);
+            m.WriteFloat(pos.x);
+            m.WriteFloat(pos.z);
+            m.WriteByte((byte)(statsOwner.Appearance.Gender == CharacterGender.Female ? 1 : 0));
+            m.WriteInt32((int)(statsOwner.ArcheType + 1));
+            m.WriteInt32(0); //discipline
+            m.WriteFloat(statsOwner.MaxHealth);
+            m.WriteInt32(statsOwner.PepRank);
+            m.WriteInt32(statsOwner.FameLevel);
+            return m;
+        }
+
+        public static Message S2C_TEAM_CHARACTER_STATS_UPDATE(int teamID, PlayerCharacter statsOwner)
+        {
+            var m = new Message(GameHeader.S2C_TEAM_CHARACTER_STATS_UPDATE);
+
+            m.WriteInt32(teamID); //TeamID?
+
+            //StatsUpdateData start
+
+            m.WriteInt32(statsOwner.RelevanceID); //Outer.CharacterID
+            m.WriteFloat(statsOwner.Health); //Stats.mHealth
+            m.WriteFloat(statsOwner.Physique); //Stats.mPhysiqueLevel
+            m.WriteFloat(statsOwner.Morale); //Stats.mMoraleLevel
+            m.WriteFloat(statsOwner.Concentration); //Stats.mConcentrationLevel
+            m.WriteInt32(statsOwner.StateRank); //Stats.mStateRankShift
+            m.WriteInt32(0); //TODO:Skills.mLastDuffUpdateTime
+
+            //TODO: TeamDuffList, array of ints?
+            m.WriteInt32(0);
+
+            //LODData3, array of bytes?
+            m.WriteByteArray(statsOwner.GetPackedLOD(3));
+
+            //StatsUpdateData end
+            return m;
+        }
+
+        #endregion
+
+        #region PlayerConversations
+
+        public static Message S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(NpcCharacter partner, ConversationTopic curTopic, ConversationNode curNode,
+            List<ConversationTopic> topics)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE);
+
+            //Conversation NPC resource ID?
+            //Single topic parameter - current topic ID?
+            //Conversation state resource ID?
+            //Response flags
+            var responseFlags = curTopic.getResponseFlags(curNode);
+
+
+            Debug.Log("PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE : ");
+            Debug.Log("partner rel ID = " + partner.RelevanceID);
+            Debug.Log("curTopic ID = " + curTopic.resource.ID);
+
+            if (curNode == null)
+            {
+                Debug.Log("No node, setting ID and responseflags to 0");
+            }
+            else
+            {
+                Debug.Log("curNode ID = " + curNode.resource.ID);
+                Debug.Log("responseFlags = " + responseFlags);
+            }
+
+            m.WriteInt32(partner.RelevanceID); //partner resource ID //Polymo: this is actually the RelevanceID
+            m.WriteInt32(curTopic.resource.ID); //current topic resource ID
+
+            if (curNode == null)
+            {
+                m.WriteInt32(0); //node
+                m.WriteInt32(0); //responseflags
+            }
+            else
+            {
+                m.WriteInt32(curNode.resource.ID); //current node-within-topic ID
+                m.WriteInt32(responseFlags); //response flags
+            }
+
+
+            //List of topics
+            //m.WriteInt32(0);
+            m.WriteInt32(topics.Count); //Size of array
+            foreach (var ct in topics)
+            {
+                //Conversation topic ID?
+                m.WriteInt32(ct.resource.ID);
+            }
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(NpcCharacter partner)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE);
+            m.WriteInt32(partner.RelevanceID);
+            return m;
+        }
+
+        #endregion
+
+        #region Player & game controller
 
         public static Message S2C_GAME_PLAYERCONTROLLER_SV2CL_UPDATESERVERTIME(float serverTime)
         {
@@ -478,10 +973,206 @@ namespace Network
             return m;
         }
 
-        public static Message S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(PlayerCharacter p)
+        public static Message S2C_GAME_CONTROLLER_SV2CL_SETPERSISTENTVARIABLE(PersistentVar pVar)
         {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN);
-            m.WriteInt32(p.IsResting ? 0 : 0xff);
+            var m = new Message(GameHeader.S2C_GAME_CONTROLLER_SV2CL_SETPERSISTENTVARIABLE);
+            m.WriteInt32(pVar.ContextID);
+            m.WriteInt32(pVar.VarID);
+            m.WriteInt32(pVar.Value);
+            return m;
+        }
+
+        public static Message S2C_GAME_CONTROLLER_SV2CL_SETPERSISTENTVARIABLE(int contextID, int varID, int value)
+        {
+            var m = new Message(GameHeader.S2C_GAME_CONTROLLER_SV2CL_SETPERSISTENTVARIABLE);
+            m.WriteInt32(contextID);
+            m.WriteInt32(varID);
+            m.WriteInt32(value);
+            return m;
+        }
+
+        #endregion
+
+        #region QuestLog
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(int questID, List<int> progressArray)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
+
+            //probably quest resource ID
+            m.WriteInt32(questID);
+
+            //Write progress array
+            //TODO : Experimental
+            if (progressArray == null)
+            {
+                m.WriteInt32(1);    //Progress array size
+                m.WriteInt32(0);    //aProgress value
+            }
+            else {
+                m.WriteInt32(progressArray.Count);    //Progress array size
+
+                foreach (var aProgress in progressArray)
+                {
+                    m.WriteInt32(aProgress);        //Progress array items
+                }
+            }
+
+
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(int questID, List<int> progressArray)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
+
+            //probably quest resource ID
+            m.WriteInt32(questID);
+
+            //Write progress array
+            //TODO : Experimental
+            if (progressArray == null)
+            {
+                m.WriteInt32(1);    //Progress array size
+                m.WriteInt32(0);    //aProgress value
+            }
+            else {
+                m.WriteInt32(progressArray.Count);    //Progress array size
+
+                foreach (var aProgress in progressArray)
+                {
+                    m.WriteInt32(aProgress);        //Progress array items
+                }
+            }
+
+
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(int questID, int targetIndex, int progress)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS);
+
+            m.WriteInt32(questID);
+            m.WriteInt32(targetIndex);
+            m.WriteInt32(progress);
+
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(int questID)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST);
+
+            m.WriteInt32(questID);
+
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(int questID)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST);
+
+            m.WriteInt32(questID);
+
+            return m;
+        }
+
+        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_COMPLETEQUEST(int questID)
+        {
+            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_COMPLETEQUEST);
+
+            m.WriteInt32(questID);
+
+            return m;
+        }
+
+
+
+        #endregion
+
+        #region Skills
+
+        public static Message S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(PlayerCharacter pc, SkillContext s)
+        {
+            var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL);
+            m.WriteInt32(s.ExecutingSkill.resourceID); //skillID
+            m.WriteFloat(s.StartTime); //startTime
+            m.WriteFloat(s.ExecutingSkill.GetSkillDuration(pc)); //(animation duration has to be manually collected)
+            m.WriteFloat(s.ExecutingSkill.attackSpeed); //skillSpeed
+            m.WriteInt32(s.ExecutingSkill.freezePawnMovement ? 1 : 0); //freezeMovement
+            m.WriteInt32(s.ExecutingSkill.freezePawnRotation ? 1 : 0); //freezeRotation
+            m.WriteInt32(s.SourceItemID); //aTokenItemID
+            m.WriteInt32(s.ExecutingSkill.animationVariation); //animVarNr
+            return m;
+        }
+
+        public static Message S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL(Character ch, SkillContext s)
+        {
+            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteInt32(s.ExecutingSkill.resourceID);
+            m.WriteFloat(s.StartTime);
+            m.WriteFloat(s.ExecutingSkill.GetSkillDuration(ch)); // duration of skill
+            m.WriteFloat(s.ExecutingSkill.attackSpeed); //skillSpeed, AnimationSpeed?
+            m.WriteInt32(s.ExecutingSkill.freezePawnMovement ? 1 : 0); //freezemovement
+            m.WriteInt32(s.ExecutingSkill.freezePawnRotation ? 1 : 0); //freezerotation
+            m.WriteInt32(s.SourceItemID); //tokenItemID
+            m.WriteInt32(s.ExecutingSkill.animationVariation); //animvarNr
+            m.WriteVector3(UnitConversion.ToUnreal(s.TargetPosition));
+            m.WriteRotator(UnitConversion.ToUnreal(ch.Rotation)); //TODO viewRotation?
+            return m;
+        }
+
+        public static Message S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(PlayerCharacter pc, FSkill s)
+        {
+            var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL);
+            return m;
+        }
+
+        public static Message S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(Character ch, int skillID, int eventID, int flags, Character skillPawn, Character triggerPawn,
+           Character targetPawn, float time)
+        {
+            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteInt32(skillID);
+            m.WriteInt32(eventID);
+            m.WriteInt32(flags); //?
+            m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
+            m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
+            m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);
+            m.WriteFloat(time);
+            return m;
+        }
+
+        public static Message S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(Character ch, int skillID, int eventID, int flags, Character skillPawn, Character triggerPawn,
+            Character targetPawn, Vector3 location, float time)
+        {
+            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteInt32(skillID);
+            m.WriteInt32(eventID);
+            m.WriteInt32(flags); //?
+            m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
+            m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
+            m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);
+            m.WriteVector3(location);
+            m.WriteFloat(time);
+            return m;
+        }
+
+        public static Message S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS(Character ch, List<DuffInfoData> duffs)
+        {
+            var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS);
+            m.WriteInt32(ch.RelevanceID);
+            m.WriteInt32(duffs.Count);
+            for (var i = 0; i < duffs.Count; i++)
+            {
+                m.WriteInt32(duffs[i].duff.resourceID);
+                m.WriteInt32(duffs[i].stackCount); //stackCount
+                m.WriteFloat(duffs[i].applyTime);
+                m.WriteFloat(duffs[i].duration);
+            }
             return m;
         }
 
@@ -507,6 +1198,10 @@ namespace Network
             }
             return m;
         }
+
+        #endregion
+
+        #region Stats
 
         public static Message S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEHEALTH(Character ch)
         {
@@ -556,10 +1251,26 @@ namespace Network
             return m;
         }
 
+        public static Message S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEFROZENFLAGS(Character c, byte frozenFlags)
+        {
+            var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEFROZENFLAGS);
+            m.WriteInt32(c.RelevanceID);
+            m.WriteByte(frozenFlags);
+            return m;
+        }
+
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS);
-            m.WriteInt32(p.FamePoints);
+            m.WriteFloat(p.FamePoints);
+            return m;
+        }
+
+        public static Message S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(PlayerCharacter p)
+        {
+            var m = new Message(GameHeader.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP);
+            m.WriteInt32(p.RelevanceID);
+            m.WriteInt32(p.FameLevel);
             return m;
         }
 
@@ -567,14 +1278,6 @@ namespace Network
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEPEPPOINTS);
             m.WriteInt32(p.PepPoints);
-            return m;
-        }
-
-        public static Message S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(Character ch)
-        {
-            var m = new Message(GameHeader.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE);
-            m.WriteInt32(ch.RelevanceID);
-            m.WriteByte((byte) ch.PawnState);
             return m;
         }
 
@@ -658,90 +1361,7 @@ namespace Network
             m.WriteInt32(ch.GetEffectiveMoveSpeed());
             return m;
         }
-
-        public static Message S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM(Game_Item item, EItemChangeNotification notification)
-        {
-            //Fsv2cl_item
-            var m = new Message(GameHeader.S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM);
-            m.WriteInt32(item.DBID);
-            m.WriteInt32(item.Type.resourceID);
-            m.WriteInt32(item.CharacterID);
-            m.WriteByte((byte) item.LocationType);
-            m.WriteInt32(item.LocationSlot);
-            m.WriteInt32(item.LocationID);
-            m.WriteInt32(item.StackSize);
-            m.WriteByte(item.Color1);
-            m.WriteByte(item.Color2);
-            m.WriteInt32(item.Attuned);
-            m.WriteByte(0); //dummy
-            m.WriteByte((byte) notification);
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM(EItemLocationType locationType, int locationSlot, int locationID)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM);
-            m.WriteByte((byte) locationType);
-            m.WriteInt32(locationSlot);
-            m.WriteInt32(locationID);
-            return m;
-        }
-
-        #region CharacterSelect
-
-        public static Message S2C_CREATE_CHARACTER_ACK(DBPlayerCharacter character)
-        {
-            var msg = new Message(GameHeader.S2C_CS_CREATE_CHARACTER_ACK);
-            msg.WriteInt32((int) MessageStatusCode.NO_ERROR);
-            msg.WriteInt32(character.DBID); //characterID
-            //SD_CHARACTER_DATA
-            msg.WriteByte((byte) character.PawnState); //not dead
-            msg.WriteInt32(character.AccountID);
-            msg.WriteString(character.Name);
-            msg.WriteVector3(UnitConversion.ToUnreal(character.Position));
-            msg.WriteInt32((int) GameConfiguration.Get.player.StartZone);
-            msg.WriteInt32(character.Money);
-            msg.WriteInt32(character.Appearance.AppearancePart1); //appearance1
-            msg.WriteInt32(character.Appearance.AppearancePart2); //appearance2
-            msg.WriteRotator(UnitConversion.ToUnreal(Quaternion.Euler(character.Rotation)));
-            msg.WriteInt32(character.Faction); //factionID
-            msg.WriteInt32(0); //lastUsedTimeStamp
-            //SD_CHARACTER_SHEET_DATA
-            msg.WriteInt32(character.ArcheType);
-            msg.WriteFloat(character.FamePep[0]);
-            msg.WriteFloat(character.FamePep[1]);
-            msg.WriteFloat(character.HealthMaxHealth[0]);
-            msg.WriteInt32(0);
-            msg.WriteByte((byte) character.ExtraBodyMindFocusAttributePoints[0]);
-            msg.WriteByte((byte) character.ExtraBodyMindFocusAttributePoints[1]);
-            msg.WriteByte((byte) character.ExtraBodyMindFocusAttributePoints[2]);
-            msg.WriteByte((byte) character.ExtraBodyMindFocusAttributePoints[3]); //unknown
-            var equipment = character.GetEquipmentList();
-            msg.WriteInt32(equipment.Count);
-            for (var i = 0; i < equipment.Count; i++)
-            {
-                WriteSv2cl_Item(equipment[i], msg);
-            }
-            return msg;
-        }
-
-        public static Message S2C_CS_DELETE_CHARACTER_ACK(int charID, bool success)
-        {
-            var m = new Message(GameHeader.S2C_CS_DELETE_CHARACTER_ACK);
-            if (success)
-            {
-                m.WriteInt32(0); //0 = success, 1 = YouDoNotOwnThisCharacter, 2=passwordIncorrect, 3=internalError
-                m.WriteInt32(charID); //characterID
-            }
-            else
-            {
-                m.WriteInt32(3);
-                m.WriteInt32(-1);
-            }
-            return m;
-        }
-
-        #endregion
+        #endregion        
 
         #region WorldLogin
 
@@ -772,7 +1392,7 @@ namespace Network
             m.WriteInt32(0); //DebugFilters
             m.WriteInt32(p.Invisible ? 1 : 0); //visibility
             //statsStream
-            m.WriteFloat(p.FameLevel); //fame
+            m.WriteFloat(p.FamePoints); //fame points (not fame level!)
             m.WriteFloat(p.PepRank); //pep
             m.WriteInt32(0); //MayChoseClassBitfield
             m.WriteByte(p.RemainingAttributePoints); //remainingAttributePoints
@@ -875,49 +1495,28 @@ namespace Network
                 m.WriteByte((byte) sds[i].totalDeckSlot);
             }
 
-            /*
-            var numFinishedQuests = 0;
-            m.WriteInt32(numFinishedQuests);
-            for (var i = 0; i < numFinishedQuests; i++)
-            {
-                m.WriteInt32(i); //finishedQuest ID
-            }
-            var numActiveQuests = 0;
-            m.WriteInt32(numActiveQuests);
-            for (var i = 0; i < numActiveQuests; i++)
-            {
-                m.WriteInt32(0);
-                m.WriteInt32(0);
-                m.WriteInt32(0); //QuestID
-                m.WriteInt32(0); //objectiveState
-            }
-            */
-
-            //Valshaaran : player quest data
-
+            #region Player quest data
             //Finished quests
-
             //Array size
-            m.WriteInt32(p.QuestData.completedQuestIDs.Count);
+            m.WriteInt32(p.questData.completedQuestIDs.Count);
             //Array content
-            foreach(var questID in p.QuestData.completedQuestIDs)
+            foreach(var questID in p.questData.completedQuestIDs)
             {
                 m.WriteInt32(questID);
             }
 
             //Active quest targets
-
             //Array size - cumulative sum of no. of targets
             int totalTargets = 0;
-            foreach (var quest in p.QuestData.curQuests)
+            foreach (var quest in p.questData.curQuests)
             {
                 totalTargets += quest.targetProgress.Count;
             }
             m.WriteInt32(totalTargets);
 
             //Array contents
-                foreach (var pqp in p.QuestData.curQuests)
-                {
+            foreach (var pqp in p.questData.curQuests)
+            {
                 Quest_Type quest = GameData.Get.questDB.GetQuest(pqp.questID);
 
                 for (int n = 0; n < quest.targets.Count; n++) {
@@ -929,16 +1528,22 @@ namespace Network
                     
                 }
             }
+            #endregion
 
-            var numPersistentVariables = 1;
-            m.WriteInt32(numPersistentVariables);
-            for (var i = 0; i < numPersistentVariables; i++)
+            #region Player persistent variables
+
+            //PerVars array size
+            m.WriteInt32(p.persistentVars.varsList.Count);
+
+            //Array contents
+            foreach (var pVar in p.persistentVars.varsList)
             {
-                m.WriteInt32(100); //contextID 100=MapExplored
-                m.WriteInt32(120); // (100) sectionID (GED files)
-                m.WriteInt32(1); //(100) 1=discovered
+                m.WriteInt32(pVar.ContextID); //contextID 100=MapExplored
+                m.WriteInt32(pVar.VarID); // (100) sectionID (GED files)
+                m.WriteInt32(pVar.Value); //(100) 1=discovered
             }
 
+            #endregion
 
             m.WriteInt32((int) player.Account.Level); //0=player,1=error, 2 = gamemaster, 2+ = increasing Gamemaster levels (more rights like console CS-Commands)
             return m;
@@ -1009,340 +1614,5 @@ namespace Network
 
         #endregion
 
-        #region PlayerTeams
-
-        public static Message S2C_REMOVED_FROM_TEAM(int teamID, PlayerCharacter removed, eTeamRemoveMemberCode reason)
-        {
-            var m = new Message(GameHeader.S2C_REMOVED_FROM_TEAM);
-            m.WriteInt32(teamID);
-            m.WriteInt32(removed.RelevanceID);
-            m.WriteInt32(0);
-            m.WriteInt32((int) reason);
-            return m;
-        }
-
-        public static Message S2C_TEAM_LEAVE_ACK(int teamID, eTeamRequestResult result)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_LEAVE_ACK);
-            m.WriteInt32(teamID);
-            m.WriteInt32((int) eTeamRequestResult.TRR_ACCEPT);
-            return m;
-        }
-
-        public static Message S2C_TEAM_KICK_ACK(int teamID, PlayerCharacter kicked, eTeamRequestResult result, PlayerCharacter kicker)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_KICK_ACK);
-            m.WriteInt32(teamID);
-            m.WriteInt32(kicked.RelevanceID);
-            m.WriteInt32((int) result);
-            return m;
-        }
-
-        public static Message S2C_TEAM_LEADER_ACK(int teamID, PlayerCharacter newLead, eTeamRequestResult result)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_LEADER_ACK);
-            m.WriteInt32(teamID);
-            m.WriteInt32(newLead.RelevanceID);
-            m.WriteInt32((int) result);
-            return m;
-        }
-
-        public static Message S2C_TEAM_LOOTMODE_ACK(int teamID, ELootMode lootMode, eTeamRequestResult result)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_LOOTMODE_ACK);
-            m.WriteInt32(teamID);
-            m.WriteInt32((int) lootMode);
-            m.WriteInt32((int) result);
-            return m;
-        }
-
-        public static Message S2C_TEAM_REMOVE_MEMBER(int teamID, PlayerCharacter leaver, eTeamRemoveMemberCode reason)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_REMOVE_MEMBER);
-            m.WriteInt32(teamID); //Team ID?
-            m.WriteInt32(0); //unknown
-            m.WriteInt32(leaver.RelevanceID); //leaver rid?
-            m.WriteInt32((int) reason); //eTeamRemoveMemberCode
-            return m;
-        }
-
-        public static Message S2C_TEAM_DISBAND_ACK()
-        {
-            var m = new Message(GameHeader.S2C_TEAM_DISBAND_ACK);
-            m.WriteInt32(0); //unknown
-            m.WriteInt32(0); //unknown
-            m.WriteInt32(0); //unknown
-            return m;
-        }
-
-        public static Message S2C_TEAM_ADD_MEMBER(int teamID, PlayerCharacter newMember, bool isLeader)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_ADD_MEMBER);
-
-            m.WriteInt32(teamID); //eTeamRequestResult?
-            m.WriteInt32(0); //Probably teamID
-
-            //memberData
-            m.WriteByte((byte) (isLeader ? 1 : 0)); //+isLeader
-            m.WriteByte(0);
-            m.WriteByte(0);
-            m.WriteInt32((int) newMember.LastZoneID); //+memberworld
-            m.WriteInt32(0);
-            m.WriteInt32(newMember.RelevanceID); //+memberRID
-            m.WriteString(newMember.Name); //+membername
-            //memberData end
-            return m;
-        }
-
-        public static Message S2C_GET_TEAM_INFO_ACK(PlayerTeam team, eTeamRequestResult result, PlayerCharacter target)
-        {
-            var m = new Message(GameHeader.S2C_GET_TEAM_INFO_ACK);
-
-            m.WriteInt32((int) result); //Unknown, 0 = party frame but with no stats
-
-            if (team != null)
-                m.WriteInt32(team.TeamID); //teamID
-            else
-                m.WriteInt32(0);
-
-            m.WriteInt32(0); //Unknown
-
-            if (result != eTeamRequestResult.TRR_GET_TEAM_INFO_FAILED)
-            {
-                //Debug.Log ("Compiling team info");
-                //teamMembersVec
-                var numOtherMembers = team.memberCount - 1;
-                if (numOtherMembers < 0)
-                {
-                    numOtherMembers = 0;
-                }
-                m.WriteInt32(numOtherMembers); // Size of memberdata array, teamMembersVec
-
-                foreach (var p in team.Members)
-                {
-                    if (p != target)
-                    {
-                        //memberData
-                        m.WriteByte((byte) (p == team.Leader ? 1 : 0)); //+isLeader
-                        m.WriteByte(0);
-                        m.WriteByte(0);
-                        m.WriteInt32((int) p.LastZoneID); //+memberworld
-                        m.WriteInt32(0);
-                        m.WriteInt32(p.RelevanceID); //+memberRID
-                        m.WriteString(p.Name); //+membername
-                        //memberData end
-                    }
-                }
-                //teamMembersVec end
-            }
-
-            return m;
-        }
-
-        public static Message S2C_TEAM_CHARACTER_STATS_BASE(int teamID, PlayerCharacter statsOwner)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_CHARACTER_STATS_BASE);
-            m.WriteInt32(teamID); //Unknown?
-            m.WriteInt32(statsOwner.RelevanceID);
-            m.WriteInt32((int) statsOwner.LastZoneID);
-            var pos = UnitConversion.ToUnreal(statsOwner.Position);
-            m.WriteFloat(pos.x);
-            m.WriteFloat(pos.z);
-            m.WriteByte((byte) (statsOwner.Appearance.Gender == CharacterGender.Female ? 1 : 0));
-            m.WriteInt32((int) (statsOwner.ArcheType + 1));
-            m.WriteInt32(0); //discipline
-            m.WriteFloat(statsOwner.MaxHealth);
-            m.WriteInt32(statsOwner.PepRank);
-            m.WriteInt32(statsOwner.FameLevel);
-            return m;
-        }
-
-        public static Message S2C_TEAM_CHARACTER_STATS_UPDATE(int teamID, PlayerCharacter statsOwner)
-        {
-            var m = new Message(GameHeader.S2C_TEAM_CHARACTER_STATS_UPDATE);
-
-            m.WriteInt32(teamID); //TeamID?
-
-            //StatsUpdateData start
-
-            m.WriteInt32(statsOwner.RelevanceID); //Outer.CharacterID
-            m.WriteFloat(statsOwner.Health); //Stats.mHealth
-            m.WriteFloat(statsOwner.Physique); //Stats.mPhysiqueLevel
-            m.WriteFloat(statsOwner.Morale); //Stats.mMoraleLevel
-            m.WriteFloat(statsOwner.Concentration); //Stats.mConcentrationLevel
-            m.WriteInt32(statsOwner.StateRank); //Stats.mStateRankShift
-            m.WriteInt32(0); //TODO:Skills.mLastDuffUpdateTime
-
-            //TODO: TeamDuffList, array of ints?
-            m.WriteInt32(0);
-
-            //LODData3, array of bytes?
-            m.WriteByteArray(statsOwner.GetPackedLOD(3));
-
-            //StatsUpdateData end
-            return m;
-        }
-
-        #endregion
-
-        #region PlayerConversations
-
-        public static Message S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE(NpcCharacter partner, ConversationTopic curTopic, ConversationNode curNode,
-            List<ConversationTopic> topics)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE);
-
-            //Conversation NPC resource ID?
-            //Single topic parameter - current topic ID?
-            //Conversation state resource ID?
-            //Response flags
-            var responseFlags = curTopic.getResponseFlags(curNode);
-
-
-            Debug.Log("PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE : ");
-            Debug.Log("partner typeref ID = " + partner.typeRef.resourceID);
-            Debug.Log("curTopic ID = " + curTopic.resource.ID);
-
-            if (curNode == null)
-            {
-                Debug.Log("No node, setting ID and responseflags to 0");
-            }
-            else
-            {
-                Debug.Log("curNode ID = " + curNode.resource.ID);
-                Debug.Log("responseFlags = " + responseFlags);
-            }
-
-            m.WriteInt32(partner.typeRef.resourceID); //partner resource ID
-            m.WriteInt32(curTopic.resource.ID); //current topic resource ID
-
-            if (curNode == null)
-            {
-                m.WriteInt32(0); //node
-                m.WriteInt32(0); //responseflags
-            }
-            else
-            {
-                m.WriteInt32(curNode.resource.ID); //current node-within-topic ID
-                m.WriteInt32(responseFlags); //response flags
-            }
-
-
-            //List of topics
-            m.WriteInt32(topics.Count); //Size of array
-            foreach (var ct in topics)
-            {
-                //Conversation topic ID?
-                m.WriteInt32(ct.resource.ID);
-            }
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(NpcCharacter partner)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE);
-            m.WriteInt32(partner.typeRef.resourceID);
-            return m;
-        }
-
-        #endregion
-
-        #region QuestLog
-
-        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ACCEPTQUEST(int questID, List<int> progressArray)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
-
-            //probably quest resource ID
-            m.WriteInt32(questID);
-
-            //Write progress array
-            //TODO : Experimental
-            if (progressArray == null)
-            {
-                m.WriteInt32(1);    //Progress array size
-                m.WriteInt32(0);    //aProgress value
-            }
-            else {
-                m.WriteInt32(progressArray.Count);    //Progress array size
-
-                foreach (var aProgress in progressArray)
-                {
-                    m.WriteInt32(aProgress);        //Progress array items
-                }
-            }
-
-
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST(int questID, List<int> progressArray)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_ADDQUEST);
-
-            //probably quest resource ID
-            m.WriteInt32(questID);
-
-            //Write progress array
-            //TODO : Experimental
-            if (progressArray == null)
-            {
-                m.WriteInt32(1);    //Progress array size
-                m.WriteInt32(0);    //aProgress value
-            }
-            else {
-                m.WriteInt32(progressArray.Count);    //Progress array size
-
-                foreach (var aProgress in progressArray)
-                {
-                    m.WriteInt32(aProgress);        //Progress array items
-                }
-            }
-
-
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS(int questID, int targetIndex, int progress)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_SETTARGETPROGRESS);
-
-            m.WriteInt32(questID);
-            m.WriteInt32(targetIndex);
-            m.WriteInt32(progress);
-
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST(int questID)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_REMOVEQUEST);
-
-            m.WriteInt32(questID);
-
-            return m;            
-        }
-
-        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(int questID)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST);
-
-            m.WriteInt32(questID);
-
-            return m;
-        }
-
-        public static Message S2C_GAME_PLAYERQUESTLOG_SV2CL_COMPLETEQUEST(int questID)
-        {
-            var m = new Message(GameHeader.S2C_GAME_PLAYERQUESTLOG_SV2CL_COMPLETEQUEST);
-
-            m.WriteInt32(questID);
-
-            return m;
-        }
-
-        
-
-        #endregion
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using Common;
 using UnityEngine;
+using Gameplay.Loot;
+using Gameplay.Entities;
 
 namespace Gameplay.Items
 {
@@ -18,5 +20,21 @@ namespace Gameplay.Items
         public int StackSize = 1;
         public Item_Type Type;
         public float UseTime;
+
+        //Constructor from ContentItem object
+        public void SetupFromCItem(Content_Inventory.ContentItem cItem)
+        {
+            Color1 = cItem.Color1;
+            Color2 = cItem.Color2;
+            Type = cItem.Item;
+            StackSize = cItem.StackSize;
+        }
+
+        public void SetupFromLoot(LootTransaction.DroppedLootItem dlItem)
+        {
+            Attuned = (byte)(dlItem.Item.Item.BindOnPickup ? 1 : 0);      
+            Type = dlItem.Item.Item;
+            StackSize = dlItem.Item.Quantity;
+        }
     }
 }

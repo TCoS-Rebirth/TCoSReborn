@@ -69,6 +69,19 @@ namespace Gameplay.Entities.Players
             return false;
         }
 
+        public PlayerQuestProgress getProgress(int questID)
+        {
+            foreach (var curQuest in curQuests)
+            {
+                if (curQuest.questID == questID)
+                {
+                    return curQuest;
+                }
+            }
+            Debug.Log("QuestDataContainer.getProgress : Failed to match questID");
+            return null;
+        }
+
         public void LoadForPlayer(List<DBQuestTarget> quests, PlayerCharacter pc)
         {
             //TODO : Implementation appears to work ok now with simple parameters, but may want revisiting
@@ -122,7 +135,7 @@ namespace Gameplay.Entities.Players
                 }
             }
 
-            pc.QuestData = this;
+            pc.questData = this;
         }
 
         public List<DBQuestTarget> SaveForPlayer()

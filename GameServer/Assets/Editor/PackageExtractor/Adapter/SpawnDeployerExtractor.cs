@@ -122,7 +122,7 @@ namespace PackageExtractor.Adapter
                     var foundGcType = false;
                     foreach (var gcType in groupClassData.groupTypes)
                     {
-                        if (classGroup.EndsWith(gcType.name))
+                        if (classGroup.EndsWith(gcType.className))
                         {
                             deployer.npcGroupClass = gcType;
                             foundGcType = true;

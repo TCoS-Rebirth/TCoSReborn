@@ -9,6 +9,8 @@ using Gameplay.Entities.NPCs;
 using Gameplay.Items;
 using Gameplay.Quests;
 using Gameplay.Skills;
+using Gameplay.Entities.Interactives;
+using World;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -25,6 +27,7 @@ namespace Database.Static
         public NpcDB npcDB = new NpcDB();
         public SkillTemplateDB skillDB = new SkillTemplateDB();
         public QuestDB questDB = new QuestDB();
+        public LevelProgression levelProg;
 
 
         public static GameData Get
@@ -89,6 +92,13 @@ namespace Database.Static
             if (!questDB.Initialize())
             {
                 Debug.Log("error while loading questDB");
+                callback(false);
+                yield break;
+            }
+            yield return null;
+            if (levelProg == null)
+            {
+                Debug.Log("Error while loading level progression data");
                 callback(false);
                 yield break;
             }
@@ -375,7 +385,8 @@ namespace Database.Static
                         }
                     }
                 }
-                throw new Exception("Failed to get ConversationTopic with resource ID " + topicRes.ID);
+                Debug.Log("Failed to get ConversationTopic with resource ID " + topicRes.ID);
+                return null;
             }
 
             public List<ConversationTopic> GetTopics(List<SBResource> topicResList)

@@ -73,6 +73,7 @@ CREATE TABLE `playercharacters` (
   `Position` varchar(255) NOT NULL DEFAULT '(0,0,0)',
   `Rotation` varchar(255) NOT NULL DEFAULT '(0,0,0)',
   `FamePep` varchar(255) NOT NULL DEFAULT '1,0',
+  `FamePoints` int(11) NOT NULL DEFAULT '0',
   `HealthMaxHealth` varchar(255) NOT NULL DEFAULT '100/100',
   `BMF` varchar(255) NOT NULL DEFAULT '10,10,10',
   `PMC` varchar(255) NOT NULL DEFAULT '100,10,10',
@@ -105,6 +106,18 @@ CREATE TABLE `playercharacterquests` (
   `TargetIndex` int(11) NOT NULL DEFAULT '0',
   `TargetProgress` int(11) NOT NULL DEFAULT '0',  
   PRIMARY KEY (`CharacterID`,`questID`,`TargetIndex`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- ----------------------------
+-- Table structure for `playercharacterpersistentvalues`
+-- ----------------------------
+DROP TABLE IF EXISTS `playercharacterpersistentvars`;
+CREATE TABLE `playercharacterpersistentvars` (
+  `CharacterID` int(11) NOT NULL,
+  `ContextID` int(11) NOT NULL DEFAULT '-1',
+  `VarID` int(11) NOT NULL DEFAULT '-1',
+  `Value` int(11) NOT NULL DEFAULT '0',  
+  PRIMARY KEY (`CharacterID`,`ContextID`,`VarID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- ----------------------------

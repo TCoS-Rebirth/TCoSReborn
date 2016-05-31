@@ -10,7 +10,7 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            if (p.Faction.ID == RequiredTaxonomy.ID)
+            if (p.Faction.ID == taxonomyID)
             {
                 return true;
             }
@@ -20,7 +20,7 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(NpcCharacter n)
         {
-            if (n.typeRef.TaxonomyFaction.ID == RequiredTaxonomy.ID)
+            if (n.typeRef.TaxonomyFaction.ID == taxonomyID)
             {
                 return true;
             }

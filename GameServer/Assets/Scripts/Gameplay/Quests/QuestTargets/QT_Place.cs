@@ -16,7 +16,10 @@ namespace Gameplay.Quests.QuestTargets
         public SBLocalizedString TargetDescription;
         public string TargetTag;
 
-        public override int GetCompletedProgressValue() { return Amount + 1; }
+        public override int GetCompletedProgressValue() {
+            if (Amount > 0) return Amount;
+            else return 1;
+        }
     }
 }
 

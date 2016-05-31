@@ -6,6 +6,7 @@ using Gameplay;
 using Gameplay.Entities.NPCs;
 using UnityEditor;
 using UnityEngine;
+using Gameplay.Loot;
 
 namespace PackageExtractor.Adapter
 {
@@ -14,6 +15,8 @@ namespace PackageExtractor.Adapter
         List<NPCCollection> npcCols = new List<NPCCollection>();
 
         List<Taxonomy> previousTaxes = new List<Taxonomy>();
+
+        List<LootTableCollection> ltCols;
 
         public override string Name
         {
@@ -125,6 +128,18 @@ namespace PackageExtractor.Adapter
                 }
             }
 
+            //Loot table cols
+            ltCols = new List<LootTableCollection>();
+            files = Directory.GetFiles(Application.dataPath + "/GameData/LootTables/");
+            foreach (var f in files)
+            {
+                var ltc = AssetDatabase.LoadAssetAtPath<LootTableCollection>("Assets" + f.Replace(Application.dataPath, string.Empty));
+                if (ltc != null)
+                {
+                    ltCols.Add(ltc);
+                }
+            }
+
             foreach (var wpo in extractorWindowRef.ActiveWrapper.IterateObjects())
             {
                 if (wpo.sbObject.ClassName.Replace("\0", string.Empty).EndsWith("NPC_Taxonomy"))
@@ -168,9 +183,14 @@ namespace PackageExtractor.Adapter
                         SBProperty lootProp;
                         if (wpo.sbObject.Properties.TryGetValue("Loot", out lootProp))
                         {
+                            newT.Loot = new List<LootTable>();
                             foreach (var lp in lootProp.Array.Values)
                             {
-                                newT.temporaryLootTableNames.Add(lp.Value.Replace("\0", string.Empty));
+                                var lt = getLootTable(lp.Value);
+                                if (lt != null)
+                                {
+                                    newT.Loot.Add(lt);
+                                }
                             }
                         }
                         AssetDatabase.CreateAsset(newT, @"Assets/GameData/Taxonomies/" + wpo.Name + ".asset");
@@ -206,6 +226,7 @@ namespace PackageExtractor.Adapter
                         }
                     }
                     var likeArray = wpo.FindProperty("Likes");
+                    t.likes = new List<Taxonomy>();
                     if (likeArray != null)
                     {
                         foreach (var like in likeArray.IterateInnerProperties())
@@ -219,6 +240,7 @@ namespace PackageExtractor.Adapter
                         }
                     }
                     var dislikeArray = wpo.FindProperty("Dislikes");
+                    t.dislikes = new List<Taxonomy>();
                     if (dislikeArray != null)
                     {
                         foreach (var dlike in dislikeArray.IterateInnerProperties())
@@ -227,10 +249,17 @@ namespace PackageExtractor.Adapter
                             var dlt = FindTaxonomy(dlikeName);
                             if (dlt != null)
                             {
-                                t.likes.Add(dlt);
+                                t.dislikes.Add(dlt);    //Valshaaran : corrected this line  from t.likes to t.dislikes
                             }
                         }
                     }
+
+                    //Duplicate like/dislike removal
+                    //t.likes = removeDuplicates(t.likes);
+                    //t.dislikes = removeDuplicates(t.dislikes);
+
+
+
                     EditorUtility.SetDirty(t);
 
                     #endregion
@@ -293,6 +322,31 @@ namespace PackageExtractor.Adapter
             //        AssetDatabase.CreateAsset(t, @"Assets/Resources/Taxonomies/" + wo.Name + ".asset");
             //        previousTaxes.Add(t);
             //    }
+        }
+
+        public LootTable getLootTable(string ltRef)
+        {
+            char[] splitter = new char[] { '.' };
+            string[] parts = ltRef.Split(splitter, 2);
+            if (parts.Length < 2) return null;
+
+            //Find col with name matching parts[0]
+            foreach (var ltCol in ltCols)
+            {
+                if (ltCol.name == parts[0])
+                {
+                    //Find LT with ref matching parts[1]
+                    foreach (var lt in ltCol.tables)
+                    {
+                        if (lt.Reference == parts[1])
+                        {
+                            return lt;
+                        }
+                    }
+                    return null;
+                }
+            }
+            return null;            
         }
     }
 }

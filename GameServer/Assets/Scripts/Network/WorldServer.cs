@@ -9,6 +9,7 @@ using Lidgren.Network;
 using UnityEngine;
 using Utility;
 using World;
+using Gameplay.Loot;
 
 namespace Network
 {
@@ -31,7 +32,7 @@ namespace Network
 
         Action<PlayerInfo> _onPlayerLogout;
 
-        NetConnector<GameHeader> _server;
+        NetConnector _server;
 
         Coroutine updatingRoutine;
 
@@ -60,7 +61,7 @@ namespace Network
         /// <returns></returns>
         public bool StartServer(ServerConfiguration config, Action<PlayerInfo> onPlayerLogout)
         {
-            _server = new NetConnector<GameHeader>(config.ListenIP, config.ServerPort, _incomingMessages);
+            _server = new NetConnector(config.ListenIP, config.ServerPort, _incomingMessages);
             var npConfig = new NetPeerConfiguration("TCoSReborn");
             npConfig.EnableMessageType(NetIncomingMessageType.DiscoveryResponse);
             npConfig.EnableMessageType(NetIncomingMessageType.StatusChanged);
@@ -170,6 +171,11 @@ namespace Network
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTIONPAWN, HandleSwirlyOptionPawn);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_SWIRLYOPTION, HandleSwirlyOption);
             _dispatchTable.Add(GameHeader.C2S_GAME_PLAYERQUESTLOG_CL2SV_ABANDONQUEST, HandleAbandonQuest);
+            _dispatchTable.Add(GameHeader.C2S_GAME_TRAVEL_CL2SV_TRAVELTO, HandleTravelTo);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_SELECTITEMS, HandleLootSelectItems);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_ENDTRANSACTIONS, HandleLootEndTransactions);
+            _dispatchTable.Add(GameHeader.C2S_GAME_LOOTING_CL2SV_ENDTRANSACTION, HandleLootEndTransaction);
+
         }
 
         IEnumerator UpdateQueues()
@@ -178,20 +184,23 @@ namespace Network
             {
                 while (_incomingMessages.Count > 0)
                 {
-                    var m = _incomingMessages.Dequeue();
-                    Action<Message> messageHandler;
-                    if (!Enum.IsDefined(typeof (GameHeader), m.Header))
+                    lock (_incomingMessages)
                     {
-                        Debug.Log("no messageType defined for: " + m.Header);
-                        continue;
-                    }
-                    if (_dispatchTable.TryGetValue((GameHeader) m.Header, out messageHandler))
-                    {
-                        messageHandler(m);
-                    }
-                    else
-                    {
-                        Debug.Log("no messageHandler defined for: " + (GameHeader) m.Header);
+                        var m = _incomingMessages.Dequeue();
+                        Action<Message> messageHandler;
+                        if (!Enum.IsDefined(typeof (GameHeader), m.Header))
+                        {
+                            Debug.Log("no messageType defined for: " + m.Header);
+                            continue;
+                        }
+                        if (_dispatchTable.TryGetValue((GameHeader) m.Header, out messageHandler))
+                        {
+                            messageHandler(m);
+                        }
+                        else
+                        {
+                            Debug.Log("no messageHandler defined for: " + (GameHeader) m.Header);
+                        }
                     }
                 }
                 if (_pendingPlayerRemoves.Count > 0)
@@ -281,6 +290,7 @@ namespace Network
                 Debug.Log("invalid loginserver message received");
                 return;
             }
+            if (_loginConnector == null || _loginConnector.ServerConnection == null) return;
             var header = (CommunicationHeader) msg.ReadByte();
             switch (header)
             {
@@ -346,7 +356,7 @@ namespace Network
                 {
                     case MapIDs.CHARACTER_SELECTION:
                         var characters = CharacterCreationSelection.GetAccountCharacters(p.Account);
-                        m.Connection.SendDirect(PacketCreator.S2C_CS_LOGIN(p, characters));
+                        m.Connection.SendMessage(PacketCreator.S2C_CS_LOGIN(p, characters));
                         if (characters.Count > 0)
                         {
                             p.CharacterCreationState = ECharacterCreationState.CCS_SELECT_CHARACTER;
@@ -364,7 +374,7 @@ namespace Network
                         }
                         //TODO handle other Maps with special requirements
                         p.CharacterCreationState = ECharacterCreationState.CCS_ENTER_WORLD;
-                        m.Connection.SendDirect(PacketCreator.S2C_WORLD_LOGIN(p));
+                        m.Connection.SendMessage(PacketCreator.S2C_WORLD_LOGIN(p));
                         break;
                 }
             }
@@ -387,7 +397,7 @@ namespace Network
             if (ch != null)
             {
                 var response = PacketCreator.S2C_CREATE_CHARACTER_ACK(ch);
-                m.Connection.SendDirect(response);
+                m.Connection.SendMessage(response);
                 m.Connection.player.CharacterCreationState = ECharacterCreationState.CCS_SELECT_CHARACTER;
             }
             else
@@ -433,7 +443,7 @@ namespace Network
             var charID = m.ReadInt32();
             var success = CharacterCreationSelection.DeleteAccountCharacter(m.Connection.player.Account, charID);
             var response = PacketCreator.S2C_CS_DELETE_CHARACTER_ACK(charID, success);
-            m.Connection.SendDirect(response);
+            m.Connection.SendMessage(response);
         }
 
         void HandleWorldLoginAck(Message m)
@@ -460,10 +470,10 @@ namespace Network
             {
                 accountCharID = -1;
             }
-            m.Connection.SendQueued(PacketCreator.S2C_WORLD_LOGOUT_ACK());
+            m.Connection.SendMessage(PacketCreator.S2C_WORLD_LOGOUT_ACK());
             if (player != null)
             {
-                m.Connection.SendQueued(PacketCreator.S2C_USER_ON_LOGOUT(player.Account.UID, accountCharID));
+                m.Connection.SendMessage(PacketCreator.S2C_USER_ON_LOGOUT(player.Account.UID, accountCharID));
             }
         }
 
@@ -587,7 +597,29 @@ namespace Network
 
         void HandleInteractiveElementInteraction(Message m)
         {
-            Debug.Log(Helper.ByteArrayToHex(m.Buffer));
+            //Debug.Log(Helper.ByteArrayToHex(m.Buffer));
+
+            var pc = m.GetAssociatedCharacter();
+            var elementRelID = m.ReadInt32();  //IE relevance ID
+            m.ReadInt32();  //player relevance ID
+            var menuOption = (ERadialMenuOptions)m.ReadInt32();
+
+            Debug.Log("WorldServer.HandleInteractiveElementInteraction : ");
+            Debug.Log("elementRelID = " + elementRelID);
+            //Debug.Log("playerRelID = " + playerRelID);
+            Debug.Log("menuOption = " + menuOption);
+
+            if (pc != null)
+            {
+                var ile = pc.ActiveZone.GetILE(elementRelID);
+                if (ile != null)
+                {
+                    Debug.Log("LevelObjectID = " + ile.LevelObjectID);
+                    //pc.OnInteract(ile, menuOption);
+                    ile.onRadialMenuOption(pc, menuOption);
+                }
+            }
+            
         }
 
         #endregion
@@ -853,6 +885,53 @@ namespace Network
             }
         }
 
+        #endregion
+
+        #region Travel
+
+        void HandleTravelTo(Message m)
+        {
+            throw new NotImplementedException();
+            /*
+            int relID = m.ReadInt32(); //Prob relID
+            string npcName = m.ReadString();
+            string destination = m.ReadString();
+            bool joinCrew = m.ReadInt32() > 0 ? true : false;
+
+            var pc = m.GetAssociatedCharacter();
+            */
+        }
+
+        #endregion
+
+        #region Loot
+
+        void HandleLootSelectItems(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionIDs =  new List<int>(m.ReadIntArray());
+            var lootItemIDs = new List<int>(m.ReadIntArray());
+            var pc = m.GetAssociatedCharacter();
+
+            LootManager.Get.GiveItems(pc, transactionIDs, lootItemIDs);
+        }
+
+        void HandleLootEndTransactions(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionIDs = new List<int>(m.ReadIntArray());
+
+            LootManager.Get.EndTransactions(transactionIDs);
+        }
+
+        void HandleLootEndTransaction(Message m)
+        {
+            m.ReadInt32();  //RelID
+            var transactionID = m.ReadInt32();
+            var tIDs = new List<int>();
+            tIDs.Add(transactionID);
+            LootManager.Get.EndTransactions(tIDs);
+        }
         #endregion
     }
 

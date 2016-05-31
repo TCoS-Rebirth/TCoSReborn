@@ -25,9 +25,12 @@ namespace Gameplay.Entities
 
         [SerializeField, ReadOnly] EPawnStates _pawnState = EPawnStates.PS_ALIVE;
 
+        [ReadOnly] EControllerStates _controllerState = EControllerStates.CPS_PAWN_ALIVE;
+
         EPhysics _physics = EPhysics.PHYS_Walking;
 
         int _shiftableAppearance;
+        public bool IsShifted { get { return ShiftableAppearance > 0; } }
 
         Vector3 _velocity;
 
@@ -193,6 +196,7 @@ namespace Gameplay.Entities
             base.UpdateEntity();
             HandleSkillCasting();
             UpdateDuffs();
+            RegenRoutine(1f);
         }
 
         #region Emotes
@@ -201,6 +205,76 @@ namespace Gameplay.Entities
         {
             if (!RelevanceContainsPlayers) return;
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_EMOTES_SV2REL_EMOTE(this, emote));
+        }
+
+        public void Sit(bool sitDown, bool onChair = false)
+        {
+            if (sitDown && SitDown(onChair))
+            {
+                GoToState(EControllerStates.CPS_PAWN_SITTING);
+            }
+            else if (Physics == EPhysics.PHYS_SitGround || Physics == EPhysics.PHYS_SitChair)
+            {
+                GoToState(EControllerStates.CPS_PAWN_ALIVE);
+            }
+            else return;
+        }
+
+        //TODO : Not functioning yet
+        public virtual bool SitDown(bool onChairFlag = false)
+        {
+            if (Physics == EPhysics.PHYS_Walking)
+            {
+
+                Velocity = new Vector3();
+                if (onChairFlag)
+                {
+                    Physics = EPhysics.PHYS_SitChair;
+                }
+                else
+                {
+                    Physics = EPhysics.PHYS_SitGround;
+                }
+                
+                return true;
+            }
+            return false;
+        }
+
+        public void GoToState(EControllerStates state) {
+
+            string stateString;
+
+            switch (state)
+            {
+                case EControllerStates.CPS_PAWN_ALIVE:
+                    _controllerState = state;
+                    stateString = "PawnAlive";
+                    break;
+
+                case EControllerStates.CPS_PAWN_DEAD:
+                    _controllerState = state;
+                    stateString = "PawnDead";
+                    break;
+
+                case EControllerStates.CPS_PAWN_SITTING:
+                    _controllerState = state;
+                    stateString = "PawnSitting";
+                    break;
+
+                case EControllerStates.CPS_PAWN_FROZEN:
+                    _controllerState = state;
+                    stateString = "PawnFrozen";
+                    break;
+
+                default:
+                    return;
+            }
+
+            Message m = PacketCreator.S2R_BASE_PAWN_SV2CL_GOTOSTATE(this, stateString);
+            BroadcastRelevanceMessage(m);
+            var pc = this as PlayerCharacter;
+            if (pc) pc.SendToClient(m);
         }
 
         #endregion
@@ -376,7 +450,11 @@ namespace Gameplay.Entities
             foreach (var col in cols)
             {
                 var c = col.GetComponent<Character>();
-                if (c != null && c != this && relevantObjects.Contains(c))
+                if (    c != null 
+                    &&  c != this 
+                    &&  c.PawnState != EPawnStates.PS_DEAD 
+                    && !faction.Likes(c.Faction) 
+                    && relevantObjects.Contains(c))
                 {
                     if (IsFacing(c.Position, range.angle))
                         queriedTargets.Add(c);
@@ -392,7 +470,11 @@ namespace Gameplay.Entities
             foreach (var col in cols)
             {
                 var c = col.GetComponent<Character>();
-                if (c != null && c != this && relevantObjects.Contains(c))
+                if (    c != null 
+                    &&  c != this 
+                    && c.PawnState != EPawnStates.PS_DEAD 
+                    && !faction.Likes(c.Faction) 
+                    && relevantObjects.Contains(c))
                 {
                     if (IsFacing(c.Position, range.angle))
                         queriedTargets.Add(c);
@@ -505,12 +587,14 @@ namespace Gameplay.Entities
         {
             var result = new SkillApplyResult(source, this, s);
             result.damageCaused = Mathf.Abs((int) SetHealth(Health - amount));
-            if (Mathf.Approximately(Health, 0))
+            OnDamageReceived(result);
+
+            //Valshaaran - added not already dead condition
+            if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Health, 0))
             {
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(source);
             }
-            OnDamageReceived(result);
             return result;
         }
 
@@ -524,6 +608,8 @@ namespace Gameplay.Entities
                     BroadcastRelevanceMessage(m);
                 }
             }
+
+            IsInteracting = false;
         }
 
         public virtual void OnDamageCaused(SkillApplyResult sap)
@@ -678,6 +764,8 @@ namespace Gameplay.Entities
         #endregion
 
         #region Interaction
+
+        public bool IsInteracting;
 
         public virtual void Interact(PlayerCharacter source, ERadialMenuOptions menuOption)
         {

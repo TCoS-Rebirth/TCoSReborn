@@ -1,4 +1,5 @@
-﻿using Database.Static;
+﻿using Common;
+using Database.Static;
 using Gameplay.Entities;
 using Gameplay.Entities.NPCs;
 using UnityEngine;
@@ -15,9 +16,13 @@ namespace World
         public float RespawnVariation;
         public int SpawnMax;
         public int SpawnMin;
+        public static float DefaultThreatRange = 5.0f;
         public float ThreatRange;
         public bool UseAbsoluteAmounts;
         public float VisualRange;
+
+        //Valshaaran - experimental factor by which to multiple spawnmin, spawnmax, so the numbers are more reasonable!
+        const float spawnNumMult = 0.2f;
 
         void OnDrawGizmosSelected()
         {
@@ -27,51 +32,59 @@ namespace World
 
         public override void TriggerSpawn(Zone z)
         {
-            //int spawnNum = Random.Range(SpawnMin, SpawnMax);
-
-            //while (spawns.Count < spawnNum)
-            //{
-            //Random position
-            var deployX = transform.position.x;
-            var deployZ = transform.position.z;
-            var deployOffset = MaxSpawnDistance*Random.insideUnitCircle;
-            deployX += deployOffset.x;
-            deployZ += deployOffset.y;
-
-            //Random rotation
-            var randRotY = Random.Range(-180.0f, 180.0f);
-            var rndRot = new Vector3(0, randRotY, 0);
-
-            var newSI = new SpawnInfo();
-            newSI.initialSpawnPoint = new Vector3(deployX, transform.position.y, deployZ);
-            newSI.initialSpawnRotation = rndRot;
-            //newSI.linkedPatrolPoint = linkedPatrolPoint; //Wildlife spawners don't ever have patrol points?
-            newSI.respawnInterval = respawnTimeout;
-            newSI.typeRef = npc;
-            newSI.spawnerCategory = ESpawnerCategory.Wildlife;
-            // si.timeOfDespawn
-
-            var newNPC = NpcCharacter.Create(npc, transform.position, transform.rotation.eulerAngles, newSI);
-
-            if (newNPC != null)
+            int spawnNum;
+            
+            if (SpawnMax > 1)
             {
-                //Set to default faction if typeref faction was null
-                if (newNPC.Faction == null)
-                    newNPC.Faction = GameData.Get.factionDB.defaultFaction;
-                //Roll level if not specified
-                if (newNPC.FameLevel == 0)
-                    newNPC.FameLevel = Random.Range(LevelMin, LevelMax);
+                spawnNum = (int)(spawnNumMult * Random.Range(SpawnMin, SpawnMax));
+                if (spawnNum < 1) spawnNum = 1;
+            }
+            else spawnNum = 1;
 
-                if (z.AddToZone(newNPC))
+            while (spawns.Count < spawnNum)
+            {
+            //Random position
+                var deployX = transform.position.x;
+                var deployZ = transform.position.z;
+                var deployOffset = MaxSpawnDistance*Random.insideUnitCircle;
+                deployX += deployOffset.x;
+                deployZ += deployOffset.y;
+                var deployPos = new Vector3(deployX, transform.position.y, deployZ);
+                var rayCast = zone.Raycast(deployPos, Vector3.down, 20f);
+
+                //Random rotation
+                var randRotY = Random.Range(-180.0f, 180.0f);
+                var rndRot = new Vector3(0, randRotY, 0);
+
+                var newSI = new SpawnInfo();
+                newSI.setupFromSpawner(this, rayCast, rndRot);
+
+            
+
+                var newNPC = NpcCharacter.Create(npc, rayCast, rndRot, newSI);
+
+                if (newNPC != null)
                 {
-                    spawns.Add(newNPC);
-                }
-                else
-                {
-                    Debug.LogWarning("NPC could not be added to zone: " + npc.ShortName + " / " + z.ReadableName + ", removing");
+                    //Set to default faction if typeref faction was null
+                    if (newNPC.Faction == null)
+                        newNPC.Faction = GameData.Get.factionDB.defaultFaction;
+                    //Roll level if not specified
+                    if (newNPC.FameLevel == 0)
+                        newNPC.FameLevel = Random.Range(LevelMin, LevelMax);
+
+                    newNPC.InitEnabled = true;
+                    newNPC.InitColl = ECollisionType.COL_Colliding;
+
+                    if (z.AddToZone(newNPC))
+                    {
+                        spawns.Add(newNPC);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("NPC could not be added to zone: " + npc.ShortName + " / " + z.ReadableName + ", removing");
+                    }
                 }
             }
-            //}
         }
 
         void OnTriggerEnter(Collider col)
@@ -80,6 +93,35 @@ namespace World
             if (ch && ch.ActiveZone == zone)
             {
                 Spawn();
+            }
+        }
+
+        //TODO : would be more efficient to have an event called when an npc in the spawner is killed
+        //Spawn timing
+        void FixedUpdate()
+        {
+            if (!initialized || triggeredSpawn || (RespawnTime <= 0)) return;
+            if (respawnPending)
+            {
+                if (respawnTimer <= 0)
+                {
+                    ClearDead(zone);
+                    Spawn();
+                    respawnPending = false;
+                }
+                else
+                {
+                    respawnTimer -= Time.deltaTime;
+                }
+            }
+            else
+            {
+                var numSpawns = liveSpawns();
+                if (numSpawns == 0 || numSpawns < (int) (spawnNumMult*SpawnMin))
+                {
+                    respawnPending = true;
+                    respawnTimer = RespawnTime*Random.Range(1.0f - RespawnVariation, 1.0f + RespawnVariation);
+                }
             }
         }
 

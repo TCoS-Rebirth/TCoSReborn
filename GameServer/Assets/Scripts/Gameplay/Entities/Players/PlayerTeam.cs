@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Common;
 using Network;
 using World;
@@ -41,6 +42,18 @@ namespace Gameplay.Entities.Players
         public int memberCount
         {
             get { return members.Count; }
+        }
+
+        internal void StartPartyTravel(int targetWorld, string portalName)
+        {
+            //TODO
+            foreach (var teamMember in members)
+            {
+                teamMember.ReceiveChatMessage("", "Party travel NYI", EGameChatRanges.GCR_SYSTEM);
+            }
+
+            throw new NotImplementedException();
+
         }
 
         public PlayerCharacter Leader

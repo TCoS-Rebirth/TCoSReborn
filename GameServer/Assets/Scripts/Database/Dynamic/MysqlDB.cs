@@ -242,6 +242,10 @@ namespace Database.Dynamic
                 {
                     return false;
                 }
+                if (!LoadAndAssignPerVars())
+                {
+                    return false;
+                }
                 return true;
             }
 
@@ -380,12 +384,13 @@ namespace Database.Dynamic
                                 Position = DatabaseHelper.DeSerializeVector3(reader.GetString(8)),
                                 Rotation = DatabaseHelper.DeSerializeVector3(reader.GetString(9)),
                                 FamePep = DatabaseHelper.DeserializeIntList(reader.GetString(10), 2).ToArray(),
-                                HealthMaxHealth = DatabaseHelper.DeserializeIntList(reader.GetString(11), 2).ToArray(),
-                                BodyMindFocus = DatabaseHelper.DeserializeIntList(reader.GetString(12), 3).ToArray(),
-                                PhysiqueMoraleConcentration = DatabaseHelper.DeserializeFloatList(reader.GetString(13), 3).ToArray(),
-                                Money = reader.GetInt32(14),
-                                ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(15), 4).ToArray(),
-                                SerializedSkillDeck = reader.GetString(16)
+                                FamePoints = reader.GetInt32(11),
+                                HealthMaxHealth = DatabaseHelper.DeserializeIntList(reader.GetString(12), 2).ToArray(),
+                                BodyMindFocus = DatabaseHelper.DeserializeIntList(reader.GetString(13), 3).ToArray(),
+                                PhysiqueMoraleConcentration = DatabaseHelper.DeserializeFloatList(reader.GetString(14), 3).ToArray(),
+                                Money = reader.GetInt32(15),
+                                ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(16), 4).ToArray(),
+                                SerializedSkillDeck = reader.GetString(17)
                             };
                             _characterCache.Add(pc);
                             SetDBIDAllocated(pc.DBID);
@@ -512,6 +517,38 @@ namespace Database.Dynamic
                 }
             }
 
+            static bool LoadAndAssignPerVars()
+            {
+                using (var reader = DatabaseHelper.GetCharacterPerVarsLoadCommand(CachedConnection).ExecuteReader())
+                {
+                    try
+                    {
+                        while (reader.Read())
+                        {
+                            var charID = reader.GetInt32("CharacterID");
+                            var contextID = reader.GetInt32("ContextID");
+                            var varID = reader.GetInt32("VarID");
+                            var value = reader.GetInt32("Value");
+                            var p = GetCharacter(charID);
+                            if (p == null)
+                            {
+                                Debug.LogWarning(string.Format("Persistent variable with ID context {0}, var {1} in DB has no matching player character (ID {2})", contextID, varID, charID));
+                                continue;
+                            }
+
+                            var dbv = new DBPersistentVar(contextID, varID, value);
+                            p.PersistentVars.Add(dbv);
+                        }
+                        return true;
+                    }
+                    catch (MySqlException e)
+                    {
+                        Debug.LogError("[LoadAssignPerVars]: " + e.Message);
+                        return false;
+                    }
+                }
+            }
+
             public static bool SaveCharacterLogout(PlayerCharacter pc)
             {
                 var ch = pc.dbRef;
@@ -532,6 +569,7 @@ namespace Database.Dynamic
                 ch.Position = pc.Position;
                 ch.Rotation = pc.Rotation.eulerAngles;
                 ch.FamePep = new int[2] {pc.FameLevel, pc.PepRank};
+                ch.FamePoints = pc.FamePoints;
                 ch.HealthMaxHealth = new int[2] {(int) pc.Health, pc.MaxHealth};
                 ch.BodyMindFocus = new int[3] {pc.Body, pc.Mind, pc.Focus};
                 ch.PhysiqueMoraleConcentration = new[] {pc.Physique, pc.Morale, pc.Concentration};
@@ -551,7 +589,8 @@ namespace Database.Dynamic
                     }
                 }
 
-                ch.QuestTargets = pc.QuestData.SaveForPlayer();
+                ch.QuestTargets = pc.questData.SaveForPlayer();
+                ch.PersistentVars = pc.persistentVars.SaveForPlayer();
 
                 return SaveCharacterToDB(ch);
             }
@@ -566,6 +605,7 @@ namespace Database.Dynamic
                         SaveSkills(pc, transaction);
                         SaveItems(pc, transaction);
                         SaveQuests(pc, transaction);
+                        SavePerVars(pc, transaction);
                         if (updateExistingCmd.ExecuteNonQuery() > 0)
                         {
                             transaction.Commit();
@@ -623,6 +663,19 @@ namespace Database.Dynamic
                     if (pc.QuestTargets[i] == null) continue;
                     questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(questSaveCommand.Connection, pc, pc.QuestTargets[i], tr);
                     questSaveCommand.ExecuteNonQuery();
+                }
+            }
+
+            static void SavePerVars(DBPlayerCharacter pc, MySqlTransaction tr)
+            {
+                var clearCmd = DatabaseHelper.GetCharacterPerVarsDeleteCommand(CachedConnection, pc, tr);
+                clearCmd.ExecuteNonQuery();
+                var perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(CachedConnection, pc, null, tr);
+                for (var i = 0; i < pc.PersistentVars.Count; i++)
+                {
+                    if (pc.PersistentVars[i] == null) continue;
+                    perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(perVarSaveCommand.Connection, pc, pc.PersistentVars[i], tr);
+                    perVarSaveCommand.ExecuteNonQuery();
                 }
             }
 

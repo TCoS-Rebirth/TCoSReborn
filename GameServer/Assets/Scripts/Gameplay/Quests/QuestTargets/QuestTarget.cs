@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Database.Static;
 using Gameplay.Events;
 using UnityEngine;
+using Gameplay.Entities;
+using Common;
 
 namespace Gameplay.Quests.QuestTargets
 {
@@ -18,6 +20,40 @@ namespace Gameplay.Quests.QuestTargets
 
         //TODO: method works out what progress value denotes that an input target is completed
         public virtual int GetCompletedProgressValue() { return 1;}
+
+        /// <summary>
+        /// Compares new progress value to completed progress,
+        /// and if the target is complete, calls onComplete();
+        /// </summary>
+        /// <param name="progressValue"></param>
+        public void onAdvance(PlayerCharacter p, int progressValue)
+        {
+            if (isComplete(progressValue)) { tryComplete(p); }
+        }
+
+        public bool isComplete(int progressValue)
+        {
+            if (progressValue >= GetCompletedProgressValue()) return true;
+            else return false;
+        }
+
+        /// <summary>
+        /// Try to execute all the target's Complete Events
+        /// </summary>
+        protected bool tryComplete(PlayerCharacter p)
+        {
+            bool success = true;
+            foreach (var completeEvent in CompleteEvents)
+            {
+                if (!completeEvent.TryExecute(null, p))
+                {
+                    p.ReceiveChatMessage(completeEvent.name, "Failed to execute completion event" + completeEvent.name, EGameChatRanges.GCR_SYSTEM);
+                    success = false;
+                }
+            }
+
+            return success;
+        }
 
         //ConversationTopic attachedTopic;
     }

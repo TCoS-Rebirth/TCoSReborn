@@ -9,6 +9,8 @@ using Gameplay.Skills;
 using Gameplay.Skills.Effects;
 using UnityEditor;
 using UnityEngine;
+using Gameplay.Loot;
+using System.IO;
 
 namespace PackageExtractor.Adapter
 {
@@ -16,10 +18,11 @@ namespace PackageExtractor.Adapter
     {
         List<SkillEffectCollection> avEffectCollections = new List<SkillEffectCollection>();
 
-        ConvCollection convCol = ScriptableObject.CreateInstance<ConvCollection>();
         //ConvCollection conversationsGP;
 
         List<NPC_Type> extractedNPCs = new List<NPC_Type>();
+
+        List<LootTableCollection> ltCols;
 
         string path = "";
 
@@ -62,6 +65,19 @@ namespace PackageExtractor.Adapter
                 Log("All steps followed?", Color.yellow);
                 return;
             }
+
+            //Loot table cols
+            ltCols = new List<LootTableCollection>();
+            var files = Directory.GetFiles(Application.dataPath + "/GameData/LootTables/");
+            foreach (var f in files)
+            {
+                var ltc = AssetDatabase.LoadAssetAtPath<LootTableCollection>("Assets" + f.Replace(Application.dataPath, string.Empty));
+                if (ltc != null)
+                {
+                    ltCols.Add(ltc);
+                }
+            }
+
             path = "Assets/GameData/";
             //conversationsGP = AssetDatabase.LoadAssetAtPath<ConvCollection>("Assets/GameData/Conversations/ConversationsGP.asset");
             foreach (var pw in extractorWindowRef.StashedPackages)
@@ -73,9 +89,15 @@ namespace PackageExtractor.Adapter
         void WalkStashStack(PackageWrapper p, SBResources resources, SBLocalizedStrings localizedStrings)
         {
             extractedNPCs.Clear();
-            convCol = ScriptableObject.CreateInstance<ConvCollection>();
-            //Create the conversations asset
-            AssetDatabase.CreateAsset(convCol, path + "Conversations/" + p.Name + ".asset");
+
+            //Loading and resetting existing collection maintains asset links
+            /*
+            var collection = AssetDatabase.LoadAssetAtPath<NPCCollection>(path + "NPCs/" + p.Name + ".asset");
+            if (!collection)
+            {
+                AssetDatabase.CreateAsset(collection, path + "NPCs/" + p.Name + ".asset");
+            }
+            */
 
             var collection = ScriptableObject.CreateInstance<NPCCollection>();
             AssetDatabase.CreateAsset(collection, path + "NPCs/" + p.Name + ".asset");
@@ -118,11 +140,6 @@ namespace PackageExtractor.Adapter
                 }
             }
             */
-
-            if (convCol.topics.Count == 0)
-                AssetDatabase.DeleteAsset(path + "Conversations/" + p.Name + ".asset");
-            else
-                EditorUtility.SetDirty(convCol);
 
             EditorUtility.SetDirty(collection);
         }
@@ -299,17 +316,27 @@ namespace PackageExtractor.Adapter
                 }
             }
             ReadString(wpo, "Equipment", out npc.temporaryEquipmentName);
-            var lootListProperty = wpo.FindProperty("Loot");
-            if (lootListProperty != null)
+
+            #region Loot
+            var lootProp = wpo.FindProperty("Loot");
+            if (lootProp != null)
             {
-                foreach (var lootProp in lootListProperty.IterateInnerProperties())
+                npc.Loot = new List<LootTable>();
+                foreach (var lp in lootProp.Array.Values)
                 {
-                    npc.temporaryLootTableaNames.Add(lootProp.Value.Replace("\0", string.Empty));
+                    var lt = getLootTable(lp.Value);
+                    if (lt != null)
+                    {
+                        npc.Loot.Add(lt);
+                    }
                 }
             }
+            #endregion
+
             ReadBool(wpo, "IndividualKillCredit", out npc.IndividualKillCredit);
 
-            #region ConversationTopics
+            #region ConversationTopics 
+            //Polymo: TODO: some are still not correctly extracted (more than needed etc)
 
             //get list of regular topics            
             var topics = wpo.FindProperty("Topics");
@@ -363,11 +390,6 @@ namespace PackageExtractor.Adapter
                         //if (newTopic != null)
                         //{
                         npc.Topics.Add(newTopicRef);
-
-                        //Add full topic to conversations database 
-                        //convCol.topics.Add(newTopic);
-                        //AssetDatabase.AddObjectToAsset(newTopic, convCol);
-
 
                         //}
                     }
@@ -471,11 +493,68 @@ namespace PackageExtractor.Adapter
                 {
                     npc.TaxonomyFaction = GameData.Get.factionDB.defaultFaction;
                 }
+            } else
+            {
+                //Look for factions referencing this package wrapper as class package
+                foreach(var faction in GameData.Get.factionDB.Factions)
+                {
+                    //Try to match faction name with current sbObj package name
+                    if (faction.name == wpo.sbObject.Package)
+                    {
+                        npc.TaxonomyFaction = faction;
+                        break;
+                    }
+                }
+
+                /*
+                //Try to match by class package again, but  with any faction with parent Taxonomy
+                if (npc.TaxonomyFaction == null)
+                {
+                    foreach (var faction in GameData.Get.factionDB.Factions)
+                    {
+                        if (faction.classPackage && faction.classPackage.name == pW.Name)
+                        {
+                            if (faction.parent.ID == 77462)
+                            {
+                                npc.TaxonomyFaction = faction;
+                                break;
+                            }
+                        }
+                    }
+                }
+                */
+
             }
+
             ReadBool(wpo, "Travel", out npc.Travel);
             ReadBool(wpo, "Arena", out npc.Arena);
             ReadString(wpo, "Shop", out npc.temporaryShopBaseName);
             return npc;
+        }
+
+        LootTable getLootTable(string ltRef)
+        {
+            char[] splitter = new char[] { '.' };
+            string[] parts = ltRef.Split(splitter, 2);
+            if (parts.Length < 2) return null;
+
+            //Find col with name matching parts[0]
+            foreach (var ltCol in ltCols)
+            {
+                if (ltCol.name == parts[0])
+                {
+                    //Find LT with ref matching parts[1]
+                    foreach (var lt in ltCol.tables)
+                    {
+                        if (lt.Reference == parts[1])
+                        {
+                            return lt;
+                        }
+                    }
+                    return null;
+                }
+            }
+            return null;
         }
     }
 }

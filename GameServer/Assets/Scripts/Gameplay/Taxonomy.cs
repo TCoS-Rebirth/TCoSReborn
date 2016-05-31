@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Gameplay.Entities.NPCs;
 using UnityEngine;
+using Gameplay.Loot;
 
 namespace Gameplay
 {
@@ -31,11 +32,10 @@ namespace Gameplay
 
         [SerializeField, ReadOnly] public Taxonomy parent;
 
-        //[SerializeField, ReadOnly]
-        //private List<LootTable> lootTables = new List<LootTable>();
-        //public List<LootTable> LootTables { get { return lootTables; } }
+        [SerializeField, ReadOnly]
+        public List<LootTable> Loot;
 
-        [SerializeField] public List<string> temporaryLootTableNames = new List<string>();
+        //[SerializeField] public List<string> temporaryLootTableNames = new List<string>();
 
         public int ID
         {

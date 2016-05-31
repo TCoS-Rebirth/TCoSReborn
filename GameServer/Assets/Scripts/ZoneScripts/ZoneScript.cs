@@ -1,5 +1,6 @@
 ﻿using Common;
 using Gameplay.Entities;
+using Gameplay.Entities.Interactives;
 using World;
 
 namespace ZoneScripts
@@ -31,11 +32,16 @@ namespace ZoneScripts
 
         public virtual void OnInteractiveElementAdded(InteractiveLevelElement el)
         {
+            
         }
 
         public virtual void OnInteractiveElementRemoved(InteractiveLevelElement el)
         {
         }
+
+        public virtual void OnStartEvent(SBEvent ev) { }
+
+        public virtual void OnStopEvent(SBEvent ev) { }
 
         public virtual void Update()
         {

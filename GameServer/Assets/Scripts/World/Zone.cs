@@ -9,6 +9,8 @@ using Network;
 using UnityEngine;
 using Utility;
 using ZoneScripts;
+using Gameplay.Entities.Interactives;
+using Database.Static;
 
 namespace World
 {
@@ -21,6 +23,10 @@ namespace World
         readonly List<InteractiveLevelElement> _interactiveElements = new List<InteractiveLevelElement>();
         readonly List<NpcCharacter> _npcs = new List<NpcCharacter>();
         readonly List<PlayerCharacter> _players = new List<PlayerCharacter>();
+        readonly List<Trigger> _triggers = new List<Trigger>();
+
+        readonly List<SBEvent> _events = new List<SBEvent>();
+        readonly List<SBScriptedEvent> _scriptedEvents = new List<SBScriptedEvent>();
 
         ZoneScript _script;
 
@@ -138,11 +144,12 @@ namespace World
             //foreach (WildlifeSpawner ws in npcSpawnerHolder.GetComponentsInChildren<NpcSpawner>())
             //{
             //TODO: properly setup all wildlife spawners
-            //}
+            //}            
 
             yieldafter = 0;
             foreach (var ie in interactiveElementHolder.GetComponentsInChildren<InteractiveLevelElement>())
             {
+                if (ie.LevelObjectID > -1)
                 AddToZone(ie);
                 yieldafter++;
                 if (yieldafter%50 == 0)
@@ -156,6 +163,13 @@ namespace World
                 if (!_destinations.Contains(dest))
                 {
                     _destinations.Add(dest);
+                }
+            }
+            foreach (var trigger in destinationsHolder.GetComponentsInChildren<Trigger>())
+            {
+                if (!_triggers.Contains(trigger))
+                {
+                    _triggers.Add(trigger);
                 }
             }
             if (_script != null)
@@ -217,6 +231,14 @@ namespace World
             {
                 _script.Update();
             }
+            for (var i = 0; i < _events.Count;i++)
+            {
+                _events[i].onZoneUpdate();
+            }
+            for (var i = 0; i < _interactiveElements.Count; i++)
+            {
+                _interactiveElements[i].UpdateEntity();
+            }
         }
 
         /// <summary>
@@ -277,9 +299,54 @@ namespace World
             }
             _interactiveElements.Add(element);
             element.ActiveZone = this;
+            if (!element.isDummy) _zoneGrid.Add(element);   //Real elements added to relevance grid
             _script.OnInteractiveElementAdded(element);
             element.transform.parent = interactiveElementHolder;
+            element.AssignRelID();
             return true;
+        }
+
+        public bool StartEvent(SBEvent ev)
+        {
+            _script.OnStartEvent(ev);
+            if (ev.eventZone != this) return false;
+            _events.Add(ev);
+            return true;
+        }
+
+        public bool StartScriptedEvent(string eventTag, Entity other, Character instigator)
+        {
+
+            //TODO:Retrieve by tag (from GameData?)
+            //var scriptedEv = GameData.Get.eventDB.GetScriptedEvent(eventTag);
+            //scriptedEv.Trigger(other,instigator)
+            //if (scriptedEv.eventZone != this) return false;
+
+            return false;
+        }
+
+        public void UntriggerEvent(Entity other, Character instigator)
+        {
+            foreach (var ev in _events)
+            {
+                if (ev.other == other && ev.instigator == instigator)
+                {
+                    ev.UnTrigger();
+                    return;
+                }
+            }
+        }
+
+        public void UntriggerEvent(string eventTag)
+        {
+            foreach (var ev in _events)
+            {
+                if (ev.EventTag == eventTag)
+                {
+                    ev.UnTrigger();
+                    return;
+                }
+            }
         }
 
         /// <summary>
@@ -313,7 +380,29 @@ namespace World
             _script.OnInteractiveElementRemoved(element);
             element.ActiveZone = null;
             _interactiveElements.Remove(element);
+            if (!element.isDummy) _zoneGrid.Remove(element);
             element.transform.parent = null;
+        }
+
+        public void StopEvent(SBEvent ev)
+        {
+            _script.OnStopEvent(ev);
+            _events.Remove(ev);
+        }
+
+        public bool StopScriptedEvent(string eventTag)
+        {
+            //Find zone event with matching tag
+            foreach (var sEv in _scriptedEvents)
+            {
+                if (sEv.EventTag == eventTag)
+                {
+                    StopEvent(sEv.Stages[sEv._stageInd]);
+                    _scriptedEvents.Remove(sEv);
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -452,12 +541,15 @@ namespace World
         [SerializeField] Transform playerHolder;
 
         [SerializeField] Transform interactiveElementHolder;
+        public Transform InteractiveElementHolder { get { return interactiveElementHolder; } }
 
         [SerializeField] Transform destinationsHolder;
 
         [SerializeField] Transform portalHolder;
 
         [SerializeField] Transform npcSpawnerHolder;
+
+        [SerializeField] Transform triggersHolder;
 
         #endregion
 
@@ -566,6 +658,31 @@ namespace World
             return null;
         }
 
+        public NpcCharacter FindNpcCharacter(string name)
+        {
+            foreach (var npc in _npcs)
+            {
+                if (npc.typeRef.LongName.Contains(name)) {
+                    return npc;
+                }
+            }
+            return null;
+        }
+
+        public NpcCharacter FindNpcCharacter(string name, int instanceIndex)
+        {
+            int count = 0;
+            foreach (var npc in _npcs)
+            {
+                if (npc.typeRef.LongName.Contains(name))
+                {
+                    if (count == instanceIndex) return npc;
+                    else count++;
+                }
+            }
+            return null;
+        }
+
         /// <summary>
         ///     Tries to find an npc by it's relevanceID in this zone
         /// </summary>
@@ -577,6 +694,32 @@ namespace World
                 if (_npcs[i].RelevanceID == relID)
                 {
                     return _npcs[i];
+                }
+            }
+            return null;
+        }
+
+        public InteractiveLevelElement GetILE(int relID)
+        {
+            for (var i = _interactiveElements.Count; i-- > 0;)
+            {
+                if (_interactiveElements[i].RelevanceID == relID)
+                {
+                    return _interactiveElements[i];
+                }
+            }
+            return null;
+        }
+
+        public InteractiveLevelElement GetChair(int levelObjectID)
+        {
+            if (levelObjectID < 0) return null;
+            foreach (var ile in _interactiveElements)
+            {
+                if (    ile.ileType == EILECategory.ILE_Chair
+                    &&  ile.LevelObjectID == levelObjectID)
+                {
+                    return ile;
                 }
             }
             return null;
@@ -639,5 +782,9 @@ namespace World
         }
 
         #endregion
+
+        [ReadOnly]
+        public float killY;    //Y-coordinate below with players are killed
+
     }
 }

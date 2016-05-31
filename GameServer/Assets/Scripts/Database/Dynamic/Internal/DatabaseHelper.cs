@@ -116,7 +116,7 @@ namespace Database.Dynamic.Internal
             {
                 _updateExistingCharacterCommand =
                     new MySqlCommand(
-                        "UPDATE playercharacters SET Appearance=@app, LastMapID=@lm, Faction=@fac, ArcheType=@arch, PawnState=@state, Position=@pos, Rotation=@rot, FamePep=@fp, HealthMaxHealth=@hmh, BMF=@bmf, PMC=@pmc, Money=@money, BMFAttributeExtraPoints=@bmfaep, SkillDeck=@skilldeck WHERE AccountID = @accID AND CharacterID = @charID;",
+                        "UPDATE playercharacters SET Appearance=@app, LastMapID=@lm, Faction=@fac, ArcheType=@arch, PawnState=@state, Position=@pos, Rotation=@rot, FamePep=@fp, FamePoints=@famepoints, HealthMaxHealth=@hmh, BMF=@bmf, PMC=@pmc, Money=@money, BMFAttributeExtraPoints=@bmfaep, SkillDeck=@skilldeck WHERE AccountID = @accID AND CharacterID = @charID;",
                         connection);
                 AddCharacterCommandParameters(_updateExistingCharacterCommand, pc);
                 _updateExistingCharacterCommand.Prepare();
@@ -137,7 +137,7 @@ namespace Database.Dynamic.Internal
             {
                 _saveNewCharacterCommand =
                     new MySqlCommand(
-                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,HealthMaxHealth,BMF,PMC,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@hmh,@bmf,@pmc,@money,@bmfaep,@skilldeck);",
+                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,FamePoints,HealthMaxHealth,BMF,PMC,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@famepoints,@hmh,@bmf,@pmc,@money,@bmfaep,@skilldeck);",
                         connection);
                 AddCharacterCommandParameters(_saveNewCharacterCommand, pc);
                 _saveNewCharacterCommand.Prepare();
@@ -166,6 +166,7 @@ namespace Database.Dynamic.Internal
             cmd.Parameters.AddWithValue("@pos", SerializeVector3(pc.Position));
             cmd.Parameters.AddWithValue("@rot", SerializeVector3(pc.Rotation));
             cmd.Parameters.AddWithValue("@fp", SerializeIntList(pc.FamePep));
+            cmd.Parameters.AddWithValue("@famepoints", pc.FamePoints);
             cmd.Parameters.AddWithValue("@hmh", SerializeIntList(pc.HealthMaxHealth));
             cmd.Parameters.AddWithValue("@bmf", SerializeIntList(pc.BodyMindFocus));
             cmd.Parameters.AddWithValue("@pmc", SerializeFloatList(pc.PhysiqueMoraleConcentration));
@@ -190,6 +191,7 @@ namespace Database.Dynamic.Internal
             cmd.Parameters["@pos"].Value = SerializeVector3(pc.Position);
             cmd.Parameters["@rot"].Value = SerializeVector3(pc.Rotation);
             cmd.Parameters["@fp"].Value = SerializeIntList(pc.FamePep);
+            cmd.Parameters["@famepoints"].Value = pc.FamePoints;
             cmd.Parameters["@hmh"].Value = SerializeIntList(pc.HealthMaxHealth);
             cmd.Parameters["@bmf"].Value = SerializeIntList(pc.BodyMindFocus);
             cmd.Parameters["@pmc"].Value =
@@ -250,6 +252,18 @@ namespace Database.Dynamic.Internal
                 _questsLoadCommand.Prepare();
             }
             return _questsLoadCommand;
+        }
+
+        static MySqlCommand _perVarsLoadCommand;
+
+        public static MySqlCommand GetCharacterPerVarsLoadCommand(MySqlConnection connection)
+        {
+            if (_perVarsLoadCommand == null)
+            {
+                _perVarsLoadCommand = new MySqlCommand("SELECT * FROM playercharacterpersistentvars", connection);
+                _perVarsLoadCommand.Prepare();
+            }
+            return _perVarsLoadCommand;
         }
 
         #endregion
@@ -395,6 +409,48 @@ namespace Database.Dynamic.Internal
             }
             _characterQuestsDeleteCommand.Transaction = transaction;
             return _characterQuestsDeleteCommand;
+        }
+
+        static MySqlCommand _characterPerVarSaveCommand;
+
+        public static MySqlCommand GetCharacterPerVarSaveCommand(MySqlConnection connection, DBPlayerCharacter pc, DBPersistentVar var, MySqlTransaction transaction)
+        {
+            if (_characterPerVarSaveCommand == null)
+            {
+                const string cmd = "INSERT INTO playercharacterpersistentvars (CharacterID,ContextID,VarID,Value) VALUES (@charID,@contextId,@varID,@value);";
+                _characterPerVarSaveCommand = new MySqlCommand(cmd, connection);
+                _characterPerVarSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
+                _characterPerVarSaveCommand.Parameters.AddWithValue("@contextID", var != null ? var.ContextId : -1);
+                _characterPerVarSaveCommand.Parameters.AddWithValue("@varID", var != null ? var.VarId : -1);
+                _characterPerVarSaveCommand.Parameters.AddWithValue("@value", var != null ? var.Value : 0);
+                _characterPerVarSaveCommand.Prepare();
+            }
+            else
+            {
+                _characterPerVarSaveCommand.Parameters["@charID"].Value = pc.DBID;
+                _characterPerVarSaveCommand.Parameters["@contextID"].Value = var != null ? var.ContextId : -1;
+                _characterPerVarSaveCommand.Parameters["@varID"].Value = var != null ? var.VarId : -1;
+                _characterPerVarSaveCommand.Parameters["@value"].Value = var != null ? var.Value : 0;
+            }
+            _characterPerVarSaveCommand.Transaction = transaction;
+            return _characterPerVarSaveCommand;
+        }
+
+        static MySqlCommand _characterPerVarsDeleteCommand;
+
+        public static MySqlCommand GetCharacterPerVarsDeleteCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        {
+            if (_characterPerVarsDeleteCommand == null)
+            {
+                _characterPerVarsDeleteCommand = new MySqlCommand("DELETE FROM playercharacterpersistentvars WHERE CharacterID=@charID", connection);
+                _characterPerVarsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
+            }
+            else
+            {
+                _characterPerVarsDeleteCommand.Parameters["@charID"].Value = pc.DBID;
+            }
+            _characterPerVarsDeleteCommand.Transaction = transaction;
+            return _characterPerVarsDeleteCommand;
         }
 
         #endregion
