@@ -916,7 +916,7 @@ namespace Network
 
 
             Debug.Log("PacketCreator.S2C_GAME_PLAYERCONVERSATION_SV2CL_CONVERSE : ");
-            Debug.Log("partner typeref ID = " + partner.typeRef.resourceID);
+            Debug.Log("partner rel ID = " + partner.RelevanceID);
             Debug.Log("curTopic ID = " + curTopic.resource.ID);
 
             if (curNode == null)
@@ -929,7 +929,7 @@ namespace Network
                 Debug.Log("responseFlags = " + responseFlags);
             }
 
-            m.WriteInt32(partner.typeRef.resourceID); //partner resource ID
+            m.WriteInt32(partner.RelevanceID); //partner resource ID //Polymo: this is actually the RelevanceID
             m.WriteInt32(curTopic.resource.ID); //current topic resource ID
 
             if (curNode == null)
@@ -945,6 +945,7 @@ namespace Network
 
 
             //List of topics
+            //m.WriteInt32(0);
             m.WriteInt32(topics.Count); //Size of array
             foreach (var ct in topics)
             {
@@ -957,7 +958,7 @@ namespace Network
         public static Message S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE(NpcCharacter partner)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERCONVERSATION_SV2CL_ENDCONVERSE);
-            m.WriteInt32(partner.typeRef.resourceID);
+            m.WriteInt32(partner.RelevanceID);
             return m;
         }
 

@@ -74,7 +74,6 @@ namespace World
             _cellSize = subscriptionDistance + 1;
             _owner = owner;
             _updateRoutine = owner.StartCoroutine(UpdateRoutine());
-            Profiler.maxNumberOfSamplesPerFrame = -1;
         }
 
         public float UpdateCycleTime
@@ -108,9 +107,9 @@ namespace World
                     yield return null;
                 }
                 var ge = _nonPlayerEntries[i];
-                if (ge.Owner == null | _removeQueue.Contains(ge.ID))
+                if (ReferenceEquals(ge.Owner, null) | _removeQueue.Contains(ge.ID))
                 {
-                    if (ge.CenterCell != null)
+                    if (!ReferenceEquals(ge.CenterCell, null))
                     {
                         ge.CenterCell.Entities.Remove(ge);
                     }
@@ -127,9 +126,9 @@ namespace World
             for (var i = _players.Count; i-- > 0;)
             {
                 var ge = _players[i];
-                if (ge.Owner == null | _removeQueue.Contains(ge.ID))
+                if (ReferenceEquals(ge.Owner, null)| _removeQueue.Contains(ge.ID))
                 {
-                    if (ge.CenterCell != null)
+                    if (!ReferenceEquals(ge.CenterCell, null))
                     {
                         ge.CenterCell.Entities.Remove(ge);
                         ge.ClearSubscriptions();
@@ -161,9 +160,10 @@ namespace World
         {
             var x = Mathf.CeilToInt(ge.CachedPosition.x/_cellSize);
             var z = Mathf.CeilToInt(ge.CachedPosition.z/_cellSize);
-            if (ge.CenterCell == null || (ge.CenterCell.X != x | ge.CenterCell.Z != z))
+            var hasCell = !ReferenceEquals(ge.CenterCell, null);
+            if (!hasCell || (ge.CenterCell.X != x | ge.CenterCell.Z != z))
             {
-                if (ge.CenterCell != null)
+                if (hasCell)
                 {
                     ge.CenterCell.Entities.Remove(ge);
                 }
@@ -176,9 +176,10 @@ namespace World
         {
             var x = Mathf.CeilToInt(ge.CachedPosition.x/_cellSize);
             var z = Mathf.CeilToInt(ge.CachedPosition.z/_cellSize);
-            if (ge.CenterCell == null || (ge.CenterCell.X != x | ge.CenterCell.Z != z))
+            var hasCell = !ReferenceEquals(ge.CenterCell, null);
+            if (!hasCell || (ge.CenterCell.X != x | ge.CenterCell.Z != z))
             {
-                if (ge.CenterCell != null)
+                if (hasCell)
                 {
                     ge.CenterCell.Entities.Remove(ge);
                 }
@@ -343,7 +344,7 @@ namespace World
             {
                 foreach (var subscription in Subscriptions)
                 {
-                    if (subscription.Owner != null)
+                    if (!ReferenceEquals(subscription.Owner, null))
                     {
                         Owner.OnEntityBecameIrrelevant(subscription.Owner);
                         subscription.Owner.OnEntityBecameIrrelevant(Owner);

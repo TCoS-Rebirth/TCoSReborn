@@ -101,7 +101,6 @@ namespace World
         void FixedUpdate()
         {
             if (!initialized || triggeredSpawn || (RespawnTime <= 0)) return;
-
             if (respawnPending)
             {
                 if (respawnTimer <= 0)
@@ -110,12 +109,19 @@ namespace World
                     Spawn();
                     respawnPending = false;
                 }
-                else { respawnTimer -= Time.deltaTime; }
+                else
+                {
+                    respawnTimer -= Time.deltaTime;
+                }
             }
-            else if (liveSpawns() == 0 || liveSpawns() < (int)(spawnNumMult * SpawnMin))
+            else
             {
-                respawnPending = true;
-                respawnTimer = RespawnTime * Random.Range(1.0f - RespawnVariation, 1.0f + RespawnVariation);
+                var numSpawns = liveSpawns();
+                if (numSpawns == 0 || numSpawns < (int) (spawnNumMult*SpawnMin))
+                {
+                    respawnPending = true;
+                    respawnTimer = RespawnTime*Random.Range(1.0f - RespawnVariation, 1.0f + RespawnVariation);
+                }
             }
         }
 

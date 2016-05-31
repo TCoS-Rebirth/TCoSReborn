@@ -290,6 +290,7 @@ namespace Network
                 Debug.Log("invalid loginserver message received");
                 return;
             }
+            if (_loginConnector == null || _loginConnector.ServerConnection == null) return;
             var header = (CommunicationHeader) msg.ReadByte();
             switch (header)
             {
