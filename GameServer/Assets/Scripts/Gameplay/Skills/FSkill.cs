@@ -17,9 +17,11 @@ namespace Gameplay.Skills
         public const float ComboVersusTimeframe = 5f;
         public const int ComboMaxStringLength = 9;
 
-        [ReadOnly] public byte animation;
+        //[ReadOnly] public byte animation;
 
-        [ReadOnly] public byte animation2;
+        [ReadOnly] public SBAnimActionFlags animation;
+
+        [ReadOnly] public SBAnimActionFlags animation2;
 
         [ReadOnly] public float animationMovementForward;
 
@@ -135,19 +137,19 @@ namespace Gameplay.Skills
             return ch.GetDurationForAnimation(animationVariation);
         }
 
-        public void RunEvents(SkillContext sInfo)
-        {
-            for (var i = 0; i < keyFrames.Count; i++)
-            {
-                if (!(keyFrames[i].Time <= sInfo.currentSkillTime)) continue;
-                var ev = keyFrames[i].EventGroup;
-                if (ev == null) continue;
-                for (var e = 0; e < ev.events.Count; e++)
-                {
-                    ev.events[e].Execute(sInfo, sInfo.Caster);
-                }
-            }
-        }
+        //public void RunEvents(RunningSkillContext sInfo)
+        //{
+        //    for (var i = 0; i < keyFrames.Count; i++)
+        //    {
+        //        if (!(keyFrames[i].Time <= sInfo.currentSkillTime)) continue;
+        //        var ev = keyFrames[i].EventGroup;
+        //        if (ev == null) continue;
+        //        for (var e = 0; e < ev.events.Count; e++)
+        //        {
+        //            ev.events[e].Execute(sInfo);
+        //        }
+        //    }
+        //}
 
         public void Reset()
         {

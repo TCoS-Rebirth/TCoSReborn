@@ -15,35 +15,32 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public Client_FX FX;
 
-        public virtual void FireClientFX(SkillContext sInfo, Character target)
+        public virtual void FireClientFX(RunningSkillContext sInfo)
         {
             switch (EmitterLocation)
             {
                 case EEmitterOverwrite.EEO_Auto:
-                    target.RunEvent(sInfo, this, sInfo.Caster, target, target);
+                    if (sInfo.PreferedTarget != null)
+                        sInfo.PreferedTarget.RunEvent(sInfo, this, sInfo.SkillPawn, sInfo.TriggerPawn, sInfo.PreferedTarget);
                     break;
                 case EEmitterOverwrite.EEO_SkillPawn:
-                    sInfo.Caster.RunEvent(sInfo, this, sInfo.Caster, sInfo.Caster, target);
+                    sInfo.SkillPawn.RunEvent(sInfo, this, sInfo.SkillPawn, sInfo.SkillPawn, sInfo.PreferedTarget);
                     break;
                 case EEmitterOverwrite.EEO_PaintLocation:
-                    sInfo.Caster.RunEventL(sInfo, this, sInfo.Caster, sInfo.Caster, sInfo.TargetPosition, target);
+                    sInfo.SkillPawn.RunEventL(sInfo, this, sInfo.SkillPawn, sInfo.SkillPawn, sInfo.TargetPosition, sInfo.PreferedTarget);
                     break;
             }
         }
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
         {
-            //if (!sInfo.IsInCurrentTimeSpan(Delay)) { return; }
+            if (!HasDelayPassed(context)) return false;
             if (!effectsFired)
             {
-                FireClientFX(sInfo, triggerPawn);
+                FireClientFX(context);
                 effectsFired = true;
             }
-        }
-
-        public override void DeepClone()
-        {
-            base.DeepClone();
+            return true;
         }
 
         public override void Reset()

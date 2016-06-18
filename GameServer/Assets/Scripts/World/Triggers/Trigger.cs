@@ -149,6 +149,11 @@ namespace World
         {
             foreach (var req in Requirements)
             {
+                if (req == null)
+                {
+                    Debug.Log("Requirement is null!");
+                    continue;
+                }
                 if (!req.isMet(nc))
                 {
                     return false;

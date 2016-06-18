@@ -14,7 +14,7 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public int resourceID;
 
-        public virtual bool Fire(SkillContext sInfo, Character target)
+        public virtual bool Fire(RunningSkillContext sInfo, Character target)
         {
             return false;
         }

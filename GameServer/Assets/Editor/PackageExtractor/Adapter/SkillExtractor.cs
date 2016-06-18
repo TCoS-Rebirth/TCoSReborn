@@ -207,8 +207,8 @@ namespace PackageExtractor.Adapter
             ReadInt(wpo, "MinSkillTier", out s.minSkillTier, false);
             ReadLocalizedString(wpo, "Name", strings, out s.skillname, false);
             ReadLocalizedString(wpo, "Description", strings, out s.description, false);
-            ReadByte(wpo, "Animation", out s.animation, false);
-            ReadByte(wpo, "Animation2", out s.animation2, false);
+            ReadEnum(wpo, "Animation", out s.animation, false);
+            ReadEnum(wpo, "Animation2", out s.animation2, false);
             ReadInt(wpo, "AnimationVariation", out s.animationVariation, false);
             ReadEnum(wpo, "RequiredWeapon", out s.requiredWeapon, false);
             ReadFloat(wpo, "AnimationSpeed", out s.animationSpeed, false);

@@ -15,7 +15,7 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public ValueSpecifier multiplierVS;
 
-        public override bool Fire(SkillContext sInfo, Character target)
+        public override bool Fire(RunningSkillContext sInfo, Character target)
         {
             if (target != null)
             {

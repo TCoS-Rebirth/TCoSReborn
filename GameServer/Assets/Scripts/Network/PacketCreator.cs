@@ -127,9 +127,9 @@ namespace Network
 
             m.WriteVector3(UnitConversion.ToUnreal(npc.Destination)); //struct NetMovment [dest, flag]
             m.WriteByte((byte) npc.MovementFlags); //ENpcMovementFlag
-            m.WriteInt32(-1); //target-RelID
-            m.WriteVector3(UnitConversion.ToUnreal(npc.FocusLocation));
-            m.WriteRotator(UnitConversion.ToUnreal(npc.Rotation));
+            m.WriteInt32(-1); //target-RelID mNetFocus
+            m.WriteVector3(UnitConversion.ToUnreal(npc.FocusLocation)); //mNetFocusLocation
+            m.WriteRotator(UnitConversion.ToUnreal(npc.Rotation)); //mDefaultRotation
             m.WriteByte((byte) npc.PawnState);
             m.WriteInt32((int) npc.ClassType); //unsure
             m.WriteInt32(0);
@@ -263,7 +263,7 @@ namespace Network
         public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(Character ch)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON);
-            m.WriteByte((byte)ch.CombatMode);
+            m.WriteByte((byte)ch.equippedWeaponType);
             return m;
         }
 
@@ -284,9 +284,19 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteByte((byte)ch.CombatMode);
-            m.WriteInt32(0); //possibly mainhand and offhand
-            m.WriteInt32(0);
+            var weaponType = SBAnimWeaponFlags.AnimWeapon_None;
+            var pc = ch as PlayerCharacter;
+            if (pc)
+            {
+                var weap = pc.ItemManager.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
+                if (weap)
+                {
+                    weaponType = weap.Type.GetWeaponType();
+                }
+            }
+            m.WriteByte((byte)weaponType); //ch.CombatMode
+            m.WriteInt32(0); //mainhand 
+            m.WriteInt32(0); //and offhand
             return m;
         }
 
@@ -1093,7 +1103,7 @@ namespace Network
 
         #region Skills
 
-        public static Message S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(PlayerCharacter pc, SkillContext s)
+        public static Message S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(PlayerCharacter pc, RunningSkillContext s)
         {
             var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL);
             m.WriteInt32(s.ExecutingSkill.resourceID); //skillID
@@ -1107,7 +1117,7 @@ namespace Network
             return m;
         }
 
-        public static Message S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL(Character ch, SkillContext s)
+        public static Message S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL(Character ch, RunningSkillContext s)
         {
             var m = new Message(GameHeader.S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL);
             m.WriteInt32(ch.RelevanceID);
@@ -1137,7 +1147,7 @@ namespace Network
             m.WriteInt32(ch.RelevanceID);
             m.WriteInt32(skillID);
             m.WriteInt32(eventID);
-            m.WriteInt32(flags); //?
+            m.WriteInt32(flags); //? probably SBAnimationActionFlags
             m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
             m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
             m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);

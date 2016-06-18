@@ -31,7 +31,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public int Uses;
 
-        public void Execute(SkillContext sInfo)
+        public void Execute(RunningSkillContext sInfo)
         {
             //needs!
         }

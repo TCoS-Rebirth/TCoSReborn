@@ -12,20 +12,6 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public List<AdvancedEmitter> Emitters = new List<AdvancedEmitter>();
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
-        {
-            if (!effectFired)
-            {
-                FireClientFX(sInfo, triggerPawn);
-                effectFired = true;
-            }
-        }
-
-        public override void DeepClone()
-        {
-            base.DeepClone();
-        }
-
         public override void Reset()
         {
             base.Reset();

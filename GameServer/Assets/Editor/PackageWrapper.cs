@@ -82,21 +82,21 @@ namespace PackageExtractor
 
     public class PackageWrapper
     {
-        List<SBObject> allSBObjects = new List<SBObject>();
+        readonly List<SBObject> allSBObjects = new List<SBObject>();
         PackageReadConfig arrayDefinitions;
         public WrappedPackageObject inspectedObject;
 
         public Action<string, Color> LogString;
         float objectContentHeight;
-        Rect objectScrollViewRect;
-        float objectSubCategoryIndent = 30f;
+        Rect objectScrollViewRect;      
         Vector2 objectViewScrollPos;
 
         public Action<string, Color> OnLogMessage;
         float prevWidthHeight;
 
         Vector2 propScrollPos;
-        float visualOffset = 5f;
+        const float visualOffset = 5f;
+        const float objectSubCategoryIndent = 30f;
 
         public List<WrappedPackageObject> wrappedObjects = new List<WrappedPackageObject>();
 
@@ -163,13 +163,11 @@ namespace PackageExtractor
                 foreach (var wrapper in wrappedObjects)
                 {
                     var parent = FindRecursiveWrapper(wrapper, packageName);
-                    if (parent != null)
+                    if (parent == null) continue;
+                    var foundObject = FindRecursive(parent, objName);
+                    if (foundObject != null)
                     {
-                        var foundObject = FindRecursive(parent, objName);
-                        if (foundObject != null)
-                        {
-                            return foundObject;
-                        }
+                        return foundObject;
                     }
                 }
             }
@@ -304,26 +302,23 @@ namespace PackageExtractor
                 var sbO = objectList[i];
                 allSBObjects.Add(sbO);
                 var parent = sbO.Package.Replace("\0", string.Empty);
-                if (parent == "null")
-                {
-                    var p = new WrappedPackageObject(sbO);
-                    wrappedObjects.Add(p);
-                    objectList.RemoveAt(i);
-                }
+                if (parent != "null") continue;
+                var p = new WrappedPackageObject(sbO);
+                wrappedObjects.Add(p);
+                objectList.RemoveAt(i);
             }
             Thread.Sleep(1);
             for (var i = wrappedObjects.Count; i-- > 0;)
             {
                 AddNodes(objectList, wrappedObjects[i]);
             }
-            if (objectList.Count > 0)
+
+            if (objectList.Count <= 0) return;
+            LogString("Not all objects could be assigned to their (Sub/)Packages, assigning them to root!", Color.red);
+            for (var i = objectList.Count; i-- > 0;)
             {
-                //LogString("Not all objects could be assigned to their (Sub/)Packages, assigning them to root!", Color.red);
-                for (var i = objectList.Count; i-- > 0;)
-                {
-                    var pow = new WrappedPackageObject(objectList[i]);
-                    wrappedObjects.Add(pow);
-                }
+                var pow = new WrappedPackageObject(objectList[i]);
+                wrappedObjects.Add(pow);
             }
         }
 
@@ -336,13 +331,11 @@ namespace PackageExtractor
                     i = openList.Count - 1;
                 }
                 var sbO = openList[i];
-                if (IsChild(currentNode, sbO))
-                {
-                    var p = new WrappedPackageObject(sbO);
-                    currentNode.ChildObjects.Add(p);
-                    openList.Remove(sbO);
-                    AddNodes(openList, p);
-                }
+                if (!IsChild(currentNode, sbO)) continue;
+                var p = new WrappedPackageObject(sbO);
+                currentNode.ChildObjects.Add(p);
+                openList.Remove(sbO);
+                AddNodes(openList, p);
             }
         }
 
@@ -350,11 +343,7 @@ namespace PackageExtractor
         {
             var parentPackage = parent.sbObject.Package.Replace("\0", string.Empty);
             var childPackage = possibleChild.Package.Replace("\0", string.Empty);
-            if (string.Format("{0}.{1}", parentPackage, parent.Name).Replace("null.", string.Empty).Equals(childPackage, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-            return false;
+            return string.Format("{0}.{1}", parentPackage, parent.Name).Replace("null.", string.Empty).Equals(childPackage, StringComparison.OrdinalIgnoreCase);
         }
 
         public void Load(object sender, DoWorkEventArgs e)
@@ -367,12 +356,12 @@ namespace PackageExtractor
             wrappedObjects = wrappedObjects.OrderBy(x => x.Name, new AlphanumComparer()).ToList();
             wrappedObjects.Reverse();
             e.Result = e.Argument;
-            //foreach (WrappedPackageObject pw in wrappedObjects)
+            //foreach (var pw in wrappedObjects)
             //{
             //    pw.CachePropertReferences(FindObjectWrapper, null);
             //    Thread.Sleep(1);
             //}
-        }
+        } 
 
         public void ResolveReferences(List<PackageWrapper> linkedPackages)
         {
@@ -409,16 +398,14 @@ namespace PackageExtractor
         void DrawRecursive(ref Rect elementRect, WrappedPackageObject current)
         {
             DrawElement(ref elementRect, current);
-            if (current.ChildrenExpanded)
+            if (!current.ChildrenExpanded) return;
+            elementRect.x += objectSubCategoryIndent;
+            for (var g = current.ChildObjects.Count; g-- > 0;)
             {
-                elementRect.x += objectSubCategoryIndent;
-                for (var g = current.ChildObjects.Count; g-- > 0;)
-                {
-                    var child = current.ChildObjects[g];
-                    DrawRecursive(ref elementRect, child);
-                }
-                elementRect.x -= objectSubCategoryIndent;
+                var child = current.ChildObjects[g];
+                DrawRecursive(ref elementRect, child);
             }
+            elementRect.x -= objectSubCategoryIndent;
         }
 
         public void DrawProperties(Rect r, GUIStyle style)

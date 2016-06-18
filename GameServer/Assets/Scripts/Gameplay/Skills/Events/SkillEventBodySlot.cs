@@ -1,12 +1,18 @@
-﻿using Gameplay.Entities;
+﻿using Common;
+using Gameplay.Entities;
 
 namespace Gameplay.Skills.Events
 {
     public class SkillEventBodySlot : SkillEventTarget
     {
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
         {
-            //needs!
+            if (HasDelayPassed(context))
+            {
+                //do things
+                return true;
+            }
+            return false;
         }
 
         public override void Reset()

@@ -1,4 +1,5 @@
 ﻿using Gameplay.Entities;
+using UnityEngine;
 
 namespace Gameplay.Skills.Events
 {
@@ -10,26 +11,29 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public SkillEvent TriggerEvent;
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
         {
-            base.Execute(sInfo, triggerPawn);
+            //Debug.Log(string.Format("[{0}] - executing event {1} of {2}", Time.time, this, context.ExecutingSkill));
+            return base.Execute(context);
         }
 
-        protected override void OnHitTarget(SkillContext sInfo, Character target)
+        protected override void OnHitTarget(RunningSkillContext sInfo, Character target)
         {
             base.OnHitTarget(sInfo, target);
             if (ReactionEvent != null)
             {
-                ReactionEvent.Execute(sInfo, target);
+                //Debug.Log(string.Format("[{0}] - executing OnHitTarget (reactionEvent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
+                ReactionEvent.Execute(sInfo);
             }
         }
 
-        protected override void OnMissedTarget(SkillContext sInfo, Character target)
+        protected override void OnMissedTarget(RunningSkillContext sInfo, Character target)
         {
             base.OnMissedTarget(sInfo, target);
             if (MissEvent != null)
             {
-                MissEvent.Execute(sInfo, target);
+                //Debug.Log(string.Format("[{0}] - executing OnMissedTarget (missevent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
+                MissEvent.Execute(sInfo);
             }
         }
 
@@ -56,6 +60,18 @@ namespace Gameplay.Skills.Events
         public override void Reset()
         {
             base.Reset();
+            if (MissEvent != null)
+            {
+                MissEvent.Reset();
+            }
+            if (ReactionEvent != null)
+            {
+                ReactionEvent.Reset();
+            }
+            if (TriggerEvent != null)
+            {
+                TriggerEvent.Reset();
+            }
         }
     }
 }

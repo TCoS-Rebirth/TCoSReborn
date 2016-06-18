@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using Common;
 using Database.Static;
-using Gameplay.Conversations;
 using Gameplay.Loot;
 using Gameplay.Skills;
 using Gameplay.Skills.Effects;
 using UnityEngine;
 using UnityEngine.Serialization;
-using Random = UnityEngine.Random;
 
 namespace Gameplay.Entities.NPCs
 {

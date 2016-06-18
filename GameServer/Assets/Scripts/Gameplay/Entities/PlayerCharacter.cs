@@ -20,7 +20,7 @@ using Gameplay.Loot;
 
 namespace Gameplay.Entities
 {
-    public sealed class PlayerCharacter : Character
+    public sealed partial class PlayerCharacter : Character
     {
         byte _moveFrame;
 
@@ -230,72 +230,11 @@ namespace Gameplay.Entities
 
         #endregion
 
-        #region Stats
-
-        /// <summary>
-        ///     <see cref="Character.SetPawnState" />
-        /// </summary>
-        public override void SetPawnState(EPawnStates newState)
-        {
-            base.SetPawnState(newState);
-            SendToClient(PacketCreator.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(this));
-        }
-
-        /// <summary>
-        ///     Notifies the client through combat message log, Sheates the weapon and sets the combatstate to idle TODO cleanup
-        /// </summary>
-        /// <param name="source"></param>
-        protected override void OnDiedThroughDamage(Character source)
-        {
-            base.OnDiedThroughDamage(source);
-            CombatMode = ECombatMode.CBM_Idle;
-            SheatheWeapon();
-            SendToClient(PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEDEATH(source));
-        }
-
-        protected override void OnHealthChanged()
-        {
-            base.OnHealthChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEHEALTH(this));
-        }
-
-        protected override void OnMaxHealthChanged()
-        {
-            base.OnMaxHealthChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMAXHEALTH(this));
-        }
-
-        protected override void OnPhysiqueChanged()
-        {
-            base.OnPhysiqueChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEPHYSIQUE(this));
-        }
-
-        protected override void OnMoraleChanged()
-        {
-            base.OnMoraleChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMORALE(this));
-        }
-
-        protected override void OnConcentrationChanged()
-        {
-            base.OnConcentrationChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATECONCENTRATION(this));
-        }
-
-        //protected override void OnMovementSpeedBonusChanged()
-        //{
-        //    base.OnMovementSpeedBonusChanged();
-        //    SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMOVEMENTSPEED(this));
-        //}
-
         protected override void OnLeavingZone(Zone z)
         {
             base.OnLeavingZone(z);
             relevantObjects.Clear();
         }
-
-        #endregion
 
         #region Personality/CharacterAppearance
 
@@ -465,119 +404,6 @@ namespace Gameplay.Entities
             SetHealth(MaxHealth);
             SetPawnState(EPawnStates.PS_ALIVE);
             PlayEffect(EPawnEffectType.EPET_ShapeUnshift);
-        }
-
-        #endregion
-
-        #region Skills
-
-        /// <summary>
-        ///     Initiated by the client on Skilldeck assignments. Updates the serverside skilldeck
-        /// </summary>
-        public void SetSkillDeck(int[] newSkillDeck)
-        {
-            if (newSkillDeck.Length != 30)
-            {
-                Debug.LogWarning("SetSkillDeck length mismatch");
-                return;
-            }
-            ActiveSkillDeck.Reset();
-            for (var i = 0; i < newSkillDeck.Length; i++)
-            {
-                if (newSkillDeck[i] <= 0)
-                {
-                    continue;
-                }
-                ActiveSkillDeck[i] = GetSkill(newSkillDeck[i]);
-            }
-            SendToClient(PacketCreator.S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS(this, Skills,
-                ActiveSkillDeck.ToArray()));
-        }
-
-        /// <summary>
-        ///     Adds a skill to this characters skill-list (if found by the given <see cref="id" />) TODO check requirements like
-        ///     level, class points etc
-        /// </summary>
-        /// <param name="id"></param>
-        public void LearnSkill(int id)
-        {
-            var s = GameData.Get.skillDB.GetSkill(id);
-            if (s != null)
-            {
-                LearnSkill(s);
-            }
-            else
-            {
-                Debug.Log("(LearnSkill) missing: " + id);
-            }
-        }
-
-        /// <summary>
-        ///     Initiated by the client, indicates a skill use request. Executes the requested skill (if available) and handles
-        ///     errors with skillcasting
-        /// </summary>
-        public void ClientUseSkill(int slotIndex, int targetID, Vector3 camPos, Vector3 targetPosition, float clientTime)
-        {
-            if (Mathf.Abs(clientTime - Time.time) > 0.5f)
-            {
-                SendToClient(PacketCreator.S2C_GAME_PLAYERCONTROLLER_SV2CL_UPDATESERVERTIME(Time.time));
-            }
-            var s = ActiveSkillDeck.GetSkillFromActiveTier(slotIndex);
-            var result = ESkillStartFailure.SSF_INVALID_SKILL;
-            if (s != null)
-            {
-                result = UseSkill(s.resourceID, targetID, targetPosition, clientTime, camPos);
-            }
-            if (result == ESkillStartFailure.SSF_ALLOWED)
-            {
-                ActiveSkillDeck.SetActiveSlot(slotIndex);
-            }
-            else
-            {
-                DebugChatMessage("Skill result: " + result);
-            }
-        }
-
-        protected override void OnLearnedSkill(FSkill s)
-        {
-            var m = PacketCreator.S2C_GAME_SKILLS_SV2CL_LEARNSKILL(s);
-            SendToClient(m);
-        }
-
-        protected override void OnStartCastSkill(SkillContext s)
-        {
-            base.OnStartCastSkill(s);
-            SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(this, s));
-        }
-
-        protected override void OnEndCastSkill(SkillContext s)
-        {
-            base.OnEndCastSkill(s);
-            SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(this, s.ExecutingSkill));
-        }
-
-        public override void OnDamageCaused(SkillApplyResult sap)
-        {
-            var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTDAMAGE(sap.skillTarget.RelevanceID,
-                sap.appliedSkill.resourceID, sap.damageCaused, sap.damageResisted);
-            SendToClient(m);
-        }
-
-        public override void OnHealingCaused(SkillApplyResult sap)
-        {
-            if (sap.healCaused > 0)
-            {
-                var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTHEAL(sap.skillTarget.RelevanceID,
-                    sap.appliedSkill.resourceID, sap.healCaused);
-                SendToClient(m);
-            }
-        }
-
-        public override void OnStatChangeCaused(SkillApplyResult sap)
-        {
-            SendToClient(
-                PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTSTATE(sap.skillTarget.RelevanceID,
-                    sap.appliedSkill.resourceID, sap.appliedEffect.resourceID, sap.statChange));
         }
 
         #endregion
@@ -785,22 +611,22 @@ namespace Gameplay.Entities
             SendToClient(m);
         }
 
-        public override void RunEvent(SkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
+        public override void RunEvent(RunningSkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
             Character triggerPawn, Character targetPawn)
         {
             base.RunEvent(sInfo, fxEvent, skillPawn, triggerPawn, targetPawn);
             SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
                 sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn,
-                sInfo.currentSkillTime));
+                sInfo.GetCurrentSkillTime()));
         }
 
-        public override void RunEventL(SkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
+        public override void RunEventL(RunningSkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
             Character triggerPawn, Vector3 location, Character targetPawn)
         {
             base.RunEventL(sInfo, fxEvent, skillPawn, triggerPawn, location, targetPawn);
             SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
                 sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn, location,
-                sInfo.currentSkillTime));
+                sInfo.GetCurrentSkillTime()));
         }
 
         #endregion
@@ -822,6 +648,8 @@ namespace Gameplay.Entities
 
         public override void SwitchWeapon(EWeaponCategory newWeapon)
         {
+            Debug.Log("weapon change request: " + newWeapon);
+            //var prevWeapon = equippedWeaponType;
             base.SwitchWeapon(newWeapon);
             if (CombatMode != ECombatMode.CBM_Idle)
             {

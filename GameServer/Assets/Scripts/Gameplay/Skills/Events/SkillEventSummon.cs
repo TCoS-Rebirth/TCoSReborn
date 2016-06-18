@@ -19,8 +19,9 @@ namespace Gameplay.Skills.Events
             base.DeepClone();
         }
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
         {
+            return base.Execute(context);
             //needs!
         }
 

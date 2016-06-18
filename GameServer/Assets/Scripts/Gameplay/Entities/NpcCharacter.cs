@@ -244,7 +244,7 @@ namespace Gameplay.Entities
             }
         }
 
-        protected override void OnEndCastSkill(SkillContext s)
+        protected override void OnEndCastSkill(RunningSkillContext s)
         {
             if (curBehaviour && curBehaviour.enabled)
             {

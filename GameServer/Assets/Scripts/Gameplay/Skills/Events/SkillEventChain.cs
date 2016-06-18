@@ -1,4 +1,5 @@
-﻿using Gameplay.Entities;
+﻿using Common;
+using Gameplay.Entities;
 using Gameplay.Skills.Effects;
 
 namespace Gameplay.Skills.Events
@@ -41,9 +42,14 @@ namespace Gameplay.Skills.Events
             }
         }
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
         {
-            //needs!
+            if (HasDelayPassed(context))
+            {
+                //DO things
+                return true;
+            }
+            return false;
         }
 
         public override void Reset()

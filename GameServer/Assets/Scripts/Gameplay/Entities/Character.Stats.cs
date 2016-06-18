@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using Common;
 using Network;
 using UnityEngine;
@@ -10,6 +9,10 @@ namespace Gameplay.Entities
     {
         const int MAX_ATTRIBUTE_VALUE = 100;
         const float AFFINITY_MULTIPLIER = 0.375f;
+
+        bool _freezePosition;
+
+        bool _freezeRotation;
 
         [NonSerialized] public float AttackSpeedBonus;
 
@@ -30,6 +33,24 @@ namespace Gameplay.Entities
         [NonSerialized] public float SoulAffinity;
 
         [NonSerialized] public float SpiritAffinity;
+
+        /// <summary>
+        ///     whether the movement of this character is currently frozen
+        /// </summary>
+        public bool FreezePosition
+        {
+            get { return _freezePosition; }
+            set { _freezePosition = value; }
+        }
+
+        /// <summary>
+        ///     whether the rotation of this character is currently frozen
+        /// </summary>
+        public bool FreezeRotation
+        {
+            get { return _freezeRotation; }
+            set { _freezeRotation = value; }
+        }
 
         public EContentClass ClassType
         {

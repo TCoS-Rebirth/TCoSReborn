@@ -15,12 +15,12 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public float rearIncrease;
 
-        public override bool Fire(SkillContext sInfo, Character target)
+        public override bool Fire(RunningSkillContext sInfo, Character target)
         {
             if (target != null)
             {
-                var result = target.Damage(sInfo.Caster, sInfo.ExecutingSkill, (int) damage.CalculateValue(sInfo));
-                sInfo.Caster.OnDamageCaused(result);
+                target.Damage(sInfo.SkillPawn, sInfo.ExecutingSkill, (int) damage.CalculateValue(sInfo), sInfo.SkillPawn.OnDamageCaused);
+                //sInfo.SkillPawn.OnDamageCaused(result);
                 return true;
             }
             return false;

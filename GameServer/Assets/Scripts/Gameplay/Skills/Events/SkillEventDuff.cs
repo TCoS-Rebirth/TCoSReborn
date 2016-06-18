@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using Common;
 using Gameplay.Entities;
+using UnityEngine;
 
 namespace Gameplay.Skills.Events
 {
@@ -45,17 +46,36 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public bool Visible;
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public void FireCondition(Character trigger, EDuffCondition condition, EDuffAttackType attackType, EDuffMagicType magicType = EDuffMagicType.EDMT_None,
+            EEffectType effectType = EEffectType.EET_Damage)
         {
-            base.Execute(sInfo, triggerPawn);
-            if (!fired)
+            for (int i = 0; i < ConditionalEvents.Count; i++)
             {
-                triggerPawn.AddDuff(this, Duration, StackType, StackCount, Visible);
-                fired = true;
+                var cEv = ConditionalEvents[i];
+                if (cEv.Condition == condition
+                    && cEv.AttackType == attackType
+                    && cEv.MagicType == magicType
+                    && cEv.EffectType == effectType
+                    )
+                {
+                    //cEv.Execute() run somehow..
+                }
             }
         }
 
-        public bool Apply(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
+        {
+            base.Execute(context);
+            if (!fired)
+            {
+                //triggerPawn.AddDuff(this, Duration, StackType, StackCount, Visible); //TODO
+                fired = true;
+            }
+            //Debug.Log(string.Format("[{0}] - executing event {1} of {2}", Time.time, this, context.ExecutingSkill));
+            return true;
+        }
+
+        public bool Apply(RunningSkillContext sInfo, Character triggerPawn)
         {
             if (triggerPawn != null)
             {

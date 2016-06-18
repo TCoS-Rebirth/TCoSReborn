@@ -10,8 +10,7 @@ namespace Gameplay.Events
 
         public override bool CanExecute(Entity obj, Entity subject)
         {
-            if (subject as Character && subject.ActiveZone.FindTravelDestination(DestinationTag)) return true;
-            else return false;
+            return subject as Character && subject.ActiveZone.FindTravelDestination(DestinationTag);
         }
 
         protected override void Execute(Entity obj, Entity subject)

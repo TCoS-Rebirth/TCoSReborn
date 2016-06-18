@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using Common;
+using Gameplay.Entities.NPCs;
+using Gameplay.Items;
 using Gameplay.Skills;
 using Gameplay.Skills.Effects;
 using Gameplay.Skills.Events;
 using Network;
 using UnityEngine;
-using Utility;
 using Random = UnityEngine.Random;
 
 namespace Gameplay.Entities
@@ -14,10 +15,6 @@ namespace Gameplay.Entities
     public abstract partial class Character : Entity
     {
         const float MOVESPEED_MULTIPLIER = 1f;
-
-        bool _freezePosition;
-
-        bool _freezeRotation;
 
         int _groundSpeed = 200;
 
@@ -109,24 +106,6 @@ namespace Gameplay.Entities
         }
 
         /// <summary>
-        ///     whether the movement of this character is currently frozen
-        /// </summary>
-        public bool FreezePosition
-        {
-            get { return _freezePosition; }
-            set { _freezePosition = value; }
-        }
-
-        /// <summary>
-        ///     whether the rotation of this character is currently frozen
-        /// </summary>
-        public bool FreezeRotation
-        {
-            get { return _freezeRotation; }
-            set { _freezeRotation = value; }
-        }
-
-        /// <summary>
         ///     The current physics of this character (climbing, flying, walking etc)
         /// </summary>
         public EPhysics Physics
@@ -159,8 +138,7 @@ namespace Gameplay.Entities
         }
 
         /// <summary>
-        ///     Calculates and returns the movement speed from base speed + physique modifier TODO it's likely that there are more
-        ///     sources to include
+        ///     Calculates and returns the movement speed from base speed + physique modifier TODO it's likely that there are more sources to include and a better way to represent it
         /// </summary>
         public int GetEffectiveMoveSpeed()
         {
@@ -194,7 +172,6 @@ namespace Gameplay.Entities
         public override void UpdateEntity()
         {
             base.UpdateEntity();
-            HandleSkillCasting();
             UpdateDuffs();
             RegenRoutine(1f);
         }
@@ -290,242 +267,6 @@ namespace Gameplay.Entities
 
         #endregion
 
-        #region Skills
-
-        List<FSkill> skills = new List<FSkill>();
-
-        public List<FSkill> Skills
-        {
-            get { return skills; }
-            set { skills = value; }
-        }
-
-        [SerializeField, ReadOnly] SkillDeck activeSkillDeck;
-
-        public SkillDeck ActiveSkillDeck
-        {
-            get { return activeSkillDeck; }
-            protected set { activeSkillDeck = value; }
-        }
-
-        //temporary
-        float lastBarRollTime;
-        float comboTimeLimit = 10f;
-
-        void CheckResetSkillbar()
-        {
-            if (activeSkillDeck == null)
-            {
-                return;
-            }
-            if (activeSkillDeck.GetActiveTierIndex() != 0)
-            {
-                if (Time.time - lastBarRollTime > comboTimeLimit)
-                {
-                    activeSkillDeck.ResetRoll();
-                    if (combatMode != ECombatMode.CBM_Idle)
-                    {
-                        var s = activeSkillDeck.GetSkillFromLastActiveSlot();
-                        if (s != null)
-                        {
-                            SwitchWeapon(s.requiredWeapon);
-                        }
-                    }
-                }
-            }
-        }
-
-        void RollDeck()
-        {
-            activeSkillDeck.RollDeck();
-            lastBarRollTime = Time.time;
-            if (combatMode != ECombatMode.CBM_Idle)
-            {
-                var s = activeSkillDeck.GetSkillFromLastActiveSlot();
-                if (s != null)
-                {
-                    SwitchWeapon(s.requiredWeapon);
-                }
-            }
-        }
-
-        public FSkill GetSkill(int id)
-        {
-            for (var i = 0; i < skills.Count; i++)
-            {
-                if (skills[i].resourceID == id)
-                {
-                    return skills[i];
-                }
-            }
-            return null;
-        }
-
-        protected bool HasSkill(int id)
-        {
-            return GetSkill(id) != null;
-        }
-
-        public SkillLearnResult LearnSkill(FSkill skill)
-        {
-            if (skill == null)
-            {
-                return SkillLearnResult.Invalid;
-            }
-            if (HasSkill(skill.resourceID))
-            {
-                return SkillLearnResult.AlreadyKnown;
-            }
-            skills.Add(skill);
-            OnLearnedSkill(skill);
-            return SkillLearnResult.Success;
-        }
-
-        protected virtual void OnLearnedSkill(FSkill s)
-        {
-        }
-
-        public ESkillStartFailure UseSkill(int skillID, int targetID, Vector3 targetPosition, float time,
-            Vector3 camPos = default(Vector3))
-        {
-            var s = GetSkill(skillID);
-            return UseSkill(s, targetID, targetPosition, time, camPos);
-        }
-
-        public ESkillStartFailure UseSkillIndex(int index, int targetID, Vector3 targetPosition, float time,
-            Vector3 camPos = default(Vector3))
-        {
-            if (activeSkillDeck == null)
-            {
-                return ESkillStartFailure.SSF_INVALID_SKILL;
-            }
-            var s = activeSkillDeck.GetSkillFromActiveTier(index);
-            return UseSkill(s, targetID, targetPosition, time, camPos);
-        }
-
-        ESkillStartFailure UseSkill(FSkill s, int targetID, Vector3 targetPosition, float time,
-            Vector3 camPos = default(Vector3))
-        {
-            if (_pawnState == EPawnStates.PS_DEAD)
-            {
-                return ESkillStartFailure.SSF_DEAD;
-            }
-            if (IsCasting)
-            {
-                return ESkillStartFailure.SSF_STILL_EXECUTING_SKILL;
-            }
-            if (s == null)
-            {
-                return ESkillStartFailure.SSF_INVALID_SKILL;
-            }
-            if (!s.IsCooldownReady(time))
-            {
-                return ESkillStartFailure.SSF_COOLING_DOWN;
-            }
-            var skillTarget = GetRelevantEntity<Character>(targetID);
-            s.Reset();
-            var skillInfo = new SkillContext(s, this, targetPosition, camPos, skillTarget, Time.time);
-            OnStartCastSkill(skillInfo);
-            activeSkill = skillInfo;
-            activeSkill.ExecutingSkill.LastCast = Time.time;
-            return ESkillStartFailure.SSF_ALLOWED;
-        }
-
-        protected virtual void OnStartCastSkill(SkillContext s)
-        {
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL(this, s));
-            //TODO: modify attackSpeed with buffs, stats etc
-        }
-
-        protected virtual void OnEndCastSkill(SkillContext s)
-        {
-        }
-
-        public List<Character> QueryMeleeSkillTargets(SkillEffectRange range)
-        {
-            var queriedTargets = new List<Character>();
-            var cols =
-                UnityEngine.Physics.OverlapSphere(transform.position + UnitConversion.ToUnity(range.locationOffset),
-                    range.maxRadius*UnitConversion.UnrUnitsToMeters);
-            foreach (var col in cols)
-            {
-                var c = col.GetComponent<Character>();
-                if (    c != null 
-                    &&  c != this 
-                    &&  c.PawnState != EPawnStates.PS_DEAD 
-                    && !faction.Likes(c.Faction) 
-                    && relevantObjects.Contains(c))
-                {
-                    if (IsFacing(c.Position, range.angle))
-                        queriedTargets.Add(c);
-                }
-            }
-            return queriedTargets;
-        }
-
-        public List<Character> QueryRangedSkillTargets(Vector3 point, SkillEffectRange range)
-        {
-            var queriedTargets = new List<Character>();
-            var cols = UnityEngine.Physics.OverlapSphere(point, range.maxRadius*UnitConversion.UnrUnitsToMeters);
-            foreach (var col in cols)
-            {
-                var c = col.GetComponent<Character>();
-                if (    c != null 
-                    &&  c != this 
-                    && c.PawnState != EPawnStates.PS_DEAD 
-                    && !faction.Likes(c.Faction) 
-                    && relevantObjects.Contains(c))
-                {
-                    if (IsFacing(c.Position, range.angle))
-                        queriedTargets.Add(c);
-                }
-            }
-            return queriedTargets;
-        }
-
-        #region Casting/Execution
-
-        SkillContext activeSkill;
-
-        public bool IsCasting
-        {
-            get { return activeSkill != null; }
-        }
-
-        void HandleSkillCasting()
-        {
-            CheckResetSkillbar();
-            if (activeSkill == null)
-            {
-                return;
-            }
-            var executingSkill = activeSkill.ExecutingSkill;
-            activeSkill.currentSkillTime = Time.time - activeSkill.StartTime;
-            if (executingSkill.keyFrames.Count == 0)
-            {
-                OnEndCastSkill(activeSkill);
-                RollDeck();
-                activeSkill.Cleanup();
-                activeSkill = null;
-            }
-            else
-            {
-                executingSkill.RunEvents(activeSkill);
-            }
-            if (activeSkill.currentSkillTime > executingSkill.GetSkillDuration(this))
-                //TODO: use correct varNr (specific to weapon?)
-            {
-                OnEndCastSkill(activeSkill);
-                RollDeck();
-                activeSkill.Cleanup();
-                activeSkill = null;
-            }
-        }
-
-        #endregion
-
-        #endregion
-
         #region Duffs
 
         List<DuffInfoData> duffs = new List<DuffInfoData>();
@@ -583,11 +324,10 @@ namespace Gameplay.Entities
 
         #region Damage/Healing
 
-        public SkillApplyResult Damage(Character source, FSkill s, int amount)
+        public SkillApplyResult Damage(Character source, FSkill s, int amount, Action<SkillApplyResult> callback)
         {
-            var result = new SkillApplyResult(source, this, s);
-            result.damageCaused = Mathf.Abs((int) SetHealth(Health - amount));
-            OnDamageReceived(result);
+            var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) SetHealth(Health - amount))};
+            callback(result);
 
             //Valshaaran - added not already dead condition
             if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Health, 0))
@@ -598,6 +338,7 @@ namespace Gameplay.Entities
             return result;
         }
 
+        //Callback for skillcasts
         protected virtual void OnDamageReceived(SkillApplyResult sap)
         {
             if (sap.damageCaused != 0)
@@ -671,35 +412,15 @@ namespace Gameplay.Entities
 
         #region Misc
 
-        Dictionary<int, float> animationDurations = new Dictionary<int, float>
+        readonly Dictionary<int, float> animationDurations = new Dictionary<int, float>
         {
             {2, 2f}
         };
 
         public float GetDurationForAnimation(int animNr)
         {
-            var value = 1.25f;
-            if (animationDurations.TryGetValue(animNr, out value))
-            {
-                return value;
-            }
-            return 1.25f;
-        }
-
-        public virtual void RunEvent(SkillContext sInfo, SkillEventFX fxEvent, Character skillPawn, Character triggerPawn, Character targetPawn)
-        {
-            if (!RelevanceContainsPlayers) return;
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
-                sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn,
-                sInfo.currentSkillTime));
-        }
-
-        public virtual void RunEventL(SkillContext sInfo, SkillEventFX fxEvent, Character skillPawn, Character triggerPawn, Vector3 location, Character targetPawn)
-        {
-            if (!RelevanceContainsPlayers) return;
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
-                sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn, location,
-                sInfo.currentSkillTime));
+            float value;
+            return animationDurations.TryGetValue(animNr, out value) ? value : 1.5f;
         }
 
         #endregion
@@ -707,6 +428,9 @@ namespace Gameplay.Entities
         #region Combat
 
         [NonSerialized] public EWeaponCategory equippedWeaponType; //TODO: temporary, equip real weapon
+
+        Item_Type MainHandWeapon;
+        Item_Type OffHandWeapon;
 
         [NonSerialized] ECombatMode combatMode;
 

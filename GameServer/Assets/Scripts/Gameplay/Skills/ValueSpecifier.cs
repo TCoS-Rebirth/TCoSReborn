@@ -36,7 +36,7 @@ namespace Gameplay.Skills
         public float targetCountMinimumMultiplier;
         public List<TaxonomyIncrease> taxonomyIncreases = new List<TaxonomyIncrease>();
 
-        public float CalculateValue(SkillContext sInfo)
+        public float CalculateValue(RunningSkillContext sInfo)
         {
             //TODO calculate correct values
             if (!Mathf.Approximately(constantMaximum, 0))
@@ -53,12 +53,12 @@ namespace Gameplay.Skills
             }
         }
 
-        float GetSourceStatisticValue(SkillContext sInfo)
+        float GetSourceStatisticValue(RunningSkillContext sInfo)
         {
             switch (source)
             {
                 case EVSSource.EVSS_TriggerPawn:
-                    return sInfo.Caster.GetCharacterStatistic(characterStatistic);
+                    return sInfo.SkillPawn.GetCharacterStatistic(characterStatistic);
                 case EVSSource.EVSS_TargetPawn:
                     return sInfo.PreferedTarget != null ? sInfo.PreferedTarget.GetCharacterStatistic(characterStatistic) : 0;
                 default:

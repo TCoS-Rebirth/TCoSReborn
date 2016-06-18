@@ -62,31 +62,33 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public SkillEffectDirectTeleport Teleport;
 
-        public override void Execute(SkillContext sInfo, Character triggerPawn)
+        public override bool Execute(RunningSkillContext context)
         {
-            //needs!
-            base.Execute(sInfo, triggerPawn);
-            if (!sInfo.IsInCurrentTimeSpan(Delay))
-            {
-                return;
-            }
+            base.Execute(context);
+            if (!HasDelayPassed(context)) return false;
             if (firstExecute)
             {
-                GatherTargets(sInfo);
+                //Debug.Log(string.Format("[{0}] - executing gatherTargets in {1} of {2}", Time.time, this, context.ExecutingSkill));
+                GatherTargets(context);
                 firstExecute = false;
             }
-            if (currentRepeat <= RepeatCount && sInfo.currentSkillTime - lastRepeatTime >= Interval)
+            if (currentRepeat > RepeatCount)
             {
-                ExecuteDirectEffects(sInfo, triggerPawn);
-                currentRepeat++;
-                lastRepeatTime = sInfo.currentSkillTime;
+                //Debug.Log(string.Format("[{0}] - event finished: {1} of {2}", Time.time, this, context.ExecutingSkill));
+                return true;
             }
+            if (context.GetCurrentSkillTime() - lastRepeatTime < Interval) return false;
+            //Debug.Log(string.Format("[{0}] - executing DirectEffects in {1} of {2}", Time.time, this, context.ExecutingSkill));
+            ExecuteDirectEffects(context);
+            currentRepeat++;
+            lastRepeatTime = context.GetCurrentSkillTime();
+            return false;
         }
 
-        void ExecuteDirectEffects(SkillContext sInfo, Character triggerPawn)
+        protected void ExecuteDirectEffects(RunningSkillContext sInfo)
         {
             var success = false;
-            for (var i = 0; i < Mathf.Min(targets.Count, TargetsPerRepeat); i++)
+            for (var i = 0; i < targets.Count /*Mathf.Min(targets.Count, TargetsPerRepeat)*/; i++) //probably not correct
             {
                 if (_State != null)
                 {
@@ -115,42 +117,45 @@ namespace Gameplay.Skills.Events
             }
             if (!success)
             {
-                OnMissedTarget(sInfo, sInfo.Caster);
+                OnMissedTarget(sInfo, sInfo.SkillPawn);
             }
         }
 
-        protected virtual void OnHitTarget(SkillContext sInfo, Character target)
+        protected virtual void OnHitTarget(RunningSkillContext sInfo, Character target)
         {
             if (HitFXEvent != null)
             {
-                HitFXEvent.Execute(sInfo, target);
+                //Debug.Log(string.Format("[{0}] - executing OnHitTarget (hitfxevent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
+                HitFXEvent.Execute(sInfo);
             }
         }
 
-        protected virtual void OnMissedTarget(SkillContext sInfo, Character target)
+        protected virtual void OnMissedTarget(RunningSkillContext sInfo, Character target)
         {
             if (MissFXEvent != null)
             {
-                MissFXEvent.Execute(sInfo, target);
+                //Debug.Log(string.Format("[{0}] - executing OnMissedTarget (missfxevent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
+                MissFXEvent.Execute(sInfo);
             }
         }
 
-        void GatherTargets(SkillContext sInfo)
+        protected void GatherTargets(RunningSkillContext sInfo)
         {
+            //Debug.Log(string.Format("[{0}] - gathering targets in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
             targets.Clear();
             if (TargetSelf != ETargetMode.ETM_Never)
             {
-                targets.Add(sInfo.Caster);
+                targets.Add(sInfo.SkillPawn);
                 return;
             }
             if (TargetFriendlies != ETargetMode.ETM_Never)
             {
                 if (Range != null)
                 {
-                    var potentialTargets = sInfo.Caster.QueryMeleeSkillTargets(Range);
+                    var potentialTargets = sInfo.SkillPawn.QueryMeleeSkillTargets(Range);
                     for (var i = 0; i < potentialTargets.Count; i++)
                     {
-                        if (sInfo.Caster.Faction.Likes(potentialTargets[i].Faction))
+                        if (sInfo.SkillPawn.Faction.Likes(potentialTargets[i].Faction))
                         {
                             targets.Add(potentialTargets[i]);
                         }
@@ -167,23 +172,12 @@ namespace Gameplay.Skills.Events
                 targets.Clear(); //TODO check if this conflicts
                 if (Range != null)
                 {
-                    var potentialTargets = new List<Character>();
-                    if (sInfo.ExecutingSkill.paintLocation)
-                    {
-                        //if (sInfo.Caster.Faction.Hates(potentialTargets[i].Faction)) //disabled for testing
-                        //{
-                        potentialTargets = sInfo.Caster.QueryRangedSkillTargets(sInfo.TargetPosition, Range);
-                        //}
-                    }
-                    else
-                    {
-                        potentialTargets = sInfo.Caster.QueryMeleeSkillTargets(Range);
-                    }
+                    var potentialTargets = sInfo.ExecutingSkill.paintLocation ? sInfo.SkillPawn.QueryRangedSkillTargets(sInfo.TargetPosition, Range) : sInfo.SkillPawn.QueryMeleeSkillTargets(Range);
                     for (var i = 0; i < potentialTargets.Count; i++)
                     {
-                        //if (sInfo.Caster.Faction.Hates(potentialTargets[i].Faction)) //disabled for testing
+                        //if (sInfo.SkillPawn.Faction.Hates(potentialTargets[i].Faction)) //disabled for testing
                         //{
-                        targets.Add(potentialTargets[i]);
+                            targets.Add(potentialTargets[i]);
                         //}
                     }
                 }
@@ -192,6 +186,7 @@ namespace Gameplay.Skills.Events
                     Debug.Log("Range null, cant query targets (?)");
                 }
             }
+            //Debug.Log(string.Format("[{0}] - targets found: {1} in {2} of {3}", Time.time, targets.Count, this, sInfo.ExecutingSkill));
         }
 
         public override void DeepClone()

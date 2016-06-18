@@ -5,8 +5,7 @@ using Gameplay.Items;
 using UnityEngine;
 
 namespace Gameplay.Entities.Players
-{
-    
+{   
 
     [Serializable]
     public class Player_ItemManager

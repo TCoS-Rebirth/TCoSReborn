@@ -154,7 +154,7 @@ public class PackageExtractorWindow : EditorWindow
 
     void OnResized()
     {
-        var spacing = 5f;
+        const float spacing = 5f;
         menuRect = new Rect(spacing, spacing, 200 - spacing, position.height - 400 - spacing*2f);
         logRect = new Rect(spacing, position.height - 200 + spacing, position.width - spacing*2f, 200 - spacing*2f);
         contentRect = new Rect(200 + spacing, spacing, position.width - 600 - spacing*2f, position.height - 200 - spacing);
@@ -191,8 +191,7 @@ public class PackageExtractorWindow : EditorWindow
         {
             activeWrapper.OnDestroy();
         }
-        activeWrapper = new PackageWrapper(packageFileName, arrayDefinitions, LogString);
-        activeWrapper.LogString = LogString;
+        activeWrapper = new PackageWrapper(packageFileName, arrayDefinitions, LogString) {LogString = LogString};
         if (activeAdapter != null)
         {
             if (!activeAdapter.IsCompatible(activeWrapper))
@@ -269,12 +268,10 @@ public class PackageExtractorWindow : EditorWindow
         for (var i = 0; i < logMessages.Count; i++)
         {
             logLabelRect.y = logLabelRect.height*i;
-            if (logLabelRect.y + logLabelRect.height >= logScrollPos.y && logLabelRect.y <= logScrollPos.y + logRect.height)
-            {
-                var m = logMessages[logMessages.Count - i - 1];
-                GUI.backgroundColor = m.color;
-                GUI.Label(logLabelRect, m.text, EditorStyles.helpBox);
-            }
+            if (!(logLabelRect.y + logLabelRect.height >= logScrollPos.y) || !(logLabelRect.y <= logScrollPos.y + logRect.height)) continue;
+            var m = logMessages[logMessages.Count - i - 1];
+            GUI.backgroundColor = m.color;
+            GUI.Label(logLabelRect, m.text, EditorStyles.helpBox);
         }
         GUI.backgroundColor = Color.white;
         logViewRect.height = Mathf.Max(logLabelRect.y + logLabelRect.height, logRect.height + 1);
