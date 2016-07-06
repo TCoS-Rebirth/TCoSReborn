@@ -67,8 +67,8 @@ namespace PackageExtractor
         [Serializable]
         public class SBClassInfo
         {
-            public List<SBArrayTypeInfo> arrayTypeDefinitions = new List<SBArrayTypeInfo>();
             public string className = "";
+            public List<SBArrayTypeInfo> arrayTypeDefinitions = new List<SBArrayTypeInfo>();
         }
 
         [Serializable]
