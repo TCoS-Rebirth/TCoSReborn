@@ -196,6 +196,7 @@ namespace Gameplay.Entities
             base.UpdateEntity();
             HandleSkillCasting();
             UpdateDuffs();
+            RegenRoutine(1f);
         }
 
         #region Emotes
@@ -244,26 +245,25 @@ namespace Gameplay.Entities
 
             string stateString;
 
-            switch ((int)state)
+            switch (state)
             {
-                case 1:
-                    _controllerState = EControllerStates.CPS_PAWN_ALIVE;
+                case EControllerStates.CPS_PAWN_ALIVE:
+                    _controllerState = state;
                     stateString = "PawnAlive";
                     break;
 
-                case 2:
-
-                    _controllerState = EControllerStates.CPS_PAWN_DEAD;
+                case EControllerStates.CPS_PAWN_DEAD:
+                    _controllerState = state;
                     stateString = "PawnDead";
                     break;
 
-                case 3:
-                    _controllerState = EControllerStates.CPS_PAWN_SITTING;
+                case EControllerStates.CPS_PAWN_SITTING:
+                    _controllerState = state;
                     stateString = "PawnSitting";
                     break;
 
-                case 4:
-                    _controllerState = EControllerStates.CPS_PAWN_FROZEN;
+                case EControllerStates.CPS_PAWN_FROZEN:
+                    _controllerState = state;
                     stateString = "PawnFrozen";
                     break;
 

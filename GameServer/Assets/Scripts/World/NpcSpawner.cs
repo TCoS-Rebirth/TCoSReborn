@@ -87,7 +87,7 @@ namespace World
             if (spawns.Count == 0)
             {
                 var newSI = new SpawnInfo();
-                newSI.setupFromSpawner(this,transform.position,Quaternion.ToEulerAngles(transform.rotation));
+                newSI.setupFromSpawner(this, transform.position, transform.rotation.eulerAngles);
 
                 //Valshaaran - experimental raycast spawning to address mid-air ConditionalEnemy spawns
                 //var rayCast = zone.Raycast(transform.position, Vector3.down, 20f);
@@ -144,10 +144,10 @@ namespace World
 
         public int liveSpawns ()
         {
-            int output = 0;
-            foreach (var spawn in spawns)
+            var output = 0;
+            for (var i = 0; i < spawns.Count; i++)
             {
-                if (spawn.PawnState == EPawnStates.PS_ALIVE) output++;
+                if (spawns[i].PawnState == EPawnStates.PS_ALIVE) output++;
             }
             return output;
         }

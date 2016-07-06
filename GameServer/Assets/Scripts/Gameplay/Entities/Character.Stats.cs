@@ -63,17 +63,27 @@ namespace Gameplay.Entities
         {
             UpdateAffinities();
             UpdateResistances();
-            StartCoroutine(RegenRoutine(1f));
+            //StartCoroutine(RegenRoutine(1f));
         }
 
-        IEnumerator RegenRoutine(float tickInterval)
+        float lastRegen;
+        void RegenRoutine(float tickInterval)
         {
-            while (true)
+            if (Time.time - lastRegen > tickInterval)
             {
-                while (combatMode != ECombatMode.CBM_Idle) yield return null;
                 DeRegenerateStats(tickInterval);
-                yield return new WaitForSeconds(tickInterval);
+                lastRegen = Time.time;
             }
+            //while (true)
+            //{
+            //    if (combatMode != ECombatMode.CBM_Idle)
+            //    {
+            //        DeRegenerateStats(tickInterval);
+            //    }
+            //    var t = Time.time;
+            //    while (Time.time - t < tickInterval) yield return null;
+            //    //yield return new WaitForSeconds(tickInterval);
+            //}
         }
 
         protected void UpdateAffinities()
@@ -154,13 +164,13 @@ namespace Gameplay.Entities
 
         public void DeRegenerateStats(float deltaTime)
         {
-            var prevHealth = Health;
+            var prevValue = Health;
             Health = Mathf.MoveTowards(Health, MaxHealth, HealthRegeneration*deltaTime);
-            if (Health != prevHealth)
+            if (Health != prevValue)
             {
                 OnHealthChanged();
             }
-            var prevValue = Physique;
+            prevValue = Physique;
             if (Physique < _physiqueDelta)
             {
                 Physique = Mathf.MoveTowards(Physique, StateRank + _physiqueDelta, PhysiqueRegeneration*deltaTime);
