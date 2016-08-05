@@ -71,7 +71,8 @@ namespace World
                     //Roll level if not specified
                     if (newNPC.FameLevel == 0)
                         newNPC.FameLevel = Random.Range(LevelMin, LevelMax);
-
+                    newNPC.OnPawnStateChanged += OnSpawnStateChanged;
+                    spawnsAlive++;
                     newNPC.InitEnabled = true;
                     newNPC.InitColl = ECollisionType.COL_Colliding;
 
@@ -116,7 +117,7 @@ namespace World
             }
             else
             {
-                var numSpawns = liveSpawns();
+                var numSpawns = spawnsAlive;
                 if (numSpawns == 0 || numSpawns < (int) (spawnNumMult*SpawnMin))
                 {
                     respawnPending = true;

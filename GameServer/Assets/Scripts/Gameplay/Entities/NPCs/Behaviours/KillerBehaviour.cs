@@ -57,8 +57,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
                 //Not sure if _currentPosition ought to be set to this elsewhere?
                 owner.Position = owner.ActiveZone.Raycast(owner.Position + Vector3.up, Vector3.down, 10f);
             }
-            owner.RespawnInfo.initialSpawnPoint = owner.Position;
-            startPosition = owner.Position;
+            _currentPosition = owner.Position;
+            owner.RespawnInfo.initialSpawnPoint = _currentPosition;
+            startPosition = _currentPosition;
             startOrientation = owner.Rotation;
             owner.SetMoveSpeed(ENPCMovementFlags.ENMF_Walking);
             rndTargetPos = startPosition;
@@ -67,7 +68,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
             aggroRadius = owner.RespawnInfo.aggroRadius;
         }
 
-        public override void OnDamage(Character source, FSkill s, int amount)
+        public override void OnDamage(Character source, FSkill_Type s, int amount)
         {
             if (!canPath)
             {
@@ -296,9 +297,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
             if (Time.time - lastAttack > 2f)
             {
-                if (!owner.IsCasting)
+                if (!owner.skills.IsCasting)
                 {
-                    var result = owner.UseSkillIndex(0, target.RelevanceID, _currentPosition, Time.time);
+                    var result = owner.skills.UseSkillIndex(0, target.RelevanceID, _currentPosition, Time.time);
                     if (result == ESkillStartFailure.SSF_INVALID_SKILL)
                     {
                         state = NpcStates.Fleeing;

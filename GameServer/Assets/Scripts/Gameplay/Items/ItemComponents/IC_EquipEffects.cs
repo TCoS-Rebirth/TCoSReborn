@@ -25,7 +25,7 @@ namespace Gameplay.Items.ItemComponents
             ETS_RuneMage4
         }
 
-        public SkillEventDuff EquipDuffEvent;
+        public FSkillEventDuff EquipDuffEvent;
         public int equipDuffEventID;
         public EEquipTattooBodyPart EquipTattooBodyPart;
         public EEquipTattooSet EquipTattooSet;

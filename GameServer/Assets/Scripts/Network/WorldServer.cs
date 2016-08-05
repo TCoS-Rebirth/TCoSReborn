@@ -559,7 +559,8 @@ namespace Network
                 m.ReadRotator(); //Rotator viewRotation = 
                 var targetID = m.ReadInt32();
                 var clientTime = m.ReadFloat();
-                pc.ClientUseSkill(skillbarIndex, targetID, Vector3.zero, targetPos, clientTime);
+                throw new NotImplementedException("FixMe");
+                //pc.ClientUseSkill(skillbarIndex, targetID, Vector3.zero, targetPos, clientTime);
             }
         }
 
@@ -575,7 +576,8 @@ namespace Network
                 m.ReadRotator(); //viewRotation 
                 var targetID = m.ReadInt32();
                 var clientTime = m.ReadFloat();
-                pc.ClientUseSkill(skillbarIndex, targetID, camPos, targetPos, clientTime);
+                throw new NotImplementedException("FixMe");
+                //pc.ClientUseSkill(skillbarIndex, targetID, camPos, targetPos, clientTime);
             }
         }
 
@@ -841,7 +843,8 @@ namespace Network
             var p = m.GetAssociatedCharacter();
             if (p)
             {
-                p.SetSkillDeck(deck);
+                //p.SetSkillDeck(deck);
+                throw new NotImplementedException("FixMe");
             }
         }
 
@@ -852,7 +855,8 @@ namespace Network
             var p = m.GetAssociatedCharacter();
             if (p)
             {
-                p.LearnSkill(skillID);
+                //p.LearnSkill(skillID);
+                throw new NotImplementedException("FixMe");
             }
         }
 

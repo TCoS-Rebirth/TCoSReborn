@@ -43,6 +43,17 @@ namespace World
 
         protected Zone zone;
 
+        protected int spawnsAlive = 0;
+        public int SpawnsAlive { get { return spawnsAlive; } }
+
+        protected void OnSpawnStateChanged(Character ch)
+        {
+            if (ch.PawnState == EPawnStates.PS_DEAD)
+            {
+                spawnsAlive--;
+            }
+        }
+
         public virtual void Initialize(Zone z)
         {
             if (initialized)
@@ -71,9 +82,9 @@ namespace World
             }
 
             //Valshaaran : temp hack to not spawn anything with position 0,0,0
-            if (    transform.position.x == 0.0
-                && transform.position.y == 0.0
-                && transform.position.z == 0.0)
+            if (    /*transform.position.x == 0.0*/ transform.position == Vector3.zero
+                //&& transform.position.y == 0.0
+               /* && transform.position.z == 0.0*/)
             {
                 triggeredSpawn = true;
                 return;
@@ -101,7 +112,8 @@ namespace World
                 //Set to default faction if typeref faction was null
                 if (newNPC.Faction == null)
                     newNPC.Faction = GameData.Get.factionDB.defaultFaction;
-
+                newNPC.OnPawnStateChanged += OnSpawnStateChanged;
+                spawnsAlive++;
                 newNPC.InitEnabled = true;
                 newNPC.InitColl = ECollisionType.COL_Colliding;
 
@@ -142,16 +154,6 @@ namespace World
             }
         }
 
-        public int liveSpawns ()
-        {
-            var output = 0;
-            for (var i = 0; i < spawns.Count; i++)
-            {
-                if (spawns[i].PawnState == EPawnStates.PS_ALIVE) output++;
-            }
-            return output;
-        }
-
         void FixedUpdate()
         {
             if (!initialized || triggeredSpawn) return;
@@ -166,7 +168,7 @@ namespace World
                 }
                 else { respawnTimer -= Time.deltaTime; }
             }
-            else if (liveSpawns() == 0)
+            else if (spawnsAlive == 0)
             {
                 respawnPending = true;
                 respawnTimer = respawnTimeout;

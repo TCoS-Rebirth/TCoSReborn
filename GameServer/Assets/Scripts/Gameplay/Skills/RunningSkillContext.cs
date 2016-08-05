@@ -12,14 +12,14 @@ namespace Gameplay.Skills
         public readonly float Duration;
         public Character PreferedTarget;
         public Character TriggerPawn;
-        public readonly FSkill ExecutingSkill;
+        public readonly FSkill_Type ExecutingSkill;
         public readonly int SourceItemID;
         public readonly float StartTime;
         public readonly Vector3 TargetPosition;
 
         public bool Aborted;
 
-        public RunningSkillContext(FSkill s, float duration, Character skillPawn, Vector3 position, Character focusedTarget, float time, int itemID = -1)
+        public RunningSkillContext(FSkill_Type s, float duration, Character skillPawn, Vector3 position, Character focusedTarget, float time, int itemID = -1)
         {
             SkillPawn = skillPawn;
             ExecutingSkill = s;
@@ -31,7 +31,7 @@ namespace Gameplay.Skills
             Aborted = false;
         }
 
-        public RunningSkillContext(FSkill s, float duration, Character skillPawn, Vector3 position, Vector3 camPos, Character focusedTarget, float time, int itemID = -1)
+        public RunningSkillContext(FSkill_Type s, float duration, Character skillPawn, Vector3 position, Vector3 camPos, Character focusedTarget, float time, int itemID = -1)
         {
             SkillPawn = skillPawn;
             ExecutingSkill = s;

@@ -1103,17 +1103,17 @@ namespace Network
 
         #region Skills
 
-        public static Message S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(PlayerCharacter pc, RunningSkillContext s)
+        public static Message S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(PlayerCharacter pc, Game_Skills.RunningSkillData s, int tokenItemID)
         {
             var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL);
-            m.WriteInt32(s.ExecutingSkill.resourceID); //skillID
+            m.WriteInt32(s.Skill.resourceID); //skillID
             m.WriteFloat(s.StartTime); //startTime
-            m.WriteFloat(s.ExecutingSkill.GetSkillDuration(pc)); //(animation duration has to be manually collected)
-            m.WriteFloat(s.ExecutingSkill.attackSpeed); //skillSpeed
-            m.WriteInt32(s.ExecutingSkill.freezePawnMovement ? 1 : 0); //freezeMovement
-            m.WriteInt32(s.ExecutingSkill.freezePawnRotation ? 1 : 0); //freezeRotation
-            m.WriteInt32(s.SourceItemID); //aTokenItemID
-            m.WriteInt32(s.ExecutingSkill.animationVariation); //animVarNr
+            m.WriteFloat(s.Duration); //(animation duration has to be manually collected)
+            m.WriteFloat(s.SkillSpeed); //skillSpeed
+            m.WriteInt32(s.LockedMovement ? 1 : 0); //freezeMovement
+            m.WriteInt32(s.LockedRotation ? 1 : 0); //freezeRotation
+            m.WriteInt32(tokenItemID); //aTokenItemID
+            m.WriteInt32(s.Skill.animationVariation); //animVarNr
             return m;
         }
 
@@ -1134,7 +1134,7 @@ namespace Network
             return m;
         }
 
-        public static Message S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(PlayerCharacter pc, FSkill s)
+        public static Message S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(PlayerCharacter pc, FSkill_Type s)
         {
             var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL);
             return m;
@@ -1147,7 +1147,7 @@ namespace Network
             m.WriteInt32(ch.RelevanceID);
             m.WriteInt32(skillID);
             m.WriteInt32(eventID);
-            m.WriteInt32(flags); //? probably SBAnimationActionFlags
+            m.WriteInt32(flags); // constants in SkillEvent
             m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
             m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
             m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);
@@ -1162,7 +1162,7 @@ namespace Network
             m.WriteInt32(ch.RelevanceID);
             m.WriteInt32(skillID);
             m.WriteInt32(eventID);
-            m.WriteInt32(flags); //?
+            m.WriteInt32(flags); //constants in SkillEvent
             m.WriteInt32(skillPawn != null ? skillPawn.RelevanceID : -1);
             m.WriteInt32(triggerPawn != null ? triggerPawn.RelevanceID : -1);
             m.WriteInt32(targetPawn != null ? targetPawn.RelevanceID : -1);
@@ -1186,14 +1186,14 @@ namespace Network
             return m;
         }
 
-        public static Message S2C_GAME_SKILLS_SV2CL_LEARNSKILL(FSkill s)
+        public static Message S2C_GAME_SKILLS_SV2CL_LEARNSKILL(FSkill_Type s)
         {
             var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_LEARNSKILL);
             m.WriteInt32(s.resourceID);
             return m;
         }
 
-        public static Message S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS(PlayerCharacter p, List<FSkill> skills, FSkill[] deck)
+        public static Message S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS(PlayerCharacter p, List<FSkill_Type> skills, FSkill_Type[] deck)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS);
             m.WriteInt32(skills.Count);
@@ -1489,21 +1489,21 @@ namespace Network
                 m.WriteInt32(0); //something with DBSkillDecks
             }
 
-            m.WriteInt32(p.Skills.Count); //learnedskills
-            for (var i = 0; i < p.Skills.Count; i++)
+            m.WriteInt32(p.skills.CharacterSkills.Count); //learnedskills
+            for (var i = 0; i < p.skills.CharacterSkills.Count; i++)
             {
-                m.WriteInt32(p.Skills[i].resourceID); //skillID
-                m.WriteByte((byte) p.Skills[i].SigilSlots); //sigilSlots
+                m.WriteInt32(p.skills.CharacterSkills[i].resourceID); //skillID
+                m.WriteByte((byte) p.skills.GetTokenSlots(p.skills.CharacterSkills[i])); //sigilSlots
             }
 
-            var sds = p.ActiveSkillDeck.GetSkillDeckSkills();
-            m.WriteInt32(sds.Count); //skilldeckSkills
-            for (var i = 0; i < sds.Count; i++)
-            {
-                m.WriteInt32(0);
-                m.WriteInt32(sds[i].skillID);
-                m.WriteByte((byte) sds[i].totalDeckSlot);
-            }
+            //var sds = p.ActiveSkillDeck.GetSkillDeckSkills();
+            m.WriteInt32(0); //skilldeckSkills count
+            //for (var i = 0; i < sds.Count; i++)
+            //{
+            //    m.WriteInt32(0);
+            //    m.WriteInt32(sds[i].skillID);
+            //    m.WriteByte((byte) sds[i].totalDeckSlot);
+            //}
 
             #region Player quest data
             //Finished quests

@@ -144,10 +144,10 @@ namespace PackageExtractor.Adapter
             EditorUtility.SetDirty(collection);
         }
 
-        SkillDeck FindSkillDeck(string deckname)
+        NPC_SkillDeck FindSkillDeck(string deckname)
         {
             var parts = deckname.Split('.');
-            return AssetDatabase.LoadAssetAtPath<SkillDeck>("Assets/GameData/Decks/" + parts[0] + "/" + parts[parts.Length - 1] + ".asset");
+            return AssetDatabase.LoadAssetAtPath<NPC_SkillDeck>("Assets/GameData/Decks/" + parts[0] + "/" + parts[parts.Length - 1] + ".asset");
         }
 
         NPC_StatTable FindNPCStats(PackageWrapper active, string npcname)

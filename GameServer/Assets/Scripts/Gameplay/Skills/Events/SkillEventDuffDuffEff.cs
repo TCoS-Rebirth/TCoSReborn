@@ -9,7 +9,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public SkillEffectDuff effect;
 
-        [ReadOnly] public SkillEventFX ExecuteFXEvent;
+        [ReadOnly] public FSkillEventFx ExecuteFXEvent;
 
         [ReadOnly] public string internalName;
 

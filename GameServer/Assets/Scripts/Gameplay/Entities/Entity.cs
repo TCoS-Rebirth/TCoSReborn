@@ -183,6 +183,19 @@ namespace Gameplay.Entities
         {
         }
 
+        void OnDestroy()
+        {
+            
+        }
+
+        /// <summary>
+        /// callback when this entity is removed from the world
+        /// </summary>
+        protected virtual void OnDestroyed()
+        {
+            
+        }
+
         /// <summary>
         ///     Call this to Teleport the entity to <see cref="newPos" /> with <see cref="newRot" />. override this to implement
         ///     the relevant broadcasts. Always call this base method
@@ -205,10 +218,10 @@ namespace Gameplay.Entities
 
 
         /// <summary>
-        ///     Shortcut for <see cref="IsInRange(Vector3,FSkill)" /> where the position is taken from the entity
+        ///     Shortcut for <see cref="IsInRange(Vector3,FSkill_Type)" /> where the position is taken from the entity
         ///     <see cref="other" />
         /// </summary>
-        public bool IsInRange(Entity other, FSkill s)
+        public bool IsInRange(Entity other, FSkill_Type s)
         {
             if (other == null)
             {
@@ -221,7 +234,7 @@ namespace Gameplay.Entities
         ///     Checks if <see cref="pos" /> is in range of Skill <see cref="s" />.
         ///     This evaluates if the skill is melee/directed or aoe (paintLocation)
         /// </summary>
-        public bool IsInRange(Vector3 pos, FSkill s)
+        public bool IsInRange(Vector3 pos, FSkill_Type s)
         {
             if (s.paintLocation)
             {
@@ -263,7 +276,9 @@ namespace Gameplay.Entities
 
         [NonSerialized] public int RelObjectCount;
 
-        [NonSerialized] public bool RelevanceContainsPlayers;
+        [NonSerialized] public bool relevanceContainsPlayers;
+
+        public bool RelevanceContainsPlayers { get { return relevanceContainsPlayers; } }
 
         /// <summary>
         ///     List of all relevant/in range entities
@@ -287,8 +302,9 @@ namespace Gameplay.Entities
         ///     Call this to broadcast a Message to all entites in relevance
         /// </summary>
         /// <param name="m"></param>
-        protected void BroadcastRelevanceMessage(Message m)
+        public void BroadcastRelevanceMessage(Message m, bool skipIfNoRelevantPlayers = true)
         {
+            if (skipIfNoRelevantPlayers && !relevanceContainsPlayers) return;
             for (var i = 0; i < relevantObjects.Count; i++)
             {
                 relevantObjects[i].ReceiveRelevanceMessage(this, m);
@@ -403,7 +419,7 @@ namespace Gameplay.Entities
             relevantObjects.Add(other);
             if (other is PlayerCharacter)
             {
-                RelevanceContainsPlayers = true;
+                relevanceContainsPlayers = true;
             }
             RelObjectCount = relevantObjects.Count;
         }
@@ -417,7 +433,7 @@ namespace Gameplay.Entities
         {
             relevantObjects.Remove(other);
             RelObjectCount = relevantObjects.Count;
-            RelevanceContainsPlayers = KnowsRelevantObjectOfType<PlayerCharacter>();
+            relevanceContainsPlayers = KnowsRelevantObjectOfType<PlayerCharacter>();
         }
 
         public void OnEntityBecameIrrelevant(int otherID)
@@ -429,7 +445,7 @@ namespace Gameplay.Entities
                 break;
             }
             RelObjectCount = relevantObjects.Count;
-            RelevanceContainsPlayers = KnowsRelevantObjectOfType<PlayerCharacter>();
+            relevanceContainsPlayers = KnowsRelevantObjectOfType<PlayerCharacter>();
         }
 
         int IGridEntity<Entity>.GetID()

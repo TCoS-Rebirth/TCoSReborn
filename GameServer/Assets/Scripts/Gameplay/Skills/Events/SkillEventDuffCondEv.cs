@@ -13,7 +13,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public EEffectType EffectType;
 
-        [ReadOnly] public SkillEvent Event;
+        [ReadOnly] public FSkill_Event Event;
 
         [ReadOnly] public float IncreasePerUse;
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Database.Static;
 using Gameplay.Skills;
@@ -63,7 +64,7 @@ namespace PackageExtractor.Adapter
             return null;
         }
 
-        FSkill GetSkillFromPackage(string fullRefName)
+        FSkill_Type GetSkillFromPackage(string fullRefName)
         {
             var parts = fullRefName.Split('.');
             SkillCollection selected = null;
@@ -117,7 +118,7 @@ namespace PackageExtractor.Adapter
             {
                 if (wpo.sbObject.ClassName.Replace("\0", string.Empty) == "SBGame.NPC_SkillDeck")
                 {
-                    var newDeck = ScriptableObject.CreateInstance<SkillDeck>();
+                    var newDeck = ScriptableObject.CreateInstance<NPC_SkillDeck>();
                     var tierArrayProp = wpo.FindProperty("Tiers");
                     if (tierArrayProp == null)
                     {
@@ -132,7 +133,7 @@ namespace PackageExtractor.Adapter
                             Log("Referenced Tier not found", Color.yellow);
                             continue;
                         }
-                        var newTier = new SkillDeck.SkillDeckTier();
+                        var newTier = new NPC_SkillDeck.SkillDeckTier();
                         var skillsArrayProp = tierObject.FindProperty("skills");
                         if (skillsArrayProp != null)
                         {
@@ -145,12 +146,14 @@ namespace PackageExtractor.Adapter
                                     var skill = GetSkillFromPackage(searchName);
                                     if (skill != null)
                                     {
-                                        newTier[currentSkillIndex] = skill;
+                                        throw new NotImplementedException("FixMe");
+                                        //newTier[currentSkillIndex] = skill;
                                     }
                                 }
                                 currentSkillIndex++;
                             }
-                            newDeck.Tiers.Add(newTier);
+                            throw new NotImplementedException("FixMe");
+                            //newDeck.Tiers.Add(newTier);
                         }
                     }
                     SaveDeck(newDeck, wpo.Name);
@@ -158,7 +161,7 @@ namespace PackageExtractor.Adapter
             }
         }
 
-        void SaveDeck(SkillDeck deck, string deckName)
+        void SaveDeck(NPC_SkillDeck deck, string deckName)
         {
             AssetDatabase.CreateAsset(deck, folder + "/" + deckName + ".asset");
             EditorUtility.SetDirty(deck);

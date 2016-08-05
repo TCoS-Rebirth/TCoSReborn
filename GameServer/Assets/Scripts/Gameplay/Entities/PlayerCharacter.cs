@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Common;
 using Database.Dynamic.Internal;
 using Database.Static;
@@ -94,17 +95,30 @@ namespace Gameplay.Entities
             Money = dbRef.Money;
             PawnState = (EPawnStates) dbRef.PawnState;
             itemManager.LoadItems(dbRef.Items);
+
+            var sk = ScriptableObject.CreateInstance<Game_PlayerSkills>();
+            sk.Init(this);
+            var cSkills = new List<FSkill_Type>();
+            var sDeck = new FSkill_Type[30];
             for (var i = 0; i < dbRef.Skills.Count; i++)
             {
-                var s = GameData.Get.skillDB.GetSkill(dbRef.Skills[i].ResourceId);
+                var dbs = dbRef.Skills[i];
+                var s = GameData.Get.skillDB.GetSkill(dbs.ResourceId);
                 if (s != null)
                 {
-                    s.SigilSlots = dbRef.Skills[i].SigilSlots;
-                    Skills.Add(s);
+                    for (var j = 0; j < dbs.SigilSlots; j++)
+                    {
+                        sk.AddTokenSlot(s);
+                    }
+                    cSkills.Add(s);
+                    if (dbs.SkillDeckSlot >= 0)
+                    {
+                        sDeck[dbs.SkillDeckSlot] = s;
+                    }
                 }
             }
-            ActiveSkillDeck = ScriptableObject.CreateInstance<SkillDeck>();
-            ActiveSkillDeck.LoadForPlayer(dbRef.SerializedSkillDeck, this);
+            sk.sv_SetSkills(cSkills, sDeck);
+            skills = sk;
 
             questData = ScriptableObject.CreateInstance<QuestDataContainer>();
             questData.LoadForPlayer(dbRef.QuestTargets, this);
@@ -113,9 +127,18 @@ namespace Gameplay.Entities
             persistentVars.LoadForPlayer(dbRef.PersistentVars, this);
         }
 
+        CapsuleCollider ccCollider;
         void OnDrawGizmos()
         {
             Gizmos.DrawIcon(transform.position, "Player.psd");
+            if (ccCollider == null)
+            {
+                ccCollider = GetComponent<CapsuleCollider>();
+            }
+            else
+            {
+                Gizmos.DrawWireSphere(transform.position, ccCollider.radius);
+            }
         }
 
         #region Duffs
@@ -609,24 +632,6 @@ namespace Gameplay.Entities
             base.PlaySound(soundEffect, volume);
             var m = PacketCreator.S2R_GAME_PAWN_SV2CLREL_STATICPLAYSOUND(this, soundEffect, volume);
             SendToClient(m);
-        }
-
-        public override void RunEvent(RunningSkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
-            Character triggerPawn, Character targetPawn)
-        {
-            base.RunEvent(sInfo, fxEvent, skillPawn, triggerPawn, targetPawn);
-            SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
-                sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn,
-                sInfo.GetCurrentSkillTime()));
-        }
-
-        public override void RunEventL(RunningSkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
-            Character triggerPawn, Vector3 location, Character targetPawn)
-        {
-            base.RunEventL(sInfo, fxEvent, skillPawn, triggerPawn, location, targetPawn);
-            SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
-                sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn, location,
-                sInfo.GetCurrentSkillTime()));
         }
 
         #endregion

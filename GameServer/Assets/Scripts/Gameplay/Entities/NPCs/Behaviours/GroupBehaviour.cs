@@ -62,7 +62,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         }
 
         //TODO: add threat from source character to own table / group table?
-        public override void OnDamage(Character source, FSkill s, int amount)
+        public override void OnDamage(Character source, FSkill_Type s, int amount)
         {
             if (!canPath)
             {
@@ -300,9 +300,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
             if (Time.time - lastAttack > 2f)
             {
-                if (!owner.IsCasting)
+                if (!owner.skills.IsCasting)
                 {
-                    var result = owner.UseSkillIndex(0, target.RelevanceID, _currentPosition, Time.time);
+                    var result = owner.skills.UseSkillIndex(0, target.RelevanceID, _currentPosition, Time.time);
                     if (result == ESkillStartFailure.SSF_INVALID_SKILL)
                     {
                         state = NpcStates.Fleeing;

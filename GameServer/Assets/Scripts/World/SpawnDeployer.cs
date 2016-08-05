@@ -510,6 +510,7 @@ namespace World
                 else
                     newNPC.Faction = GameData.Get.factionDB.defaultFaction;
 
+                newNPC.OnDamaged += OnSpawnWasDamaged;
                 deployed.Add(newNPC);
                 zone.AddToZone(newNPC);
 
@@ -630,20 +631,32 @@ namespace World
             }
         }
 
+        bool spawnWasDamaged;
+
+        void OnSpawnWasDamaged(Character ch)
+        {
+            spawnWasDamaged = true;
+        }
         //TODO : Replace placeholder implementation
         //We want : If aggro triggered, enter combat
         //Hack: For unit testing, move to combat on any member health damage
         bool isCombatTriggered()
         {
-            for (var i = 0; i < deployed.Count; i++)
+            if (spawnWasDamaged)
             {
-                var n = deployed[i];
-                if ((n.Health < n.MaxHealth) && n.Health > 0)
-                {
-                    return true;
-                }
+                spawnWasDamaged = false;
+                return true;
             }
             return false;
+            //for (var i = 0; i < deployed.Count; i++)
+            //{
+            //    var n = deployed[i];
+            //    if ((n.Health < n.MaxHealth) && n.Health > 0)
+            //    {
+            //        return true;
+            //    }
+            //}
+            //return false;
         }
 
         bool isCombatEnded()

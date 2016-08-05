@@ -576,11 +576,12 @@ namespace Database.Dynamic
                 ch.Money = pc.Money;
                 ch.ExtraBodyMindFocusAttributePoints = new int[4] {pc.ExtraBodyPoints, pc.ExtraMindPoints, pc.ExtraFocusPoints, pc.RemainingAttributePoints};
                 ch.Skills.Clear();
-                for (var i = 0; i < pc.Skills.Count; i++)
+                for (var i = 0; i < pc.skills.CharacterSkills.Count; i++)
                 {
-                    ch.Skills.Add(new DBSkill(pc.Skills[i].resourceID, pc.Skills[i].SigilSlots));
+                    ch.Skills.Add(new DBSkill(pc.skills.CharacterSkills[i].resourceID, pc.skills.GetTokenSlots(pc.skills.CharacterSkills[i])));
                 }
-                ch.SerializedSkillDeck = pc.ActiveSkillDeck.DBSerialize();
+                throw new NotImplementedException("Skilldeck saving");
+                //ch.SerializedSkillDeck = pc.ActiveSkillDeck.DBSerialize();
                 for (var i = 0; i < ch.Items.Count; i++)
                 {
                     if (ch.Items[i].DBID <= 0)

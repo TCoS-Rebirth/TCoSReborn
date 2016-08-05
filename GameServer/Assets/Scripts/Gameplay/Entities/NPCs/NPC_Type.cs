@@ -82,7 +82,7 @@ namespace Gameplay.Entities.NPCs
 
         public string ShortName;
         //public byte NPCClassClassification;
-        public SkillDeck SkillDeck;
+        public NPC_SkillDeck SkillDeck;
         public NPC_StatTable Stats;
         public float StrollSpeed;
 

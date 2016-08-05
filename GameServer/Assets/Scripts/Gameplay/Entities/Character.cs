@@ -52,13 +52,18 @@ namespace Gameplay.Entities
         }
 
         /// <summary>
-        ///     The state of this character
+        ///     The state of this character, setter does not invoke notifications
         /// </summary>
         public EPawnStates PawnState
         {
             get { return _pawnState; }
-            set { _pawnState = value; }
+            set
+            {
+                _pawnState = value;
+            }
         }
+
+        public event Action<Character> OnPawnStateChanged;
 
         /// <summary>
         ///     Faction reference of this character
@@ -134,7 +139,7 @@ namespace Gameplay.Entities
             c.radius = 0.4f;
             c.height = 1.8f;
             BodyCenterHeight = c.height*0.5f;
-            c.center = new Vector3(0, 0f, 0f);
+            c.center = new Vector3(0, 1f, 0f);
         }
 
         /// <summary>
@@ -166,6 +171,7 @@ namespace Gameplay.Entities
         {
             _pawnState = newState;
             if (!RelevanceContainsPlayers) return;
+            if (OnPawnStateChanged != null) OnPawnStateChanged(this);
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(this));
         }
 
@@ -175,6 +181,19 @@ namespace Gameplay.Entities
             UpdateDuffs();
             RegenRoutine(1f);
         }
+
+        protected override void OnDestroyed()
+        {
+            base.OnDestroyed();
+            OnPawnStateChanged = null;
+            OnDamaged = null;
+        }
+
+        #region Skills
+
+        public Game_Skills skills;
+
+        #endregion
 
         #region Emotes
 
@@ -276,11 +295,10 @@ namespace Gameplay.Entities
             get { return duffs; }
         }
 
-        public DuffInfoData AddDuff(SkillEventDuff newDuff, float duration, EStackType stackType, int stackCount,
+        public DuffInfoData AddDuff(FSkillEventDuff newDuff, float duration, EStackType stackType, int stackCount,
             bool visible)
         {
-            var duffInfo = new DuffInfoData(Instantiate(newDuff), duration, visible);
-            duffInfo.applyTime = Time.time;
+            var duffInfo = new DuffInfoData(Instantiate(newDuff), duration, visible) {applyTime = Time.time};
             duffInfo.ApplyEffects(this);
             duffs.Add(duffInfo);
             OnDuffsChanged();
@@ -324,7 +342,9 @@ namespace Gameplay.Entities
 
         #region Damage/Healing
 
-        public SkillApplyResult Damage(Character source, FSkill s, int amount, Action<SkillApplyResult> callback)
+        public event Action<Character> OnDamaged;
+
+        public SkillApplyResult Damage(Character source, FSkill_Type s, int amount, Action<SkillApplyResult> callback)
         {
             var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) SetHealth(Health - amount))};
             callback(result);
@@ -335,6 +355,7 @@ namespace Gameplay.Entities
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(source);
             }
+            if (OnDamaged != null) OnDamaged(this);
             return result;
         }
 
@@ -357,7 +378,7 @@ namespace Gameplay.Entities
         {
         }
 
-        public SkillApplyResult Heal(Character source, FSkill s, int amount)
+        public SkillApplyResult Heal(Character source, FSkill_Type s, int amount)
         {
             var result = new SkillApplyResult(source, this, s);
             result.healCaused = (int) SetHealth(Health + amount);
@@ -450,11 +471,12 @@ namespace Gameplay.Entities
 
         public virtual void DrawWeapon()
         {
-            var s = activeSkillDeck.GetSkillFromLastActiveSlot();
-            if (s != null)
-            {
-                equippedWeaponType = s.requiredWeapon;
-            }
+            throw new NotImplementedException("FixMe");
+            //var s = skills.ActiveSkillDeck.GetSkillFromLastActiveSlot();
+            //if (s != null)
+            //{
+            //    equippedWeaponType = s.requiredWeapon;
+            //}
             combatMode = ECombatMode.CBM_Melee;
             if (!RelevanceContainsPlayers) return;
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON(this));
@@ -507,10 +529,10 @@ namespace Gameplay.Entities
             }
             else
             {
-                //if (75 > Random.Range(0, 100)) //greeting emote chance 
-                //{
-                DoEmote(EContentEmote.ECE_battle);
-                //}
+                if (25 > Random.Range(0, 100)) //greeting emote chance 
+                {
+                    DoEmote(EContentEmote.ECE_battle);
+                }
             }
         }
 

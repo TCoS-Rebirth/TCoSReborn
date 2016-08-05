@@ -120,30 +120,26 @@ namespace Database.Static
                 return skillCollections.Count > 0;
             }
 
-            public FSkill GetSkill(int sID)
+            public FSkill_Type GetSkill(int sID)
             {
                 for (var i = 0; i < skillCollections.Count; i++)
                 {
                     var skill = skillCollections[i].GetSkill(sID);
                     if (skill != null)
                     {
-                        skill = Instantiate(skill);
-                        skill.DeepClone();
                         return skill;
                     }
                 }
                 return null;
             }
 
-            public FSkill GetSkill(string skillName)
+            public FSkill_Type GetSkill(string skillName)
             {
                 for (var i = 0; i < skillCollections.Count; i++)
                 {
                     var skill = skillCollections[i].FindSkill(skillName);
                     if (skill != null)
                     {
-                        skill = Instantiate(skill);
-                        skill.DeepClone();
                         return skill;
                     }
                 }

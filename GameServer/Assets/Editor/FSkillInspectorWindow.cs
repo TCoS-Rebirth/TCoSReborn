@@ -11,7 +11,7 @@ using Gameplay;
 
 public class FSkillInspectorWindow : EditorWindow
 {
-    FSkill _selectedSkill;
+    FSkill_Type _selectedSkill;
     GUIStyle _boxStyle;
     GUIStyle _bigLabelStyle;
     GUIStyle _smallLabelStyle;
@@ -29,7 +29,7 @@ public class FSkillInspectorWindow : EditorWindow
         GUI.backgroundColor = prevColor;
         GUILayout.BeginHorizontal();
         GUILayout.Label("FSkill asset:", GUILayout.ExpandWidth(false));
-        _selectedSkill = EditorGUILayout.ObjectField(_selectedSkill, typeof (FSkill), false, GUILayout.ExpandWidth(false)) as FSkill;
+        _selectedSkill = EditorGUILayout.ObjectField(_selectedSkill, typeof (FSkill_Type), false, GUILayout.ExpandWidth(false)) as FSkill_Type;
         if (_selectedSkill != null)
         {
             GUILayout.Label("Selected: " + _selectedSkill.skillname, _bigLabelStyle, GUILayout.ExpandWidth(false));
@@ -65,7 +65,7 @@ public class FSkillInspectorWindow : EditorWindow
     }
 
     Vector2 scrollPos;
-    void DrawTree(FSkill skill)
+    void DrawTree(FSkill_Type skill)
     {
         scrollPos = GUILayout.BeginScrollView(scrollPos);
         foreach (var keyFrame in skill.keyFrames)

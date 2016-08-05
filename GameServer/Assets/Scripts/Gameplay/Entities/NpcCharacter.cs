@@ -7,6 +7,7 @@
 
 #define BLOCK_DISABLED_QUESTS   //When defined, NPCs won't give players quests flagged disabled
 
+using System;
 using System.Collections.Generic;
 using Common;
 using Database.Static;
@@ -24,6 +25,7 @@ using World;
 using System.Linq;
 using Gameplay.Quests.QuestTargets;
 using Gameplay.Items;
+using Random = UnityEngine.Random;
 
 namespace Gameplay.Entities
 {
@@ -133,8 +135,10 @@ namespace Gameplay.Entities
             PawnState = EPawnStates.PS_ALIVE;
             if (typeRef.SkillDeck != null)
             {
-                ActiveSkillDeck = Instantiate(typeRef.SkillDeck);
-                ActiveSkillDeck.LoadForNPC(this);
+                var sk = ScriptableObject.CreateInstance<Game_NPCSkills>();
+                sk.Init(this);
+                sk.sv_SetSkills(typeRef.SkillDeck);
+                skills = sk;
             }
 
             //TODO: Make AI state machine an enumerated flag for efficiency(Killer, passive etc.)
@@ -244,11 +248,11 @@ namespace Gameplay.Entities
             }
         }
 
-        protected override void OnEndCastSkill(RunningSkillContext s)
+        void OnEndCastSkill(FSkill_Type skill)
         {
             if (curBehaviour && curBehaviour.enabled)
             {
-                curBehaviour.OnEndedCast(s.ExecutingSkill);
+                curBehaviour.OnEndedCast(skill);
             }
         }
 
@@ -435,10 +439,11 @@ namespace Gameplay.Entities
 
         void OnPathComplete(Path p)
         {
+            if (pathMoveState != MoveResult.SearchingPath) return;
             p.Claim(this);
             PathPostProcessor.Instance.Process(p);
-            currentPath = p.vectorPath;
-            p.vectorPath = null;
+            currentPath.Clear();
+            currentPath.AddRange(p.vectorPath);
             p.Release(this);
         }
 
@@ -478,8 +483,8 @@ namespace Gameplay.Entities
                 currentPath.RemoveAt(0);
                 if (RelevanceContainsPlayers)
                 {
-                    BroadcastRelevanceMessage(PacketCreator.S2R_GAME_PAWN_SV2CLREL_TELEPORTTO(this));
                     //enable if desyncs become too noticable (client can behave stupid sometimes)
+                    BroadcastRelevanceMessage(PacketCreator.S2R_GAME_PAWN_SV2CLREL_TELEPORTTO(this));
                     //BroadcastRelevanceMessage(PacketCreator.S2R_GAME_NPCPAWN_SV2REL_STOPMOVEMENT(this));
                     BroadcastRelevanceMessage(PacketCreator.S2R_GAME_NPCPAWN_SV2REL_MOVE(this));
                 }
@@ -497,7 +502,7 @@ namespace Gameplay.Entities
                 //yield return null;
                 return;
             }
-            if (pathMoveState == MoveResult.Moving && !FreezePosition)
+            if (pathMoveState == MoveResult.Moving & !FreezePosition)
             {
                 IsMoving = true;
                 if (VectorMath.SqrDistanceXZ(_destination, transform.position) > 0.25f)
@@ -508,7 +513,7 @@ namespace Gameplay.Entities
                     Vector3 rCastPoint;
                     if (ActiveZone.Raycast(transform.position + Vector3.up, Vector3.down, 5f, out rCastPoint))
                     {
-                        Position = rCastPoint + Vector3.up * BodyCenterHeight;
+                        Position = rCastPoint;
                     }
                 }
                 else

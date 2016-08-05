@@ -1,6 +1,6 @@
 ﻿namespace Gameplay.Skills
 {
-    public class SkillConsumable : FSkill
+    public class SkillConsumable : FSkill_Type
     {
     }
 }

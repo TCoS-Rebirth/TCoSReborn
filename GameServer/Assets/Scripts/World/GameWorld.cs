@@ -131,6 +131,10 @@ namespace World
 
         void Start()
         {
+            if (!Application.isEditor)
+            {
+                Application.targetFrameRate = 30;
+            }
             if ((_serverConfiguration = LoadConfigFile()) == null)
             {
                 Debug.LogError("Config file not found (default file created");

@@ -55,6 +55,8 @@ namespace World
 
         readonly Stopwatch _updateTimer = new Stopwatch();
 
+        int _cachedFrameSplit = 200;
+
         float _updateCycleTime;
 
         /// <summary>
@@ -69,7 +71,7 @@ namespace World
         /// <param name="owner">owner is required to start the internal update coroutine</param>
         public SimpleWorldGrid(float subscriptionDistance, [NotNull] MonoBehaviour owner)
         {
-            if (owner == null) throw new ArgumentNullException("owner cannot be null");
+            if (owner == null) throw new ArgumentNullException("owner");
             _subscriptionDistanceSquared = subscriptionDistance*subscriptionDistance;
             _cellSize = subscriptionDistance + 1;
             _owner = owner;
@@ -102,7 +104,7 @@ namespace World
             _updateTimer.Start();
             for (var i = _nonPlayerEntries.Count; i-- > 0;)
             {
-                if (i%GetFrameSplit() == 0)
+                if (_cachedFrameSplit == 0 || i%_cachedFrameSplit == 0)
                 {
                     yield return null;
                 }
@@ -147,19 +149,19 @@ namespace World
             goto RESTART;
         }
 
-        int GetFrameSplit()
+        void CalcFrameSplit()
         {
             if (_nonPlayerEntries.Count <= 200)
             {
-                return 200;
+                _cachedFrameSplit = 200;
             }
-            return _nonPlayerEntries.Count/10;
+            _cachedFrameSplit = _nonPlayerEntries.Count/10;
         }
 
         void ProcessNonPlayerEntity(GridEntry ge)
         {
-            var x = Mathf.CeilToInt(ge.CachedPosition.x/_cellSize);
-            var z = Mathf.CeilToInt(ge.CachedPosition.z/_cellSize);
+            var x = (int)(ge.CachedPosition.x/_cellSize);
+            var z = (int)(ge.CachedPosition.z/_cellSize);
             var hasCell = !ReferenceEquals(ge.CenterCell, null);
             if (!hasCell || (ge.CenterCell.X != x | ge.CenterCell.Z != z))
             {
@@ -174,8 +176,8 @@ namespace World
 
         void ProcessPlayerEntity(GridEntry ge)
         {
-            var x = Mathf.CeilToInt(ge.CachedPosition.x/_cellSize);
-            var z = Mathf.CeilToInt(ge.CachedPosition.z/_cellSize);
+            var x = (int)(ge.CachedPosition.x/_cellSize);
+            var z = (int)(ge.CachedPosition.z/_cellSize);
             var hasCell = !ReferenceEquals(ge.CenterCell, null);
             if (!hasCell || (ge.CenterCell.X != x | ge.CenterCell.Z != z))
             {
@@ -244,7 +246,7 @@ namespace World
         /// <param name="entity">The entity to register</param>
         public void Add(T entity)
         {
-            if (entity == null) throw new ArgumentNullException("entity is null");
+            if (entity == null) throw new ArgumentNullException("entity");
             var entry = new GridEntry(entity);
             if (entity is PlayerCharacter)
             {
@@ -268,6 +270,7 @@ namespace World
                 }
                 _nonPlayerEntries.Add(entry);
             }
+            CalcFrameSplit();
         }
 
         /// <summary>
@@ -276,8 +279,9 @@ namespace World
         /// <param name="entity">The entity to remove</param>
         public void Remove(T entity)
         {
-            if (entity == null) throw new ArgumentNullException("entity is null");
+            if (entity == null) throw new ArgumentNullException("entity");
             _removeQueue.Add(entity.GetID());
+            CalcFrameSplit();
         }
 
         void UpdatePlayerBasedSubscriptions(GridEntry ge)
@@ -291,7 +295,8 @@ namespace World
                 {
                     continue;
                 }
-                if (Vector3.SqrMagnitude(ge.CachedPosition - cellEntities[e].CachedPosition) > _subscriptionDistanceSquared)
+                var v = ge.CachedPosition - cellEntities[e].CachedPosition;
+                if (v.x * v.x + v.y * v.y + v.z * v.z > _subscriptionDistanceSquared)
                 {
                     continue;
                 }
@@ -307,7 +312,8 @@ namespace World
                 cellEntities = ge.CenterCell.NeighborCells[n].Entities;
                 for (var e = 0; e < cellEntities.Count; e++)
                 {
-                    if (Vector3.SqrMagnitude(ge.CachedPosition - cellEntities[e].CachedPosition) > _subscriptionDistanceSquared)
+                    var v = ge.CachedPosition - cellEntities[e].CachedPosition;
+                    if (v.x * v.x + v.y * v.y + v.z * v.z > _subscriptionDistanceSquared)
                     {
                         continue;
                     }
