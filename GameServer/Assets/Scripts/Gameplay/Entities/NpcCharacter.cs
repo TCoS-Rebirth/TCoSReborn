@@ -7,7 +7,6 @@
 
 #define BLOCK_DISABLED_QUESTS   //When defined, NPCs won't give players quests flagged disabled
 
-using System;
 using System.Collections.Generic;
 using Common;
 using Database.Static;
@@ -22,9 +21,7 @@ using Pathfinding;
 using UnityEngine;
 using Utility;
 using World;
-using System.Linq;
 using Gameplay.Quests.QuestTargets;
-using Gameplay.Items;
 using Random = UnityEngine.Random;
 
 namespace Gameplay.Entities
@@ -60,7 +57,7 @@ namespace Gameplay.Entities
 
         [Header("AI"), ReadOnly]
         [Tooltip("This should be set via script")]
-        public NPC_Type typeRef;
+        public NPC_Type Type;
 
         public ENPCMovementFlags MovementFlags
         {
@@ -100,65 +97,63 @@ namespace Gameplay.Entities
             set { _dialogs = value; }
         }
 
-        void SetupFromTypeRef()
+        /// <summary>
+        ///     Creates a new npc character instance and initializes it
+        /// </summary>
+        public static NpcCharacter Create(NPC_Type npcType, Vector3 pos, Vector3 rot, SpawnInfo sInfo = null)
         {
-            RespawnInfo.typeRef = typeRef;
-            ClassType = typeRef.NPCClassClassification;
-           // if (typeRef.ShortName != null) transform.name = Name = typeRef.ShortName;
-            //else if (typeRef.LongName != null) transform.name = Name = typeRef.LongName;
-            transform.name = Name = typeRef.name;
+            if (npcType == null)
+            {
+                Debug.Log("NpcCharacter.Create : Invalid npcType, NpcCharacter not created");
+                return null;
+            }
+            var go = new GameObject(npcType.ShortName.Contains("No Text") ? npcType.ShortName : npcType.name);
+            var newNpc = go.AddComponent<NpcCharacter>();
+            newNpc.RetrieveRelevanceID();
+            newNpc.Type = npcType;
+            newNpc.transform.position = pos;
+            newNpc.transform.rotation = Quaternion.Euler(rot);
+            newNpc.RespawnInfo = sInfo;
+            newNpc.RespawnInfo.typeRef = npcType;
+            if (newNpc.Type.GroundSpeed > 0)
+            {
+                newNpc.movementSpeeds[ENPCMovementFlags.ENMF_Normal] = (int)newNpc.Type.GroundSpeed;
+            }
+            if (newNpc.Type.StrollSpeed > 0)
+            {
+                newNpc.movementSpeeds[ENPCMovementFlags.ENMF_Walking] = (int)newNpc.Type.StrollSpeed;
+            }
+            newNpc.Faction = newNpc.Type.TaxonomyFaction;
+            newNpc.PawnState = EPawnStates.PS_ALIVE;
+            newNpc.SetupCollision();
+            newNpc.Skills = ScriptableObject.CreateInstance<Game_NPCSkills>();
+            newNpc.Skills.Init(newNpc);
+            newNpc.Stats = ScriptableObject.CreateInstance<Game_NPCStats>();
+            newNpc.Stats.Init(newNpc);
+            newNpc.CombatState = ScriptableObject.CreateInstance<Game_NPCCombatState>();
+            newNpc.CombatState.Init(newNpc);
+            newNpc.SetupBehaviour();
+            return newNpc;
+        }
 
-            //NPC_Type with level 0 indicates random level generation by spawner
-            if (typeRef.FameLevel != 0)
-            {
-                FameLevel = typeRef.FameLevel;
-            }
-            else
-            {
-                FameLevel = Random.Range(RespawnInfo.levelMin, RespawnInfo.levelMax);
-            }
-            PepRank = typeRef.PePRank;
-            var hp = 100;
-            var levelHP = 100;
-            typeRef.InitializeStats(FameLevel, PepRank, out hp, out levelHP, out Body, out Mind, out Focus);
-            MaxHealth = Mathf.Max(hp, levelHP, FameLevel * 10, 100); //TODO fix
-            Health = MaxHealth;
-            if (typeRef.GroundSpeed > 0)
-            {
-                movementSpeeds[ENPCMovementFlags.ENMF_Normal] = (int)typeRef.GroundSpeed;
-            }
-            if (typeRef.StrollSpeed > 0)
-            {
-                movementSpeeds[ENPCMovementFlags.ENMF_Walking] = (int)typeRef.StrollSpeed;
-            }
-            Faction = typeRef.TaxonomyFaction;
-            PawnState = EPawnStates.PS_ALIVE;
-            if (typeRef.SkillDeck != null)
-            {
-                var sk = ScriptableObject.CreateInstance<Game_NPCSkills>();
-                sk.Init(this);
-                sk.sv_SetSkills(typeRef.SkillDeck);
-                skills = sk;
-            }
-
+        void SetupBehaviour()
+        {
             //TODO: Make AI state machine an enumerated flag for efficiency(Killer, passive etc.)
-            if (    RespawnInfo.referenceAiStateMachine != null
-                &&  RespawnInfo.referenceAiStateMachine.Contains("Kill")) {
+            if (RespawnInfo.referenceAiStateMachine != null && RespawnInfo.referenceAiStateMachine.Contains("Kill"))
+            {
                 defaultBehaviour = gameObject.AddComponent<KillerBehaviour>();
-                
-                
             }
             else if (RespawnInfo.spawnerCategory == ESpawnerCategory.Wildlife)
             {
-                
                 //If AI state machine reference is critter machine, set critter
                 //Pacifies the killer bunny rabbits =p
                 if (RespawnInfo.referenceAiStateMachine != null
-                &&  RespawnInfo.referenceAiStateMachine.Contains("Critter"))
+                    && RespawnInfo.referenceAiStateMachine.Contains("Critter"))
                 {
                     defaultBehaviour = gameObject.AddComponent<CritterBehaviour>();
                 }
-                else {
+                else
+                {
                     defaultBehaviour = gameObject.AddComponent<KillerBehaviour>();
                 }
             }
@@ -166,7 +161,6 @@ namespace Gameplay.Entities
             {
                 defaultBehaviour = gameObject.AddComponent<GroupBehaviour>();
             }
-
             //Attach pathing if appropriate
             if (RespawnInfo.linkedPatrolPoint != null)
             {
@@ -301,40 +295,6 @@ namespace Gameplay.Entities
             _destination = Position;
             SetFocusLocation(transform.position + transform.forward);
         }
-
-        #region Factory
-
-        /// <summary>
-        ///     Creates a new npc character instance and initializes it
-        /// </summary>
-        public static NpcCharacter Create(NPC_Type npcType, Vector3 pos, Vector3 rot, SpawnInfo sInfo = null)
-        {
-            if (npcType == null)
-            {
-                Debug.Log("NpcCharacter.Create : Invalid npcType, NpcCharacter not created");
-                return null;
-            }
-
-            GameObject go;
-
-            if (npcType.ShortName.Contains("No Text"))
-                go = new GameObject(npcType.ShortName);
-            else
-                go = new GameObject(npcType.name);
-
-            var newNpc = go.AddComponent<NpcCharacter>();
-            newNpc.RetrieveRelevanceID();
-            newNpc.typeRef = npcType;
-            newNpc.transform.position = pos;
-            newNpc.transform.rotation = Quaternion.Euler(rot);
-            newNpc.RespawnInfo = sInfo;
-            newNpc.SetupCollision();
-            newNpc.SetupFromTypeRef();
-            newNpc.InitializeStats();
-            return newNpc;
-        }
-
-        #endregion
 
         #region Movement
 
@@ -502,7 +462,7 @@ namespace Gameplay.Entities
                 //yield return null;
                 return;
             }
-            if (pathMoveState == MoveResult.Moving & !FreezePosition)
+            if (pathMoveState == MoveResult.Moving & !Stats.FreezePosition)
             {
                 IsMoving = true;
                 if (VectorMath.SqrDistanceXZ(_destination, transform.position) > 0.25f)
@@ -713,7 +673,7 @@ namespace Gameplay.Entities
             //Fulfil any null-topic quest target
 
             //Add normal topics, filter out current topic ID, greeting topics
-            foreach (var nTopic in typeRef.Topics)
+            foreach (var nTopic in Type.Topics)
             {
                 ConversationTopic fullTopic = GameData.Get.convDB.GetTopic(nTopic);
                 if ((nTopic.ID != p.currentConv.curTopic.resource.ID)
@@ -725,7 +685,7 @@ namespace Gameplay.Entities
                 }
             }
 
-            foreach (var qTopic in typeRef.QuestTopics)
+            foreach (var qTopic in Type.QuestTopics)
             {
                 ConversationTopic fullTopic = GameData.Get.convDB.GetTopic(qTopic);
                 if (!fullTopic.requirementsMet(p)) continue;
@@ -857,7 +817,7 @@ namespace Gameplay.Entities
             //TODO : Placeholder, improve topic choice logic
 
             //Retrieve non-quest topics
-            var choices = GameData.Get.convDB.GetTopics(typeRef.Topics);
+            var choices = GameData.Get.convDB.GetTopics(Type.Topics);
 
             //Talk topic (QT_Talk?)
             foreach (var topic in choices)
@@ -973,7 +933,7 @@ namespace Gameplay.Entities
             List<int> output = new List<int>();
 
             //cycle quest topics
-            foreach (var questTopic in typeRef.QuestTopics)
+            foreach (var questTopic in Type.QuestTopics)
             {
                 Quest_Type relatedQuest = GameData.Get.questDB.GetQuestFromContained(questTopic);
                 if (relatedQuest != null)
@@ -997,12 +957,12 @@ namespace Gameplay.Entities
             int output = 0;
             foreach(var lt in Faction.Loot)
             {
-                output += lt.GenerateMoney(FameLevel);
+                output += lt.GenerateMoney(Stats.FameLevel);
             }
 
-            foreach(var lt in typeRef.Loot)
+            foreach(var lt in Type.Loot)
             {
-                output += lt.GenerateMoney(FameLevel);
+                output += lt.GenerateMoney(Stats.FameLevel);
             }
             return output;
         }

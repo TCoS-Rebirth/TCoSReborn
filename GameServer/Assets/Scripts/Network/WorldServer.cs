@@ -5,11 +5,13 @@ using Common;
 using Common.UnrealTypes;
 using Database.Dynamic;
 using Gameplay.Entities;
+using Gameplay.Items;
 using Lidgren.Network;
 using UnityEngine;
 using Utility;
 using World;
 using Gameplay.Loot;
+using Gameplay.Skills;
 
 namespace Network
 {
@@ -530,13 +532,14 @@ namespace Network
         void HandleToggleWeapon(Message m)
         {
             var pc = m.GetAssociatedCharacter();
-            if (pc.CombatMode != ECombatMode.CBM_Idle)
+            if (pc.CombatState.CombatMode != ECombatMode.CBM_Idle)
             {
-                pc.SheatheWeapon();
+                pc.CombatState.sv_SheatheWeapon();
             }
             else
             {
-                pc.DrawWeapon();
+                pc.CombatState.sv_DrawWeapon(ECombatMode.CBM_Melee);
+                Debug.Log("TODO implement correct initial state resolving function");
             }
         }
 
@@ -545,7 +548,7 @@ namespace Network
             var pc = m.GetAssociatedCharacter();
             m.ReadInt32(); //int charID = 
             int weaponType = m.ReadByte();
-            pc.SwitchWeapon((EWeaponCategory) weaponType);
+            pc.CombatState.SwitchToWeaponType((EAppMainWeaponType)weaponType);
         }
 
         void HandleUseSkill(Message m)
@@ -559,8 +562,7 @@ namespace Network
                 m.ReadRotator(); //Rotator viewRotation = 
                 var targetID = m.ReadInt32();
                 var clientTime = m.ReadFloat();
-                throw new NotImplementedException("FixMe");
-                //pc.ClientUseSkill(skillbarIndex, targetID, Vector3.zero, targetPos, clientTime);
+                pc.Skills.ExecuteIndex(skillbarIndex, targetID, targetPos, clientTime);
             }
         }
 
@@ -572,12 +574,11 @@ namespace Network
                 m.ReadInt32(); //int casterID = 
                 var skillbarIndex = m.ReadInt32();
                 var targetPos = UnitConversion.ToUnity(m.ReadVector3());
-                var camPos = m.ReadVector3(); //CameraPos
+                m.ReadVector3(); //CameraPos
                 m.ReadRotator(); //viewRotation 
                 var targetID = m.ReadInt32();
                 var clientTime = m.ReadFloat();
-                throw new NotImplementedException("FixMe");
-                //pc.ClientUseSkill(skillbarIndex, targetID, camPos, targetPos, clientTime);
+                pc.Skills.ExecuteIndex(skillbarIndex, targetID, targetPos, clientTime);
             }
         }
 
@@ -843,8 +844,7 @@ namespace Network
             var p = m.GetAssociatedCharacter();
             if (p)
             {
-                //p.SetSkillDeck(deck);
-                throw new NotImplementedException("FixMe");
+                (p.Skills as Game_PlayerSkills).SetSkillDeck(deck);
             }
         }
 
@@ -855,8 +855,7 @@ namespace Network
             var p = m.GetAssociatedCharacter();
             if (p)
             {
-                //p.LearnSkill(skillID);
-                throw new NotImplementedException("FixMe");
+                (p.Skills as Game_PlayerSkills).LearnSkill(skillID);
             }
         }
 
@@ -885,7 +884,7 @@ namespace Network
             var p = m.GetAssociatedCharacter();
             if (p != null)
             {
-                p.ItemManager.MoveItem(sourceLocType, sourceLocSlot, sourceLocID, targetLocType, targetLocSlot, targetLocID);
+                (p.Items as Game_PlayerItemManager).MoveItem(sourceLocType, sourceLocSlot, sourceLocID, targetLocType, targetLocSlot, targetLocID);
             }
         }
 

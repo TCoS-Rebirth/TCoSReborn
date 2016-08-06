@@ -26,5 +26,10 @@ namespace Gameplay.RequirementSpecifier
             //TODO: Implement Req_NPC_Exists
             throw new NotImplementedException();
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

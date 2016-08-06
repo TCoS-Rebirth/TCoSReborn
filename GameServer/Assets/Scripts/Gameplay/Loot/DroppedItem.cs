@@ -22,11 +22,11 @@ namespace Gameplay.Loot
         {
             if (MinLevel > 0)
             {
-                if (pc.FameLevel < MinLevel) return false;
+                if (pc.Stats.FameLevel < MinLevel) return false;
             }
             if (MaxLevel > 0)
             {
-                if (pc.FameLevel > MaxLevel) return false;
+                if (pc.Stats.FameLevel > MaxLevel) return false;
             }
 
             return true;

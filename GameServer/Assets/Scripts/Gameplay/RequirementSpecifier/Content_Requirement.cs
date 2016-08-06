@@ -14,5 +14,7 @@ namespace Gameplay.RequirementSpecifier
 
         public abstract bool isMet(PlayerCharacter p);
         public abstract bool isMet(NpcCharacter n);
+
+        public abstract bool CheckPawn(Character character);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Common;
+using Gameplay.Entities;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -36,31 +37,31 @@ namespace Gameplay.Skills
         public float targetCountMinimumMultiplier;
         public List<TaxonomyIncrease> taxonomyIncreases = new List<TaxonomyIncrease>();
 
-        public float CalculateValue(RunningSkillContext sInfo)
+        public float CalculateValue(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
             //TODO calculate correct values
             if (!Mathf.Approximately(constantMaximum, 0))
             {
                 var val = Random.Range(constantMinimum, constantMaximum);
-                val = val + val*linkedAttributeModifier*GetSourceStatisticValue(sInfo);
+                val = val + val*linkedAttributeModifier*GetSourceStatisticValue(skillPawn, targetPawn);
                 return val;
             }
             else
             {
                 var val = Random.Range(absoluteMinimum, absoluteMaximum);
-                val = val + val*linkedAttributeModifier*GetSourceStatisticValue(sInfo);
+                val = val + val*linkedAttributeModifier*GetSourceStatisticValue(skillPawn, targetPawn);
                 return val;
             }
         }
 
-        float GetSourceStatisticValue(RunningSkillContext sInfo)
+        float GetSourceStatisticValue(Character skillPawn, Character targetPawn)
         {
             switch (source)
             {
                 case EVSSource.EVSS_TriggerPawn:
-                    return sInfo.SkillPawn.GetCharacterStatistic(characterStatistic);
+                    return skillPawn.Stats.GetCharacterStatistic(characterStatistic);
                 case EVSSource.EVSS_TargetPawn:
-                    return sInfo.PreferedTarget != null ? sInfo.PreferedTarget.GetCharacterStatistic(characterStatistic) : 0;
+                    return targetPawn != null ? targetPawn.Stats.GetCharacterStatistic(characterStatistic) : 0;
                 default:
                     return 0;
             }

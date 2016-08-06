@@ -662,7 +662,7 @@ namespace World
         {
             foreach (var npc in _npcs)
             {
-                if (npc.typeRef.LongName.Contains(name)) {
+                if (npc.Type.LongName.Contains(name)) {
                     return npc;
                 }
             }
@@ -674,7 +674,7 @@ namespace World
             int count = 0;
             foreach (var npc in _npcs)
             {
-                if (npc.typeRef.LongName.Contains(name))
+                if (npc.Type.LongName.Contains(name))
                 {
                     if (count == instanceIndex) return npc;
                     else count++;

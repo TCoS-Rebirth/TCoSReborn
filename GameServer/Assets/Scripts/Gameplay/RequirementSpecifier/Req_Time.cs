@@ -23,5 +23,10 @@ namespace Gameplay.RequirementSpecifier
             //TODO : Implement Req_Time logic
             throw new NotImplementedException();
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

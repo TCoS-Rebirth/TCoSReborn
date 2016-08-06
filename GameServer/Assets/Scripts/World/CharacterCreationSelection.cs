@@ -166,8 +166,20 @@ namespace World
             int raceId = (byte) (lod3[9] & 0x01);
 
             //Lods end
-            newCharacter.Appearance = new CharacterAppearance(raceId, genderId, bodyTypeId, headTypeId, bodyColour, chestTattooId, leftArmTattooId, rightArmTattooId, hairStyleId,
-                hairColour, voiceId);
+            newCharacter.Appearance = new DBPlayerCharacter.DBAppearance
+                (
+                raceId,
+                genderId,
+                bodyTypeId,
+                headTypeId,
+                bodyColour,
+                chestTattooId,
+                leftArmTattooId,
+                rightArmTattooId,
+                hairStyleId,
+                hairColour,
+                voiceId
+                );
 
             var it = GameData.Get.itemDB.GetSetItem(torsoId, EquipmentSlot.ES_CHEST);
             if (it != null)

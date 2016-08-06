@@ -20,9 +20,16 @@ namespace Gameplay.RequirementSpecifier
 
         public bool isMet(Character c)
         {
-            if (SBOperator.Operate(c.PepRank, Operator, RequiredPep))
+            if (SBOperator.Operate(c.Stats.PepRank, Operator, RequiredPep))
                 return true;
             return false;
+        }
+
+        public override bool CheckPawn(Character character)
+        {
+            var p = character as PlayerCharacter;
+            if (!p) return false;
+            return isMet(p);
         }
     }
 }

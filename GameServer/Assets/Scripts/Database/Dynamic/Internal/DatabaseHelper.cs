@@ -156,9 +156,9 @@ namespace Database.Dynamic.Internal
             cmd.Parameters.AddWithValue("@charID", pc.DBID);
             cmd.Parameters.AddWithValue("@name", pc.Name);
             cmd.Parameters.AddWithValue("@app", SerializeIntList(pc.Appearance.Race,
-                (int) pc.Appearance.Gender, pc.Appearance.BodyType, pc.Appearance.HeadType,
-                pc.Appearance.BodyColor, pc.Appearance.ChestTattoo, pc.Appearance.TattooLeft,
-                pc.Appearance.TattooRight, pc.Appearance.HairStyle, pc.Appearance.HairColor, pc.Appearance.Voice));
+                (int) pc.Appearance.Gender, pc.Appearance.Body, pc.Appearance.Head,
+                pc.Appearance.BodyColor, pc.Appearance.TattooChest, pc.Appearance.TattooLeft,
+                pc.Appearance.TattooRight, pc.Appearance.Hair, pc.Appearance.HairColor, pc.Appearance.Voice));
             cmd.Parameters.AddWithValue("@lm", pc.LastZoneID);
             cmd.Parameters.AddWithValue("@fac", pc.Faction);
             cmd.Parameters.AddWithValue("@arch", pc.ArcheType);
@@ -181,9 +181,9 @@ namespace Database.Dynamic.Internal
             cmd.Parameters["@charID"].Value = pc.DBID;
             cmd.Parameters["@name"].Value = pc.Name;
             cmd.Parameters["@app"].Value = SerializeIntList(pc.Appearance.Race,
-                (int) pc.Appearance.Gender, pc.Appearance.BodyType, pc.Appearance.HeadType,
-                pc.Appearance.BodyColor, pc.Appearance.ChestTattoo, pc.Appearance.TattooLeft,
-                pc.Appearance.TattooRight, pc.Appearance.HairStyle, pc.Appearance.HairColor, pc.Appearance.Voice);
+                (int) pc.Appearance.Gender, pc.Appearance.Body, pc.Appearance.Head,
+                pc.Appearance.BodyColor, pc.Appearance.TattooChest, pc.Appearance.TattooLeft,
+                pc.Appearance.TattooRight, pc.Appearance.Hair, pc.Appearance.HairColor, pc.Appearance.Voice);
             cmd.Parameters["@lm"].Value = pc.LastZoneID;
             cmd.Parameters["@fac"].Value = pc.Faction;
             cmd.Parameters["@arch"].Value = pc.ArcheType;

@@ -21,5 +21,12 @@ namespace Gameplay.RequirementSpecifier
         {
             return false;
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            var p = character as PlayerCharacter;
+            if (!p) return false;
+            return isMet(p);
+        }
     }
 }

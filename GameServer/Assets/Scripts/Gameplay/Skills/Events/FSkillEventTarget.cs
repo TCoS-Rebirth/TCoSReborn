@@ -32,5 +32,6 @@ namespace Gameplay.Skills.Events
         [ReadOnly] public ETargetMode TargetSpirits;
 
         [ReadOnly] public List<string> temporaryLimitToTaxonomy = new List<string>();
+
     }
 }

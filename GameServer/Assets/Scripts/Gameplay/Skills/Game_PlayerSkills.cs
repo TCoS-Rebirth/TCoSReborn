@@ -22,23 +22,34 @@ namespace Gameplay.Skills
         {
             base.Init(character);
             Owner = character as PlayerCharacter;
-            throw new NotImplementedException("TODO Load skilldeck from DB");
+            var cSkills = new List<FSkill_Type>();
+            for (var i = 0; i < Owner.dbRef.Skills.Count; i++)
+            {
+                var dbs = Owner.dbRef.Skills[i];
+                var s = GameData.Get.skillDB.GetSkill(dbs.ResourceId);
+                if (s != null)
+                {
+                    for (var j = 0; j < dbs.SigilSlots; j++)
+                    {
+                        AddTokenSlot(s);
+                    }
+                    cSkills.Add(s);
+                }
+            }
+            sv_SetSkills(cSkills);
+            LoadDBSerializedDeck(Owner.dbRef.SerializedSkillDeck);
         }
 
         public void sv2cl_SetSkills(List<FSkill_Type> aCharacterSkills, FSkill_Type[] aSkilldeckSkills)
         {
-            sv_SetSkills(aCharacterSkills, aSkilldeckSkills);
+            sv_SetSkills(aCharacterSkills);
+            SkilldeckSkills = aSkilldeckSkills;
+            Owner.SendToClient(PacketCreator.S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS(Owner, aCharacterSkills, SkilldeckSkills));
         }
 
-        public void sv_SetSkills(List<FSkill_Type> aCharacterSkills, FSkill_Type[] aSkilldeckSkills)
+        public void sv_SetSkills(List<FSkill_Type> aCharacterSkills)
         {
             CharacterSkills = aCharacterSkills;
-            SkilldeckSkills = aSkilldeckSkills;
-        }
-
-        void OnSkillDeckChanged()
-        {
-            Owner.SendToClient(PacketCreator.S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS(Owner, CharacterSkills, SkilldeckSkills));
         }
 
         /// <summary>
@@ -60,7 +71,6 @@ namespace Gameplay.Skills
                 }
             }
             sv2cl_SetSkills(CharacterSkills, newdeckSkills);
-            OnSkillDeckChanged();
         }
 
         public override int GetTokenSlots(FSkill_Type skill)
@@ -86,29 +96,38 @@ namespace Gameplay.Skills
             Debug.Log("TODO notify client about skilltoken update");
         }
 
-        //protected override void AddActiveSkill(RunningSkillData skillData)
-        //{
-        //    base.AddActiveSkill(skillData);
-        //    Owner.SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(Owner, skillData, 0));
-        //}
-
-        //protected override void ClearLastSkill(RunningSkillData s)
-        //{
-        //    base.ClearLastSkill(s);
-        //    Owner.SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(Owner, s.Skill));
-        //}
-
-        public override void RunEvent(FSkill_Type skill, FSkillEventFx fxEvent, int flags, Character skillPawn, Character triggerPawn, Character targetPawn)
+        public override ESkillStartFailure ExecuteIndex(int index, int targetID, Vector3 targetPosition, float time)
         {
-            base.RunEvent(skill, fxEvent, flags, skillPawn, triggerPawn, targetPawn);
+            if (Mathf.Abs(Time.time - time) > 0.5f)
+            {
+                Owner.ResyncClientTime();
+            }
+            return base.ExecuteIndex(index, targetID, targetPosition, Time.time);
+        }
+
+        protected override void AddActiveSkill(FSkill_Type aSkill, Character target, float aStartTime, float aDuration, float aSkillSpeed, bool aFreezeMovement, bool aFreezeRotation, int aTokenItemID, int AnimVarNr, Vector3 aLocation, Quaternion aRotation)
+        {
+            base.AddActiveSkill(aSkill, target, aStartTime, aDuration, aSkillSpeed, aFreezeMovement, aFreezeRotation, aTokenItemID, AnimVarNr, aLocation, aRotation);
+            Owner.SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(Owner, LastSkill, 0));
+        }
+
+        protected override void sv2cl_ClearLastSkill()
+        {
+            base.sv2cl_ClearLastSkill();
+            Owner.SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL());
+        }
+
+        public override void sv2clrel_RunEvent(FSkill_Type skill, FSkillEventFx fxEvent, int flags, Character skillPawn, Character triggerPawn, Character targetPawn)
+        {
+            base.sv2clrel_RunEvent(skill, fxEvent, flags, skillPawn, triggerPawn, targetPawn);
             Owner.SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(Owner,
                 skill.resourceID, fxEvent.resourceID, flags, skillPawn, triggerPawn, targetPawn,
                 fxEvent.ElapsedTime));
         }
 
-        public override void RunEventL(FSkill_Type skill, FSkillEventFx fxEvent, int flags, Character skillPawn, Character triggerPawn, Vector3 location, Character targetPawn)
+        public override void sv2clrel_RunEventL(FSkill_Type skill, FSkillEventFx fxEvent, int flags, Character skillPawn, Character triggerPawn, Vector3 location, Character targetPawn)
         {
-            base.RunEventL(skill, fxEvent, flags, skillPawn, triggerPawn, location, targetPawn);
+            base.sv2clrel_RunEventL(skill, fxEvent, flags, skillPawn, triggerPawn, location, targetPawn);
             Owner.SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(Owner,
                 skill.resourceID, fxEvent.resourceID, flags, skillPawn, triggerPawn, targetPawn, location,
                 fxEvent.ElapsedTime));
@@ -132,7 +151,7 @@ namespace Gameplay.Skills
             return sb.ToString().TrimEnd('|');
         }
 
-        public void LoadDBSerializedDeck(string serializedData)
+        void LoadDBSerializedDeck(string serializedData)
         {
             var skillIDs = serializedData.Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
             if (skillIDs.Length != 30)
@@ -141,18 +160,16 @@ namespace Gameplay.Skills
                 return;
             }
             var newDeck = new FSkill_Type[30];
-            for (int i = 0; i < skillIDs.Length; i++)
+            for (var i = 0; i < skillIDs.Length; i++)
             {
-                if (skillIDs[i] != "0")
+                if (skillIDs[i] == "0") continue;
+                int id;
+                if (int.TryParse(skillIDs[i], out id))
                 {
-                    int id;
-                    if (int.TryParse(skillIDs[i], out id))
-                    {
-                        newDeck[i] = GetSkill(id);
-                    }
+                    newDeck[i] = GetSkill(id);
                 }
             }
-            sv_SetSkills(CharacterSkills, newDeck);
+            SkilldeckSkills = newDeck;
         }
 
         /// <summary>
@@ -172,66 +189,24 @@ namespace Gameplay.Skills
             }
         }
 
-        #region FromOld_FixMe
-        /*  
-
-        /// <summary>
-        ///     Initiated by the client, indicates a skill use request. Executes the requested skill (if available) and handles
-        ///     errors with skillcasting
-        /// </summary>
-        public void ClientUseSkill(int slotIndex, int targetID, Vector3 camPos, Vector3 targetPosition, float clientTime)
+        public List<SkillDeckSkill> GetSkillDeckSkills()
         {
-            if (Mathf.Abs(clientTime - Time.time) > 0.5f)
+            var sds = new List<SkillDeckSkill>();
+            for (var i = 0; i < SkilldeckSkills.Length; i++)
             {
-                SendToClient(PacketCreator.S2C_GAME_PLAYERCONTROLLER_SV2CL_UPDATESERVERTIME(Time.time));
+                if (SkilldeckSkills[i] != null)
+                {
+                    sds.Add(new SkillDeckSkill {Type = SkilldeckSkills[i], AbsoluteDeckSlot = i});
+                }
             }
-            var s = ActiveSkillDeck.GetSkillFromActiveTier(slotIndex);
-            var result = ESkillStartFailure.SSF_INVALID_SKILL;
-            if (s != null)
-            {
-                result = UseSkill(s.resourceID, targetID, targetPosition, clientTime, camPos);
-            }
-            if (result == ESkillStartFailure.SSF_ALLOWED)
-            {
-                ActiveSkillDeck.SetActiveSlot(slotIndex);
-            }
-            else
-            {
-                DebugChatMessage("Skill result: " + result);
-            }
-        }
+            return sds;
+        } 
 
-        void OnLearnedSkill(FSkill_Type s)
+        public class SkillDeckSkill
         {
-            var m = PacketCreator.S2C_GAME_SKILLS_SV2CL_LEARNSKILL(s);
-            SendToClient(m);
+            public FSkill_Type Type;
+            public int AbsoluteDeckSlot;
         }
-
-        public override void OnDamageCaused(SkillApplyResult sap)
-        {
-            var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTDAMAGE(sap.skillTarget.RelevanceID,
-                sap.appliedSkill.resourceID, sap.damageCaused, sap.damageResisted);
-            SendToClient(m);
-        }
-
-        public override void OnHealingCaused(SkillApplyResult sap)
-        {
-            if (sap.healCaused > 0)
-            {
-                var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTHEAL(sap.skillTarget.RelevanceID,
-                    sap.appliedSkill.resourceID, sap.healCaused);
-                SendToClient(m);
-            }
-        }
-
-        public override void OnStatChangeCaused(SkillApplyResult sap)
-        {
-            SendToClient(
-                PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTSTATE(sap.skillTarget.RelevanceID,
-                    sap.appliedSkill.resourceID, sap.appliedEffect.resourceID, sap.statChange));
-        }
-        */
-        #endregion
 
     }
 }

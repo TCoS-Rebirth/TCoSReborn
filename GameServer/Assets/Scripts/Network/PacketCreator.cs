@@ -12,6 +12,7 @@ using Utility;
 using World;
 using Gameplay.Quests;
 using Database.Static;
+using Gameplay;
 using Gameplay.Entities.Interactives;
 using Gameplay.Loot;
 
@@ -51,12 +52,12 @@ namespace Network
             var m = new Message(GameHeader.S2C_PLAYER_ADD);
             m.WriteInt32(pc.RelevanceID);
             m.WriteInt32(UnitConversion.ToUnreal(pc.Rotation).Yaw);
-            m.WriteInt32(pc.MaxHealth);
-            m.WriteFloat(pc.Physique);
-            m.WriteFloat(pc.Morale);
-            m.WriteFloat(pc.Concentration);
-            m.WriteInt32(pc.FameLevel);
-            m.WriteInt32(pc.PepRank);
+            m.WriteInt32(pc.Stats.MaxHealth);
+            m.WriteFloat(pc.Stats.Physique);
+            m.WriteFloat(pc.Stats.Morale);
+            m.WriteFloat(pc.Stats.Concentration);
+            m.WriteInt32(pc.Stats.FameLevel);
+            m.WriteInt32(pc.Stats.PepRank);
             //pawn add stream
             m.WriteVector3(UnitConversion.ToUnreal(pc.Velocity));
             m.WriteVector3(UnitConversion.ToUnreal(pc.Position));
@@ -69,21 +70,22 @@ namespace Network
             m.WriteInt32(0); //DebugFilter
             m.WriteInt32(0); //BitFieldHasPet_Invisible_JumpedFromLadder;
             m.WriteInt32(pc.ShiftableAppearance); //shiftableAppearance;
-            m.WriteByteArray(pc.GetPackedLOD(0));
-            m.WriteByteArray(pc.GetPackedLOD(1)); //<-----------fix length for all, or better implement it!
-            m.WriteByteArray(pc.GetPackedLOD(2));
-            m.WriteByteArray(pc.GetPackedLOD(3));
+            var app = pc.Appearance as Game_PlayerAppearance;
+            m.WriteByteArray(app.GetPackedLOD(0));
+            m.WriteByteArray(app.GetPackedLOD(1)); //<-----------fix length for all, or better implement it!
+            m.WriteByteArray(app.GetPackedLOD(2));
+            m.WriteByteArray(app.GetPackedLOD(3));
             m.WriteString(pc.Name);
             m.WriteString(pc.Guild != null ? pc.Guild.Name : "");
             m.WriteInt32(pc.Faction.ID);
-            m.WriteFloat(pc.Health);
+            m.WriteFloat(pc.Stats.Health);
             m.WriteByte(0); //frozenFlags
             m.WriteInt32(pc.GetEffectiveMoveSpeed());
-            m.WriteInt32(pc.StateRank);
-            m.WriteByte((byte) pc.CombatMode); //HACK: following fields may have to be changed by this mode accordingly
-            var it = pc.ItemManager.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
+            m.WriteInt32(pc.Stats.StateRank);
+            m.WriteByte((byte) pc.CombatState.CombatMode); //HACK: following fields may have to be changed by this mode accordingly
+            var it = pc.Items.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
             m.WriteInt32(it != null ? it.Type.resourceID : 0);
-            it = pc.ItemManager.GetEquippedItem(EquipmentSlot.ES_SHIELD);
+            it = pc.Items.GetEquippedItem(EquipmentSlot.ES_SHIELD);
             m.WriteInt32(it != null ? it.Type.resourceID : 0); //Offhandweapon! (does this even exist?)
             m.WriteInt32(pc.Effects.Count);
             for (var i = 0; i < pc.Effects.Count; i++)
@@ -97,17 +99,17 @@ namespace Network
         {
             var m = new Message(GameHeader.S2C_NPC_ADD);
             m.WriteInt32(npc.RelevanceID);
-            m.WriteInt32(npc.typeRef.resourceID);
+            m.WriteInt32(npc.Type.resourceID);
             m.WriteInt32(-1); //ownerID?
             m.WriteVector3(UnitConversion.ToUnreal(npc.Position));
-            m.WriteInt32(npc.MaxHealth);
-            m.WriteFloat(npc.Physique);
-            m.WriteFloat(npc.Morale);
-            m.WriteFloat(npc.Concentration);
-            m.WriteInt32(npc.FameLevel);
-            m.WriteInt32(npc.PepRank);
+            m.WriteInt32(npc.Stats.MaxHealth);
+            m.WriteFloat(npc.Stats.Physique);
+            m.WriteFloat(npc.Stats.Morale);
+            m.WriteFloat(npc.Stats.Concentration);
+            m.WriteInt32(npc.Stats.FameLevel);
+            m.WriteInt32(npc.Stats.PepRank);
             //NpcPawnStream
-            m.WriteInt32(npc.typeRef.resourceID); //same as resourceID
+            m.WriteInt32(npc.Type.resourceID); //same as resourceID
 
             /*
             m.WriteInt32(npc.RelatedQuestIDs.Count);
@@ -131,7 +133,7 @@ namespace Network
             m.WriteVector3(UnitConversion.ToUnreal(npc.FocusLocation)); //mNetFocusLocation
             m.WriteRotator(UnitConversion.ToUnreal(npc.Rotation)); //mDefaultRotation
             m.WriteByte((byte) npc.PawnState);
-            m.WriteInt32((int) npc.ClassType); //unsure
+            m.WriteInt32((int) npc.Stats.ClassType); //unsure
             m.WriteInt32(0);
             m.WriteInt32(0); //DebugFilter?
             m.WriteInt32(npc.Invisible ? 1 : 0); //invisibility
@@ -139,13 +141,13 @@ namespace Network
             m.WriteInt32(npc.ShiftableAppearance); //shiftableAppearance
             m.WriteInt32(npc.Faction.ID); //Faction
             //NpcStatsStream
-            m.WriteFloat(npc.Health); //health
+            m.WriteFloat(npc.Stats.Health); //health
             m.WriteByte(0); //frozenflags?
             m.WriteInt32(0); //movespeed?
-            m.WriteInt32(npc.StateRank);
+            m.WriteInt32(npc.Stats.StateRank);
             //NpcStatsStream end
             //NpcCombatStateStream
-            m.WriteByte((byte) npc.CombatMode);
+            m.WriteByte((byte) npc.CombatState.CombatMode);
             m.WriteInt32(0); //mainHandweapon?
             m.WriteInt32(0); //offhandweapon?
             //NpcCombatStateStream end
@@ -217,8 +219,8 @@ namespace Network
             msg.WriteVector3(UnitConversion.ToUnreal(character.Position));
             msg.WriteInt32((int)GameConfiguration.Get.player.StartZone);
             msg.WriteInt32(character.Money);
-            msg.WriteInt32(character.Appearance.AppearancePart1); //appearance1
-            msg.WriteInt32(character.Appearance.AppearancePart2); //appearance2
+            msg.WriteInt32(character.Appearance.AppearanceCachePart1); //appearance1
+            msg.WriteInt32(character.Appearance.AppearanceCachePart2); //appearance2
             msg.WriteRotator(UnitConversion.ToUnreal(Quaternion.Euler(character.Rotation)));
             msg.WriteInt32(character.Faction); //factionID
             msg.WriteInt32(0); //lastUsedTimeStamp
@@ -263,7 +265,7 @@ namespace Network
         public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(Character ch)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON);
-            m.WriteByte((byte)ch.equippedWeaponType);
+            m.WriteByte((byte)ch.CombatState.GetWeaponFlag());
             return m;
         }
 
@@ -276,7 +278,7 @@ namespace Network
         public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(Character ch)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON);
-            m.WriteByte((byte)ch.equippedWeaponType);
+            m.WriteByte((byte)ch.CombatState.GetWeaponFlag());
             return m;
         }
 
@@ -288,7 +290,7 @@ namespace Network
             var pc = ch as PlayerCharacter;
             if (pc)
             {
-                var weap = pc.ItemManager.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
+                var weap = pc.Items.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
                 if (weap)
                 {
                     weaponType = weap.Type.GetWeaponType();
@@ -874,12 +876,12 @@ namespace Network
             var pos = UnitConversion.ToUnreal(statsOwner.Position);
             m.WriteFloat(pos.x);
             m.WriteFloat(pos.z);
-            m.WriteByte((byte)(statsOwner.Appearance.Gender == CharacterGender.Female ? 1 : 0));
+            m.WriteByte((byte)statsOwner.Appearance.GetGender());
             m.WriteInt32((int)(statsOwner.ArcheType + 1));
             m.WriteInt32(0); //discipline
-            m.WriteFloat(statsOwner.MaxHealth);
-            m.WriteInt32(statsOwner.PepRank);
-            m.WriteInt32(statsOwner.FameLevel);
+            m.WriteFloat(statsOwner.Stats.MaxHealth);
+            m.WriteInt32(statsOwner.Stats.PepRank);
+            m.WriteInt32(statsOwner.Stats.FameLevel);
             return m;
         }
 
@@ -892,18 +894,18 @@ namespace Network
             //StatsUpdateData start
 
             m.WriteInt32(statsOwner.RelevanceID); //Outer.CharacterID
-            m.WriteFloat(statsOwner.Health); //Stats.mHealth
-            m.WriteFloat(statsOwner.Physique); //Stats.mPhysiqueLevel
-            m.WriteFloat(statsOwner.Morale); //Stats.mMoraleLevel
-            m.WriteFloat(statsOwner.Concentration); //Stats.mConcentrationLevel
-            m.WriteInt32(statsOwner.StateRank); //Stats.mStateRankShift
+            m.WriteFloat(statsOwner.Stats.Health); //Stats.mHealth
+            m.WriteFloat(statsOwner.Stats.Physique); //Stats.mPhysiqueLevel
+            m.WriteFloat(statsOwner.Stats.Morale); //Stats.mMoraleLevel
+            m.WriteFloat(statsOwner.Stats.Concentration); //Stats.mConcentrationLevel
+            m.WriteInt32(statsOwner.Stats.StateRank); //Stats.mStateRankShift
             m.WriteInt32(0); //TODO:Skills.mLastDuffUpdateTime
 
             //TODO: TeamDuffList, array of ints?
             m.WriteInt32(0);
 
             //LODData3, array of bytes?
-            m.WriteByteArray(statsOwner.GetPackedLOD(3));
+            m.WriteByteArray((statsOwner.Appearance as Game_PlayerAppearance).GetPackedLOD(3));
 
             //StatsUpdateData end
             return m;
@@ -1134,7 +1136,7 @@ namespace Network
             return m;
         }
 
-        public static Message S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(PlayerCharacter pc, FSkill_Type s)
+        public static Message S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL()
         {
             var m = new Message(GameHeader.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL);
             return m;
@@ -1217,7 +1219,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEHEALTH);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteFloat(ch.Health);
+            m.WriteFloat(ch.Stats.Health);
             return m;
         }
 
@@ -1225,7 +1227,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMAXHEALTH);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteFloat(ch.MaxHealth);
+            m.WriteFloat(ch.Stats.MaxHealth);
             return m;
         }
 
@@ -1233,7 +1235,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEPHYSIQUE);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteFloat(ch.Physique);
+            m.WriteFloat(ch.Stats.Physique);
             return m;
         }
 
@@ -1241,7 +1243,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMORALE);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteFloat(ch.Morale);
+            m.WriteFloat(ch.Stats.Morale);
             return m;
         }
 
@@ -1249,7 +1251,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATECONCENTRATION);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteFloat(ch.Concentration);
+            m.WriteFloat(ch.Stats.Concentration);
             return m;
         }
 
@@ -1257,7 +1259,7 @@ namespace Network
         {
             var m = new Message(GameHeader.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATESTATERANKSHIFT);
             m.WriteInt32(ch.RelevanceID);
-            m.WriteFloat(ch.StateRank);
+            m.WriteFloat(ch.Stats.StateRank);
             return m;
         }
 
@@ -1272,64 +1274,64 @@ namespace Network
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS);
-            m.WriteFloat(p.FamePoints);
+            m.WriteFloat((p.Stats as Game_PlayerStats).FamePoints);
             return m;
         }
 
-        public static Message S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(PlayerCharacter p)
+        public static Message S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(Character p)
         {
             var m = new Message(GameHeader.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP);
             m.WriteInt32(p.RelevanceID);
-            m.WriteInt32(p.FameLevel);
+            m.WriteInt32(p.Stats.FameLevel);
             return m;
         }
 
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEPEPPOINTS(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEPEPPOINTS);
-            m.WriteInt32(p.PepPoints);
+            m.WriteInt32((p.Stats as Game_PlayerStats).PepPoints);
             return m;
         }
 
         public static Message S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEBODYDELTA(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEBODYDELTA);
-            m.WriteInt32(p.Body);
+            m.WriteInt32(p.Stats.Body);
             return m;
         }
 
         public static Message S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEMINDDELTA(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEMINDDELTA);
-            m.WriteInt32(p.Mind);
+            m.WriteInt32(p.Stats.Mind);
             return m;
         }
 
         public static Message S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEFOCUSDELTA(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEFOCUSDELTA);
-            m.WriteInt32(p.Focus);
+            m.WriteInt32(p.Stats.Focus);
             return m;
         }
 
         public static Message S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEMAGICRESISTANCE(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEMAGICRESISTANCE);
-            m.WriteFloat(p.MagicResistance);
+            m.WriteFloat(p.Stats.MagicResistance);
             return m;
         }
 
         public static Message S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEMELEERESISTANCE(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_CHARACTERSTATS_SV2CL_UPDATEMELEERESISTANCE);
-            m.WriteFloat(p.MeleeResistance);
+            m.WriteFloat(p.Stats.MeleeResistance);
             return m;
         }
 
         public static Message S2C_GAME_CHARACTERSTATS_SV2CL_UPDATERANGEDRESISTANCE(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_CHARACTERSTATS_SV2CL_UPDATERANGEDRESISTANCE);
-            m.WriteFloat(p.RangedResistance);
+            m.WriteFloat(p.Stats.RangedResistance);
             return m;
         }
 
@@ -1343,24 +1345,24 @@ namespace Network
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEBODYANDRUNEAFFINITY(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEBODYANDRUNEAFFINITY);
-            m.WriteInt32(p.Body);
-            m.WriteFloat(p.RuneAffinity);
+            m.WriteInt32(p.Stats.Body);
+            m.WriteFloat(p.Stats.RuneAffinity);
             return m;
         }
 
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEMINDANDSPIRITAFFINITY(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEMINDANDSPIRITAFFINITY);
-            m.WriteInt32(p.Mind);
-            m.WriteFloat(p.SpiritAffinity);
+            m.WriteInt32(p.Stats.Mind);
+            m.WriteFloat(p.Stats.SpiritAffinity);
             return m;
         }
 
         public static Message S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFOCUSANDSOULAFFINITY(PlayerCharacter p)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFOCUSANDSOULAFFINITY);
-            m.WriteInt32(p.Focus);
-            m.WriteFloat(p.SoulAffinity);
+            m.WriteInt32(p.Stats.Focus);
+            m.WriteFloat(p.Stats.SoulAffinity);
             return m;
         }
 
@@ -1402,44 +1404,45 @@ namespace Network
             m.WriteInt32(0); //DebugFilters
             m.WriteInt32(p.Invisible ? 1 : 0); //visibility
             //statsStream
-            m.WriteFloat(p.FamePoints); //fame points (not fame level!)
-            m.WriteFloat(p.PepRank); //pep
+            var pStats = p.Stats as Game_PlayerStats;
+            m.WriteFloat(pStats.FamePoints); //fame points (not fame level!)
+            m.WriteFloat(p.Stats.PepRank); //pep
             m.WriteInt32(0); //MayChoseClassBitfield
-            m.WriteByte(p.RemainingAttributePoints); //remainingAttributePoints
-            m.WriteFloat(p.Health); //currentHealth
+            m.WriteByte(pStats.RemainingAttributePoints); //remainingAttributePoints
+            m.WriteFloat(p.Stats.Health); //currentHealth
             m.WriteByte(0); //cameraMode
             m.WriteInt32(p.GetEffectiveMoveSpeed()); //moveSpeed
 
             //Stats
-            m.WriteInt32(p.Body);
-            m.WriteInt32(p.Mind);
-            m.WriteInt32(p.Focus);
-            m.WriteFloat(p.Physique);
-            m.WriteFloat(p.Morale);
-            m.WriteFloat(p.Concentration);
-            m.WriteInt32(p.FameLevel);
-            m.WriteInt32(p.PepRank);
-            m.WriteFloat(p.RuneAffinity);
-            m.WriteFloat(p.SpiritAffinity);
-            m.WriteFloat(p.SoulAffinity);
-            m.WriteFloat(p.MeleeResistance);
-            m.WriteFloat(p.RangedResistance);
-            m.WriteFloat(p.MagicResistance);
-            m.WriteInt32(p.MaxHealth);
-            m.WriteFloat(p.PhysiqueRegeneration);
-            m.WriteFloat(p.PhysiqueDegeneration);
-            m.WriteFloat(p.MoraleRegeneration);
-            m.WriteFloat(p.MoraleDegeneration);
-            m.WriteFloat(p.ConcentrationRegeneration);
-            m.WriteFloat(p.ConcentrationDegeneration);
-            m.WriteFloat(p.HealthRegeneration);
-            m.WriteFloat(p.AttackSpeedBonus);
-            m.WriteFloat(p.MovementSpeedBonus);
-            m.WriteFloat(p.DamageBonus);
-            m.WriteFloat(p.Health);
+            m.WriteInt32(p.Stats.Body);
+            m.WriteInt32(p.Stats.Mind);
+            m.WriteInt32(p.Stats.Focus);
+            m.WriteFloat(p.Stats.Physique);
+            m.WriteFloat(p.Stats.Morale);
+            m.WriteFloat(p.Stats.Concentration);
+            m.WriteInt32(p.Stats.FameLevel);
+            m.WriteInt32(p.Stats.PepRank);
+            m.WriteFloat(p.Stats.RuneAffinity);
+            m.WriteFloat(p.Stats.SpiritAffinity);
+            m.WriteFloat(p.Stats.SoulAffinity);
+            m.WriteFloat(p.Stats.MeleeResistance);
+            m.WriteFloat(p.Stats.RangedResistance);
+            m.WriteFloat(p.Stats.MagicResistance);
+            m.WriteInt32(p.Stats.MaxHealth);
+            m.WriteFloat(p.Stats.PhysiqueRegeneration);
+            m.WriteFloat(p.Stats.PhysiqueDegeneration);
+            m.WriteFloat(p.Stats.MoraleRegeneration);
+            m.WriteFloat(p.Stats.MoraleDegeneration);
+            m.WriteFloat(p.Stats.ConcentrationRegeneration);
+            m.WriteFloat(p.Stats.ConcentrationDegeneration);
+            m.WriteFloat(p.Stats.HealthRegeneration);
+            m.WriteFloat(p.Stats.AttackSpeedBonus);
+            m.WriteFloat(p.Stats.MovementSpeedBonus);
+            m.WriteFloat(p.Stats.DamageBonus);
+            m.WriteFloat(p.Stats.Health);
             //stats end
 
-            m.WriteInt32(p.StateRank); //slider
+            m.WriteInt32(p.Stats.StateRank); //slider
             m.WriteInt32(0); //something with stats buildup in character screen
             m.WriteInt32(0); //same
             m.WriteInt32(0); //same
@@ -1458,23 +1461,24 @@ namespace Network
             m.WriteVector3(UnitConversion.ToUnreal(p.Position)); //position
             m.WriteInt32((int) p.LastZoneID); //worldID
             m.WriteInt32(p.Money); //money
-            m.WriteInt32(p.Appearance.AppearancePart1); //apearance 1 maybe LOd3, 2 ?
-            m.WriteInt32(p.Appearance.AppearancePart2); //appearance 2
+            var app = p.Appearance as Game_PlayerAppearance;
+            m.WriteInt32(app.AppearancePart1); //apearance 1 maybe LOd3, 2 ?
+            m.WriteInt32(app.AppearancePart2); //appearance 2
             m.WriteRotator(UnitConversion.ToUnreal(p.Rotation)); //rotation
             m.WriteInt32(p.Faction.ID); //faction/taxonomy
             m.WriteInt32(0); //lastUsedTimeStamp
             //characterSheetData
             m.WriteInt32((int) p.ArcheType); //Archetype
-            m.WriteFloat(p.FamePoints); //famepoints
-            m.WriteFloat(p.PepPoints); //pepPoints
-            m.WriteFloat(p.Health); //health
+            m.WriteFloat(pStats.FamePoints); //famepoints
+            m.WriteFloat(pStats.PepPoints); //pepPoints
+            m.WriteFloat(p.Stats.Health); //health
             m.WriteInt32(0); //selectedSkilldeck (?)
-            m.WriteByte(p.ExtraBodyPoints); //extraBodyPoints
-            m.WriteByte(p.ExtraMindPoints); //extraMindPoints
-            m.WriteByte(p.ExtraFocusPoints); //extraFocusPoints
+            m.WriteByte(pStats.ExtraBodyPoints); //extraBodyPoints
+            m.WriteByte(pStats.ExtraMindPoints); //extraMindPoints
+            m.WriteByte(pStats.ExtraFocusPoints); //extraFocusPoints
             m.WriteByte(0);
 
-            var playerItems = p.ItemManager.GetItems(EItemLocationType.ILT_Unknown);
+            var playerItems = p.Items.GetItems(EItemLocationType.ILT_Unknown);
             m.WriteInt32(playerItems.Count);
             for (var i = 0; i < playerItems.Count; i++)
             {
@@ -1489,21 +1493,21 @@ namespace Network
                 m.WriteInt32(0); //something with DBSkillDecks
             }
 
-            m.WriteInt32(p.skills.CharacterSkills.Count); //learnedskills
-            for (var i = 0; i < p.skills.CharacterSkills.Count; i++)
+            m.WriteInt32(p.Skills.CharacterSkills.Count); //learnedskills
+            for (var i = 0; i < p.Skills.CharacterSkills.Count; i++)
             {
-                m.WriteInt32(p.skills.CharacterSkills[i].resourceID); //skillID
-                m.WriteByte((byte) p.skills.GetTokenSlots(p.skills.CharacterSkills[i])); //sigilSlots
+                m.WriteInt32(p.Skills.CharacterSkills[i].resourceID); //skillID
+                m.WriteByte((byte) p.Skills.GetTokenSlots(p.Skills.CharacterSkills[i])); //sigilSlots
             }
 
-            //var sds = p.ActiveSkillDeck.GetSkillDeckSkills();
-            m.WriteInt32(0); //skilldeckSkills count
-            //for (var i = 0; i < sds.Count; i++)
-            //{
-            //    m.WriteInt32(0);
-            //    m.WriteInt32(sds[i].skillID);
-            //    m.WriteByte((byte) sds[i].totalDeckSlot);
-            //}
+            var sdeck = (p.Skills as Game_PlayerSkills).GetSkillDeckSkills();
+            m.WriteInt32(sdeck.Count); //skilldeckSkills count
+            for (var i = 0; i < sdeck.Count; i++)
+            {
+                m.WriteInt32(0);
+                m.WriteInt32(sdeck[i].Type.resourceID);
+                m.WriteByte((byte) sdeck[i].AbsoluteDeckSlot);
+            }
 
             #region Player quest data
             //Finished quests
@@ -1573,8 +1577,8 @@ namespace Network
                 m.WriteVector3(UnitConversion.ToUnreal(pc.Position));
                 m.WriteInt32(pc.LastZoneID); //worldID
                 m.WriteInt32(pc.Money);
-                m.WriteInt32(pc.Appearance.AppearancePart1); //appearance1
-                m.WriteInt32(pc.Appearance.AppearancePart2); //appearance2
+                m.WriteInt32(pc.Appearance.AppearanceCachePart1); //appearance1
+                m.WriteInt32(pc.Appearance.AppearanceCachePart2); //appearance2
                 m.WriteRotator(Rotator.Zero);
                 m.WriteInt32(pc.Faction);
                 m.WriteInt32(0); //lastusedTimeStamp

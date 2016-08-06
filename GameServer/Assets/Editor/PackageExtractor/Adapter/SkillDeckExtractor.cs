@@ -146,14 +146,12 @@ namespace PackageExtractor.Adapter
                                     var skill = GetSkillFromPackage(searchName);
                                     if (skill != null)
                                     {
-                                        throw new NotImplementedException("FixMe");
-                                        //newTier[currentSkillIndex] = skill;
+                                        newTier.Skills[currentSkillIndex] = skill;
                                     }
                                 }
                                 currentSkillIndex++;
                             }
-                            throw new NotImplementedException("FixMe");
-                            //newDeck.Tiers.Add(newTier);
+                            newDeck.Tiers.Add(newTier);
                         }
                     }
                     SaveDeck(newDeck, wpo.Name);

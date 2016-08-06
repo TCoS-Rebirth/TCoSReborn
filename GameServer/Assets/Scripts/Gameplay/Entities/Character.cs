@@ -12,7 +12,7 @@ using Random = UnityEngine.Random;
 
 namespace Gameplay.Entities
 {
-    public abstract partial class Character : Entity
+    public abstract class Character : Entity
     {
         const float MOVESPEED_MULTIPLIER = 1f;
 
@@ -22,7 +22,7 @@ namespace Gameplay.Entities
 
         [SerializeField, ReadOnly] EPawnStates _pawnState = EPawnStates.PS_ALIVE;
 
-        [ReadOnly] EControllerStates _controllerState = EControllerStates.CPS_PAWN_ALIVE;
+        //[ReadOnly] EControllerStates _controllerState = EControllerStates.CPS_PAWN_ALIVE;
 
         EPhysics _physics = EPhysics.PHYS_Walking;
 
@@ -41,6 +41,16 @@ namespace Gameplay.Entities
         [SerializeField, ReadOnly] Taxonomy faction;
 
         protected Rigidbody PhysicsBody;
+
+        public Game_Skills Skills;
+
+        public Game_ItemManager Items;
+
+        public Game_CharacterStats Stats;
+
+        public Game_Appearance Appearance;
+
+        public Game_CombatState CombatState;
 
         /// <summary>
         ///     The class type of this character
@@ -148,7 +158,7 @@ namespace Gameplay.Entities
         public int GetEffectiveMoveSpeed()
         {
             var baseSpeed = _groundSpeed*GroundSpeedModifier;
-            return (int) (baseSpeed + _groundSpeed*0.01f*MovementSpeedBonus);
+            return (int) (baseSpeed + _groundSpeed*0.01f*Stats.MovementSpeedBonus);
         }
 
         /// <summary>
@@ -158,7 +168,6 @@ namespace Gameplay.Entities
         public virtual void SetMoveSpeed(int newSpeed)
         {
             _groundSpeed = newSpeed;
-            if (!RelevanceContainsPlayers) return;
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMOVEMENTSPEED(this));
         }
 
@@ -170,7 +179,6 @@ namespace Gameplay.Entities
         public virtual void SetPawnState(EPawnStates newState)
         {
             _pawnState = newState;
-            if (!RelevanceContainsPlayers) return;
             if (OnPawnStateChanged != null) OnPawnStateChanged(this);
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(this));
         }
@@ -178,8 +186,9 @@ namespace Gameplay.Entities
         public override void UpdateEntity()
         {
             base.UpdateEntity();
+            if (Skills != null) Skills.OnFrame();
             UpdateDuffs();
-            RegenRoutine(1f);
+            if (Stats != null) Stats.OnFrame();
         }
 
         protected override void OnDestroyed()
@@ -189,17 +198,10 @@ namespace Gameplay.Entities
             OnDamaged = null;
         }
 
-        #region Skills
-
-        public Game_Skills skills;
-
-        #endregion
-
         #region Emotes
 
         public virtual void DoEmote(EContentEmote emote)
         {
-            if (!RelevanceContainsPlayers) return;
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_EMOTES_SV2REL_EMOTE(this, emote));
         }
 
@@ -244,22 +246,22 @@ namespace Gameplay.Entities
             switch (state)
             {
                 case EControllerStates.CPS_PAWN_ALIVE:
-                    _controllerState = state;
+                    //_controllerState = state;
                     stateString = "PawnAlive";
                     break;
 
                 case EControllerStates.CPS_PAWN_DEAD:
-                    _controllerState = state;
+                    //_controllerState = state;
                     stateString = "PawnDead";
                     break;
 
                 case EControllerStates.CPS_PAWN_SITTING:
-                    _controllerState = state;
+                    //_controllerState = state;
                     stateString = "PawnSitting";
                     break;
 
                 case EControllerStates.CPS_PAWN_FROZEN:
-                    _controllerState = state;
+                    //_controllerState = state;
                     stateString = "PawnFrozen";
                     break;
 
@@ -267,7 +269,7 @@ namespace Gameplay.Entities
                     return;
             }
 
-            Message m = PacketCreator.S2R_BASE_PAWN_SV2CL_GOTOSTATE(this, stateString);
+            var m = PacketCreator.S2R_BASE_PAWN_SV2CL_GOTOSTATE(this, stateString);
             BroadcastRelevanceMessage(m);
             var pc = this as PlayerCharacter;
             if (pc) pc.SendToClient(m);
@@ -334,7 +336,6 @@ namespace Gameplay.Entities
 
         protected virtual void OnDuffsChanged()
         {
-            if (!RelevanceContainsPlayers) return;
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS(this, duffs));
         }
 
@@ -346,11 +347,11 @@ namespace Gameplay.Entities
 
         public SkillApplyResult Damage(Character source, FSkill_Type s, int amount, Action<SkillApplyResult> callback)
         {
-            var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) SetHealth(Health - amount))};
+            var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) Stats.SetHealth(Stats.Health - amount))};
             callback(result);
 
             //Valshaaran - added not already dead condition
-            if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Health, 0))
+            if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Stats.Health, 0))
             {
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(source);
@@ -364,11 +365,8 @@ namespace Gameplay.Entities
         {
             if (sap.damageCaused != 0)
             {
-                if (RelevanceContainsPlayers)
-                {
-                    var m = PacketCreator.S2R_BASE_PAWN_SV2CLREL_DAMAGEACTIONS(this, 1f);
-                    BroadcastRelevanceMessage(m);
-                }
+                var m = PacketCreator.S2R_BASE_PAWN_SV2CLREL_DAMAGEACTIONS(this, 1f);
+                BroadcastRelevanceMessage(m);
             }
 
             IsInteracting = false;
@@ -381,14 +379,13 @@ namespace Gameplay.Entities
         public SkillApplyResult Heal(Character source, FSkill_Type s, int amount)
         {
             var result = new SkillApplyResult(source, this, s);
-            result.healCaused = (int) SetHealth(Health + amount);
+            result.healCaused = (int) Stats.SetHealth(Stats.Health + amount);
             OnHealReceived(result);
             return result;
         }
 
         protected virtual void OnDiedThroughDamage(Character source)
         {
-            if (!RelevanceContainsPlayers) return;
             BroadcastRelevanceMessage(PacketCreator.S2R_GAME_PAWN_SV2REL_COMBATMESSAGEDEATH(this, source));
         }
 
@@ -410,21 +407,18 @@ namespace Gameplay.Entities
 
         public virtual void PlayEffect(EPawnEffectType effectType)
         {
-            if (!RelevanceContainsPlayers) return;
             var m = PacketCreator.S2R_GAME_PAWN_SV2CLREL_PLAYPAWNEFFECT(this, effectType);
             BroadcastRelevanceMessage(m);
         }
 
         public virtual void PlayEffectDirect(int effectID)
         {
-            if (!RelevanceContainsPlayers) return;
             var m = PacketCreator.S2R_GAME_PAWN_SV2CLREL_PLAYPAWNEFFECTDIRECT(this, effectID);
             BroadcastRelevanceMessage(m);
         }
 
         public virtual void PlaySound(EPawnSound soundEffect, float volume)
         {
-            if (!RelevanceContainsPlayers) return;
             var m = PacketCreator.S2R_GAME_PAWN_SV2CLREL_STATICPLAYSOUND(this, soundEffect, volume);
             BroadcastRelevanceMessage(m);
         }
@@ -442,69 +436,6 @@ namespace Gameplay.Entities
         {
             float value;
             return animationDurations.TryGetValue(animNr, out value) ? value : 1.5f;
-        }
-
-        #endregion
-
-        #region Combat
-
-        [NonSerialized] public EWeaponCategory equippedWeaponType; //TODO: temporary, equip real weapon
-
-        Item_Type MainHandWeapon;
-        Item_Type OffHandWeapon;
-
-        [NonSerialized] ECombatMode combatMode;
-
-        public ECombatMode CombatMode
-        {
-            get { return combatMode; }
-            set { combatMode = value; }
-        }
-
-        public virtual void SheatheWeapon()
-        {
-            equippedWeaponType = EWeaponCategory.EWC_None;
-            combatMode = ECombatMode.CBM_Idle;
-            if (!RelevanceContainsPlayers) return;
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_COMBATSTATE_SV2REL_SHEATHEWEAPON(this));
-        }
-
-        public virtual void DrawWeapon()
-        {
-            throw new NotImplementedException("FixMe");
-            //var s = skills.ActiveSkillDeck.GetSkillFromLastActiveSlot();
-            //if (s != null)
-            //{
-            //    equippedWeaponType = s.requiredWeapon;
-            //}
-            combatMode = ECombatMode.CBM_Melee;
-            if (!RelevanceContainsPlayers) return;
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON(this));
-        }
-
-        public virtual void SwitchWeapon(EWeaponCategory newWeapon)
-        {
-            switch (newWeapon)
-            {
-                case EWeaponCategory.EWC_Unarmed:
-                    CombatMode = ECombatMode.CBM_Melee;
-                    break;
-                case EWeaponCategory.EWC_MeleeOrUnarmed:
-                    CombatMode = ECombatMode.CBM_Cast;
-                    break;
-                case EWeaponCategory.EWC_Melee:
-                    CombatMode = ECombatMode.CBM_Melee;
-                    break;
-                case EWeaponCategory.EWC_Ranged:
-                    CombatMode = ECombatMode.CBM_Ranged;
-                    break;
-            }
-            equippedWeaponType = newWeapon;
-            if (combatMode != ECombatMode.CBM_Idle)
-            {
-                if (!RelevanceContainsPlayers) return;
-                BroadcastRelevanceMessage(PacketCreator.S2R_GAME_COMBATSTATE_SV2REL_DRAWWEAPON(this));
-            }
         }
 
         #endregion

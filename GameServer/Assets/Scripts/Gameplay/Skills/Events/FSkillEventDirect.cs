@@ -12,7 +12,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public FSkillEventDuff Buff;
 
-        int currentRepeat;
+        //int currentRepeat;
 
         [ReadOnly] public SkillEffectDirectDamage Damage;
 
@@ -24,7 +24,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public SkillEffectDirectFireBodySlot FireBodySlot;
 
-        bool firstExecute = true;
+        //bool firstExecute = true;
 
         [ReadOnly] public SkillEffectDirectHeal Heal;
 
@@ -34,7 +34,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public bool KeepTargets;
 
-        float lastRepeatTime;
+        //float lastRepeatTime;
 
         [ReadOnly] public FSkillEventFx MissFXEvent;
 
@@ -56,7 +56,7 @@ namespace Gameplay.Skills.Events
         //var private transient bool FirstExecute;
         //var private transient Vector DetachedRangePosition;
 
-        protected List<Character> targets = new List<Character>();
+        //protected List<Character> targets = new List<Character>();
 
         [ReadOnly] public int TargetsPerRepeat;
 
@@ -64,34 +64,35 @@ namespace Gameplay.Skills.Events
 
         public override bool Execute()
         {
-            FireClientFX();
+            base.Execute();
+            ExecuteDirectEffects(GatherTargets());
             return true;
         }
 
-        protected void ExecuteDirectEffects(RunningSkillContext sInfo)
+        public void ExecuteDirectEffects(List<Character> targets)
         {
             var success = false;
-            for (var i = 0; i < targets.Count /*Mathf.Min(targets.Count, TargetsPerRepeat)*/; i++) //probably not correct
+            for (var i = 0; i < targets.Count; i++) //TODO targetsperrepeat etc?
             {
                 if (_State != null)
                 {
-                    success = _State.Fire(sInfo, targets[i]);
+                    success = _State.Apply(Skill, SkillPawn, targets[i]);
                 }
                 if (Damage != null)
                 {
-                    success = Damage.Fire(sInfo, targets[i]);
+                    success = Damage.Apply(Skill, SkillPawn, targets[i]);
                 }
                 if (Heal != null)
                 {
-                    success = Heal.Fire(sInfo, targets[i]);
+                    success = Heal.Apply(Skill, SkillPawn, targets[i]);
                 }
                 if (Buff != null)
                 {
-                    success = Buff.Apply(sInfo, targets[i]);
+                    success = Buff.Apply(Skill, SkillPawn, targets[i]);
                 }
                 if (Debuff != null)
                 {
-                    success = Debuff.Apply(sInfo, targets[i]);
+                    success = Debuff.Apply(Skill, SkillPawn, targets[i]);
                 }
                 if (success)
                 {
@@ -102,6 +103,51 @@ namespace Gameplay.Skills.Events
             {
                 //OnMissedTarget(sInfo, sInfo.SkillPawn);
             }
+        }
+
+        public List<Character> GatherTargets()
+        {
+            var targets = new List<Character>();
+            if (TargetSelf != ETargetMode.ETM_Never)
+            {
+                targets.Add(SkillPawn);
+            }
+            if (Range == null)
+            {
+                Debug.Log("skill Range undefined, cant query other targets");
+                return targets;
+            }
+            if (TargetFriendlies != ETargetMode.ETM_Never)
+            {
+                var potentialTargets = SkillPawn.Skills.QueryMeleeSkillTargets(Range);
+                for (var i = 0; i < potentialTargets.Count; i++)
+                {
+                    if (SkillPawn.Faction.Likes(potentialTargets[i].Faction))
+                    {
+                        targets.Add(potentialTargets[i]);
+                    }
+                }
+            }
+            if (TargetEnemies != ETargetMode.ETM_Never)
+            {
+                targets.Clear(); //TODO check if this conflicts
+                if (Range != null)
+                {
+                    var potentialTargets = Skill.paintLocation ? SkillPawn.Skills.QueryRangedSkillTargets(Location, Range) : SkillPawn.Skills.QueryMeleeSkillTargets(Range);
+                    for (var i = 0; i < potentialTargets.Count; i++)
+                    {
+                        if (!SkillPawn.Faction.Likes(potentialTargets[i].Faction))
+                        {
+                            targets.Add(potentialTargets[i]);
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.Log("Range null, cant query targets (?)");
+                }
+            }
+            return targets;
         }
 
         //protected virtual void OnHitTarget(RunningSkillContext sInfo, Character target)
@@ -120,56 +166,6 @@ namespace Gameplay.Skills.Events
         //        //Debug.Log(string.Format("[{0}] - executing OnMissedTarget (missfxevent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
         //        MissFXEvent.Execute(sInfo);
         //    }
-        //}
-
-        //protected void GatherTargets(RunningSkillContext sInfo)
-        //{
-        //    //Debug.Log(string.Format("[{0}] - gathering targets in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
-        //    targets.Clear();
-        //    if (TargetSelf != ETargetMode.ETM_Never)
-        //    {
-        //        targets.Add(sInfo.SkillPawn);
-        //        return;
-        //    }
-        //    if (TargetFriendlies != ETargetMode.ETM_Never)
-        //    {
-        //        if (Range != null)
-        //        {
-        //            var potentialTargets = sInfo.SkillPawn.QueryMeleeSkillTargets(Range);
-        //            for (var i = 0; i < potentialTargets.Count; i++)
-        //            {
-        //                if (sInfo.SkillPawn.Faction.Likes(potentialTargets[i].Faction))
-        //                {
-        //                    targets.Add(potentialTargets[i]);
-        //                }
-        //            }
-        //        }
-        //        else
-        //        {
-        //            Debug.Log("Range null, cant query targets (?)");
-        //        }
-        //        return;
-        //    }
-        //    if (TargetEnemies != ETargetMode.ETM_Never)
-        //    {
-        //        targets.Clear(); //TODO check if this conflicts
-        //        if (Range != null)
-        //        {
-        //            var potentialTargets = sInfo.ExecutingSkill.paintLocation ? sInfo.SkillPawn.QueryRangedSkillTargets(sInfo.TargetPosition, Range) : sInfo.SkillPawn.QueryMeleeSkillTargets(Range);
-        //            for (var i = 0; i < potentialTargets.Count; i++)
-        //            {
-        //                //if (sInfo.SkillPawn.Faction.Hates(potentialTargets[i].Faction)) //disabled for testing
-        //                //{
-        //                    targets.Add(potentialTargets[i]);
-        //                //}
-        //            }
-        //        }
-        //        else
-        //        {
-        //            Debug.Log("Range null, cant query targets (?)");
-        //        }
-        //    }
-        //    //Debug.Log(string.Format("[{0}] - targets found: {1} in {2} of {3}", Time.time, targets.Count, this, sInfo.ExecutingSkill));
         //}
 
         public override void DeepClone()
@@ -200,10 +196,9 @@ namespace Gameplay.Skills.Events
         public override void Reset()
         {
             base.Reset();
-            targets.Clear();
-            firstExecute = true;
-            lastRepeatTime = 0;
-            currentRepeat = 0;
+            //firstExecute = true;
+            //lastRepeatTime = 0;
+            //currentRepeat = 0;
             if (Buff != null)
             {
                 Buff.Reset();

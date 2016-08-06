@@ -10,30 +10,22 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            switch (Gender)
-            {
-                case NPCGender.ENG_Male:
-                    if (p.Appearance.Gender == CharacterGender.Male)
-                    {
-                        return true;
-                    }
-                    return false;
-
-                case NPCGender.ENG_Female:
-                    if (p.Appearance.Gender == CharacterGender.Female)
-                    {
-                        return true;
-                    }
-                    return false;
-
-                default:
-                    return false;
-            }
+            return p.Appearance.GetGender() == Gender;
         }
 
         public override bool isMet(NpcCharacter n)
         {
             throw new NotImplementedException();
+        }
+
+        public override bool CheckPawn(Character character)
+        {
+            var p = character as PlayerCharacter;
+            if (p != null)
+            {
+                return isMet(p);
+            }
+            return false;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Gameplay.Skills
@@ -7,7 +8,7 @@ namespace Gameplay.Skills
     public class NPC_SkillDeck : ScriptableObject
     {
         [UnityEngine.Serialization.FormerlySerializedAs("tiers")]
-        public SkillDeckTier[] Tiers = new SkillDeckTier[6];
+        public List<SkillDeckTier> Tiers = new List<SkillDeckTier>();
 
 
         [Serializable]

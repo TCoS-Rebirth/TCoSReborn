@@ -15,21 +15,21 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public ValueSpecifier multiplierVS;
 
-        public override bool Fire(RunningSkillContext sInfo, Character target)
+        public override bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
-            if (target != null)
+            if (targetPawn != null)
             {
-                var drainedValue = (int) drainedAmount.CalculateValue(sInfo);
-                var realDrainedAmount = target.SetCharacterStat(drainedCharacterStat, target.GetCharacterStat(drainedCharacterStat) + drainedValue);
+                var drainedValue = (int) drainedAmount.CalculateValue(skill, skillPawn, targetPawn);
+                var realDrainedAmount = targetPawn.Stats.SetCharacterStat(drainedCharacterStat, targetPawn.Stats.GetCharacterStat(drainedCharacterStat) + drainedValue);
                 if (multiplierVS != null)
                 {
-                    realDrainedAmount = (int) (realDrainedAmount*multiplierVS.CalculateValue(sInfo));
+                    realDrainedAmount = (int) (realDrainedAmount*multiplierVS.CalculateValue(skill, skillPawn, targetPawn));
                 }
                 else
                 {
                     realDrainedAmount = (int) (realDrainedAmount*multiplier);
                 }
-                target.SetCharacterStat(gainedCharacterStat, realDrainedAmount);
+                targetPawn.Stats.SetCharacterStat(gainedCharacterStat, realDrainedAmount);
                 return true;
             }
             return false;

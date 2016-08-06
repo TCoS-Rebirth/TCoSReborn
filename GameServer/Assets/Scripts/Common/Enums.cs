@@ -62,10 +62,10 @@
 
     public enum NPCGender
     {
-        ENG_Male,
-        ENG_Female,
-        ENG_Neuter,
-        ENG_Hermaphrodite
+        ENG_Male = 0,
+        ENG_Female = 1,
+        ENG_Neuter = 2,
+        ENG_Hermaphrodite = 3
     }
 
     public enum ENPCClassType
@@ -535,6 +535,35 @@
         EWC_Dagger,
         EWC_Bow,
         EWC_Shields
+    }
+
+    public enum AppearancePart
+    {
+        AP_ChestClothes,
+        AP_LeftGlove,
+        AP_RightGlove,
+        AP_Pants,
+        AP_Shoes,
+        AP_HeadGearArmour,
+        AP_LeftShoulderArmour,
+        AP_RightShoulderArmour,
+        AP_LeftGauntlet,
+        AP_RightGauntlet,
+        AP_ChestArmour,
+        AP_Belt,
+        AP_LeftThigh,
+        AP_RightThigh,
+        AP_LeftShin,
+        AP_RightShin,
+        AP_MainWeapon,
+        AP_OffhandWeapon,
+        AP_Hair,
+        AP_MainSheath,
+        AP_OffhandSheath,
+        AP_Body,
+        AP_Head,
+        AP_Tattoo,
+        AP_ClassTattoo
     }
 
     public enum EDebugDrawFilters

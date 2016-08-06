@@ -69,8 +69,8 @@ namespace World
                     if (newNPC.Faction == null)
                         newNPC.Faction = GameData.Get.factionDB.defaultFaction;
                     //Roll level if not specified
-                    if (newNPC.FameLevel == 0)
-                        newNPC.FameLevel = Random.Range(LevelMin, LevelMax);
+                    if (newNPC.Stats.FameLevel == 0)
+                        newNPC.Stats.FameLevel = Random.Range(LevelMin, LevelMax);
                     newNPC.OnPawnStateChanged += OnSpawnStateChanged;
                     spawnsAlive++;
                     newNPC.InitEnabled = true;

@@ -92,6 +92,7 @@ namespace Gameplay.Skills.Events
             Location = aLocation;
             StartTime = aTime;
             OriginDuffCondition = aOriginCondition;
+            eventState = ESkillEventState.SES_INITIALIZING;
         }
 
         public abstract bool Execute();

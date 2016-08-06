@@ -5,8 +5,13 @@ using UnityEngine;
 
 namespace Gameplay.Entities
 {
-    public abstract partial class Character
+    public abstract class Game_CharacterStats: ScriptableObject
     {
+
+        Character Owner;
+
+        const float REGEN_UPDATE_INTERVAL = 1f;
+        
         const int MAX_ATTRIBUTE_VALUE = 100;
         const float AFFINITY_MULTIPLIER = 0.375f;
 
@@ -33,6 +38,30 @@ namespace Gameplay.Entities
         [NonSerialized] public float SoulAffinity;
 
         [NonSerialized] public float SpiritAffinity;
+
+        byte extraBodyPoints;
+
+        public byte ExtraBodyPoints
+        {
+            get { return extraBodyPoints; }
+            set { extraBodyPoints = value; }
+        }
+
+        byte extraMindPoints;
+
+        public byte ExtraMindPoints
+        {
+            get { return extraMindPoints; }
+            set { extraMindPoints = value; }
+        }
+
+        byte extraFocusPoints;
+
+        public byte ExtraFocusPoints
+        {
+            get { return extraFocusPoints; }
+            set { extraFocusPoints = value; }
+        }
 
         /// <summary>
         ///     whether the movement of this character is currently frozen
@@ -80,31 +109,27 @@ namespace Gameplay.Entities
             }
         }
 
-        public void InitializeStats()
+        public virtual void Init(Character character)
         {
+            Owner = character;
             UpdateAffinities();
             UpdateResistances();
             //StartCoroutine(RegenRoutine(1f));
         }
 
-        float lastRegen;
-        void RegenRoutine(float tickInterval)
+        public virtual void OnFrame()
         {
-            if (Time.time - lastRegen > tickInterval)
+            RegenRoutine();
+        }
+
+        float lastRegen;
+        void RegenRoutine()
+        {
+            if (Time.time - lastRegen > REGEN_UPDATE_INTERVAL)
             {
-                DeRegenerateStats(tickInterval);
+                DeRegenerateStats(REGEN_UPDATE_INTERVAL);
                 lastRegen = Time.time;
             }
-            //while (true)
-            //{
-            //    if (combatMode != ECombatMode.CBM_Idle)
-            //    {
-            //        DeRegenerateStats(tickInterval);
-            //    }
-            //    var t = Time.time;
-            //    while (Time.time - t < tickInterval) yield return null;
-            //    //yield return new WaitForSeconds(tickInterval);
-            //}
         }
 
         protected void UpdateAffinities()
@@ -126,8 +151,13 @@ namespace Gameplay.Entities
             if (!Mathf.Approximately(prevBonus, newBonus))
             {
                 MovementSpeedBonus = newBonus;
-                SetMoveSpeed(_groundSpeed); //just to trigger the broadcast TODO find cleaner solution
+                Owner.SetMoveSpeed(Owner.GroundSpeed); //just to trigger the broadcast TODO find cleaner solution
             }
+        }
+
+        public virtual void GiveFame(int amount)
+        {
+            
         }
 
         public float GetCharacterStatistic(EVSCharacterStatistic statistic)
@@ -264,7 +294,8 @@ namespace Gameplay.Entities
 
         protected virtual void OnFameChanged()
         {
-            PlayEffect(EPawnEffectType.EPET_LevelUp);
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(Owner));
+            Owner.PlayEffect(EPawnEffectType.EPET_LevelUp);
         }
 
         public void SetPep(int newRank)
@@ -279,7 +310,7 @@ namespace Gameplay.Entities
 
         protected virtual void OnPepChanged()
         {
-            PlayEffect(EPawnEffectType.EPET_RankUp);
+            Owner.PlayEffect(EPawnEffectType.EPET_RankUp);
         }
 
         public float SetHealth(float newAmount)
@@ -296,7 +327,7 @@ namespace Gameplay.Entities
 
         protected virtual void OnHealthChanged()
         {
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEHEALTH(this));
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEHEALTH(Owner));
         }
 
         public void SetMaxHealth(int amount)
@@ -319,7 +350,7 @@ namespace Gameplay.Entities
 
         protected virtual void OnMaxHealthChanged()
         {
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMAXHEALTH(this));
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMAXHEALTH(Owner));
         }
 
         #endregion
@@ -446,19 +477,20 @@ namespace Gameplay.Entities
 
         protected virtual void OnConcentrationChanged()
         {
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATECONCENTRATION(this));
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATECONCENTRATION(Owner));
         }
 
         protected virtual void OnMoraleChanged()
         {
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMORALE(this));
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMORALE(Owner));
         }
 
         protected virtual void OnPhysiqueChanged()
         {
-            BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEPHYSIQUE(this));
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEPHYSIQUE(Owner));
         }
 
         #endregion
     }
+
 }

@@ -1,28 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
 using Common;
-using Gameplay.Items;
+using Gameplay.Entities;
+using Network;
 using UnityEngine;
 
-namespace Gameplay.Entities.Players
-{   
+namespace Gameplay.Items
+{
 
-    [Serializable]
-    public class Player_ItemManager
+    public class Game_PlayerItemManager : Game_ItemManager
     {
-        public delegate void ItemChangeNotification(Game_Item item, EItemChangeNotification type, EItemLocationType locationType, int locationSlot, int locationID);
+
+        PlayerCharacter Owner;
+
+        public void Init(PlayerCharacter owner)
+        {
+            Owner = owner;
+            LoadItems(Owner.dbRef.Items);
+        }
+
+        void OnItemChanged(Game_Item item, EItemChangeNotification notificationType, EItemLocationType locationType, int slotID, int locationID)
+        {
+            if (item == null)
+            {
+                var m = PacketCreator.S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM(locationType, slotID, locationID);
+                Owner.SendToClient(m);
+            }
+            else
+            {
+                var m = PacketCreator.S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM(item, notificationType);
+                Owner.SendToClient(m);
+            }
+        }
 
         HashSet<int> filledItemSlots = new HashSet<int>();
 
         List<Game_Item> items = new List<Game_Item>();
-        public ItemChangeNotification OnItemChanged;
 
         public const int MAX_INV = 200;
-
-        public Player_ItemManager(ItemChangeNotification itemChangedCallback)
-        {
-            OnItemChanged = itemChangedCallback;
-        }
 
         int GetFreeItemSlot()
         {
@@ -42,10 +57,9 @@ namespace Gameplay.Entities.Players
             return i;
         }
 
-        public bool hasFreeSpace(int slots)
+        public override bool HasFreeSpace(int slots)
         {
             return slots <= (MAX_INV - filledItemSlots.Count);
-
         }
 
         Game_Item CanStackToExisting(Game_Item item)
@@ -68,7 +82,7 @@ namespace Gameplay.Entities.Players
             return null;
         }
 
-        public bool AddItem(Game_Item item)
+        public override bool AddItem(Game_Item item)
         {
             if (item == null)
             {
@@ -86,30 +100,21 @@ namespace Gameplay.Entities.Players
                 item.LocationSlot = freeSlot;
                 items.Add(item);
                 filledItemSlots.Add(freeSlot);
-                if (OnItemChanged != null)
-                {
-                    OnItemChanged(item, EItemChangeNotification.ICN_Added, EItemLocationType.ILT_Inventory, freeSlot, 0);
-                }
+                OnItemChanged(item, EItemChangeNotification.ICN_Added, EItemLocationType.ILT_Inventory, freeSlot, 0);
                 return true;
             }
             stackToExisting.StackSize += item.StackSize;
-            if (OnItemChanged != null)
-            {
-                OnItemChanged(stackToExisting, EItemChangeNotification.ICN_Stacked, EItemLocationType.ILT_Inventory, stackToExisting.LocationSlot, 0);
-            }
+            OnItemChanged(stackToExisting, EItemChangeNotification.ICN_Stacked, EItemLocationType.ILT_Inventory, stackToExisting.LocationSlot, 0);
             return true;
         }
 
-        public bool RemoveItem(EItemLocationType locationType, int locationSlot, int locationID)
+        public override bool RemoveItem(EItemLocationType locationType, int locationSlot, int locationID)
         {
             for (var i = 0; i < items.Count; i++)
             {
                 if (items[i].LocationType == locationType && items[i].LocationSlot == locationSlot)
                 {
-                    if (OnItemChanged != null)
-                    {
-                        OnItemChanged(null, EItemChangeNotification.ICN_Removed, locationType, locationSlot, locationID);
-                    }
+                    OnItemChanged(null, EItemChangeNotification.ICN_Removed, locationType, locationSlot, locationID);
                     filledItemSlots.Remove(items[i].LocationSlot);
                     items[i].LocationType = EItemLocationType.ILT_Unknown;
                     items[i].LocationSlot = -1;
@@ -137,11 +142,8 @@ namespace Gameplay.Entities.Players
                 sourceItem.LocationType = targetLocationType;
                 sourceItem.LocationSlot = targetLocationSlot;
                 sourceItem.LocationID = targetLocationID;
-                if (OnItemChanged != null)
-                {
-                    OnItemChanged(null, EItemChangeNotification.ICN_Removed, sourcelocationType, sourceLocationSlot, sourceLocationID);
-                    OnItemChanged(sourceItem, EItemChangeNotification.ICN_Moved, sourceItem.LocationType, sourceItem.LocationSlot, sourceItem.LocationID);
-                }
+                OnItemChanged(null, EItemChangeNotification.ICN_Removed, sourcelocationType, sourceLocationSlot, sourceLocationID);
+                OnItemChanged(sourceItem, EItemChangeNotification.ICN_Moved, sourceItem.LocationType, sourceItem.LocationSlot, sourceItem.LocationID);
             }
             else
             {
@@ -155,10 +157,7 @@ namespace Gameplay.Entities.Players
                         if (RemoveItem(sourcelocationType, sourceLocationSlot, sourceLocationID))
                         {
                             targetItem.StackSize += sourceItem.StackSize;
-                            if (OnItemChanged != null)
-                            {
-                                OnItemChanged(targetItem, EItemChangeNotification.ICN_Stacked, targetItem.LocationType, targetItem.LocationSlot, targetItem.LocationID);
-                            }
+                            OnItemChanged(targetItem, EItemChangeNotification.ICN_Stacked, targetItem.LocationType, targetItem.LocationSlot, targetItem.LocationID);
                         }
                     }
                 }
@@ -178,17 +177,14 @@ namespace Gameplay.Entities.Players
                         targetItem.LocationType = sourcelocationType;
                         targetItem.LocationSlot = sourceLocationSlot;
                         targetItem.LocationID = sourceLocationID;
-                        if (OnItemChanged != null)
-                        {
-                            OnItemChanged(sourceItem, EItemChangeNotification.ICN_Moved, sourceItem.LocationType, sourceItem.LocationSlot, sourceItem.LocationID);
-                            OnItemChanged(targetItem, EItemChangeNotification.ICN_Moved, targetItem.LocationType, targetItem.LocationSlot, targetItem.LocationID);
-                        }
+                        OnItemChanged(sourceItem, EItemChangeNotification.ICN_Moved, sourceItem.LocationType, sourceItem.LocationSlot, sourceItem.LocationID);
+                        OnItemChanged(targetItem, EItemChangeNotification.ICN_Moved, targetItem.LocationType, targetItem.LocationSlot, targetItem.LocationID);
                     }
                 }
             }
         }
 
-        public List<Game_Item> GetItems(EItemLocationType location)
+        public override List<Game_Item> GetItems(EItemLocationType location)
         {
             if (location == EItemLocationType.ILT_Unknown)
             {
@@ -205,7 +201,7 @@ namespace Gameplay.Entities.Players
             return equipList;
         }
 
-        public Game_Item GetItem(EItemLocationType locationType, int locationSlot, int locationID)
+        public override Game_Item GetItem(EItemLocationType locationType, int locationSlot, int locationID)
         {
             for (var i = 0; i < items.Count; i++)
             {
@@ -217,11 +213,11 @@ namespace Gameplay.Entities.Players
             return null;
         }
 
-        public Game_Item GetEquippedItem(EquipmentSlot slot)
+        public override Game_Item GetEquippedItem(EquipmentSlot slot)
         {
             for (var i = 0; i < items.Count; i++)
             {
-                if (items[i].LocationType == EItemLocationType.ILT_Equipment && items[i].LocationSlot == (int) slot)
+                if (items[i].LocationType == EItemLocationType.ILT_Equipment && items[i].LocationSlot == (int)slot)
                 {
                     return items[i];
                 }
@@ -247,6 +243,33 @@ namespace Gameplay.Entities.Players
                 }
             }
             return false;
+        }
+
+        public override void GiveInventory(Content_Inventory inventory)
+        {
+            foreach (var cItem in inventory.Items)
+            {
+
+                var gi = CreateInstance<Game_Item>();
+                gi.SetupFromCItem(cItem);
+
+                //TODO: Handle attuned status?
+                //if (attuned) { gi.Attuned = 1; }
+
+                AddItem(gi);
+            }
+        }
+
+        public bool HasInventory(Content_Inventory inventory)
+        {
+            foreach (var cItem in inventory.Items)
+            {
+                if (!HasItemStack(cItem))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

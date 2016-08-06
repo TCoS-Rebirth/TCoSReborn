@@ -6,12 +6,12 @@ namespace Gameplay.Items.ItemComponents
 {
     public class Item_Component : ScriptableObject
     {
-        public virtual bool CanEquip(Character ch, Item_Type item)
+        public virtual bool CanEquip(Character ch, Game_Item item)
         {
             return true;
         }
 
-        public virtual bool CanUse(Character ch, Item_Type item)
+        public virtual bool CanUse(Character ch, Game_Item item)
         {
             return true;
         }
@@ -34,15 +34,15 @@ namespace Gameplay.Items.ItemComponents
         {
         }
 
-        public virtual void OnEquip(Character ch, Item_Type item)
+        public virtual void OnEquip(Character ch, Game_Item item)
         {
         }
 
-        public virtual void OnUnequiip(Character ch, Item_Type item)
+        public virtual void OnUnequip(Character ch, Game_Item item)
         {
         }
 
-        public virtual void OnUse(Character ch, Item_Type item)
+        public virtual void OnUse(Character ch, Game_Item item)
         {
         }
     }

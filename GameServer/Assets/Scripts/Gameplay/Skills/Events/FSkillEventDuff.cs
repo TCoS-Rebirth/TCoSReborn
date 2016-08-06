@@ -32,8 +32,6 @@ namespace Gameplay.Skills.Events
         //var transient bool UninstallWhenDone;
         //var transient array<Game_Pawn> Targets;
 
-        bool fired;
-
         [ReadOnly] public string Name;
 
         [ReadOnly] public EDuffPriority Priority;
@@ -49,7 +47,7 @@ namespace Gameplay.Skills.Events
         public void FireCondition(Character trigger, EDuffCondition condition, EDuffAttackType attackType, EDuffMagicType magicType = EDuffMagicType.EDMT_None,
             EEffectType effectType = EEffectType.EET_Damage)
         {
-            for (int i = 0; i < ConditionalEvents.Count; i++)
+            for (var i = 0; i < ConditionalEvents.Count; i++)
             {
                 var cEv = ConditionalEvents[i];
                 if (cEv.Condition == condition
@@ -58,31 +56,22 @@ namespace Gameplay.Skills.Events
                     && cEv.EffectType == effectType
                     )
                 {
-                    //cEv.Execute() run somehow..
+                    trigger.Skills.FireCondition(trigger, condition, attackType, magicType, effectType);
                 }
             }
         }
 
-        //public override bool Execute()
-        //{
-        //    base.Execute(context);
-        //    if (!fired)
-        //    {
-        //        //triggerPawn.AddDuff(this, Duration, StackType, StackCount, Visible); //TODO
-        //        fired = true;
-        //    }
-        //    //Debug.Log(string.Format("[{0}] - executing event {1} of {2}", Time.time, this, context.ExecutingSkill));
-        //    return true;
-        //}
-
-        public bool Apply(RunningSkillContext sInfo, Character triggerPawn)
+        public override bool Execute()
         {
-            if (triggerPawn != null)
-            {
-                triggerPawn.AddDuff(this, Duration, StackType, StackCount, Visible);
-                return true;
-            }
-            return false;
+            base.Execute();
+            
+            return true;
+        }
+
+        public bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
+        {
+            targetPawn.AddDuff(this, Duration, StackType, StackCount, Visible); 
+            return true;
         }
 
         public override void DeepClone()
@@ -113,7 +102,6 @@ namespace Gameplay.Skills.Events
         public override void Reset()
         {
             base.Reset();
-            fired = false;
             for (var i = 0; i < DirectEffects.Count; i++)
             {
                 DirectEffects[i].Reset();

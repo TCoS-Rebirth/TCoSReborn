@@ -89,7 +89,7 @@ namespace Gameplay.Skills
 
         [ReadOnly] public bool skillRequiresEquippedWeapon;
 
-        [ReadOnly] public bool skillRollsCombatBar;
+        [ReadOnly] public bool skillRollsCombatBar = true;
 
         [ReadOnly] public int stackCount;
 

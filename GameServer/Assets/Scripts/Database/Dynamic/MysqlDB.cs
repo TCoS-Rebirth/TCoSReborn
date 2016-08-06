@@ -7,6 +7,7 @@ using Database.Static;
 using Gameplay;
 using Gameplay.Entities;
 using Gameplay.Items;
+using Gameplay.Skills;
 using MySql.Data.MySqlClient;
 using UnityEngine;
 using Utility;
@@ -376,11 +377,11 @@ namespace Database.Dynamic
                                 AccountID = reader.GetInt32(0),
                                 DBID = reader.GetInt32(1),
                                 Name = reader.GetString(2),
-                                Appearance = new CharacterAppearance(DatabaseHelper.DeserializeIntList(reader.GetString(3), 11).ToArray()),
                                 LastZoneID = reader.GetInt32(4),
                                 Faction = reader.GetInt32(5),
                                 ArcheType = reader.GetInt32(6),
                                 PawnState = reader.GetInt32(7),
+                                Appearance = new DBPlayerCharacter.DBAppearance(DatabaseHelper.DeserializeIntList(reader.GetString(3), 11).ToArray()),
                                 Position = DatabaseHelper.DeSerializeVector3(reader.GetString(8)),
                                 Rotation = DatabaseHelper.DeSerializeVector3(reader.GetString(9)),
                                 FamePep = DatabaseHelper.DeserializeIntList(reader.GetString(10), 2).ToArray(),
@@ -563,25 +564,25 @@ namespace Database.Dynamic
                     Debug.LogWarning("Sessionkey for " + pc.Name + " is not valid. not saving logout to DB");
                     return false;
                 }
-                ch.Appearance = pc.Appearance;
+                var pStats = pc.Stats as Game_PlayerStats;
+                ch.Appearance = (pc.Appearance as Game_PlayerAppearance).ToDBCache();
                 ch.LastZoneID = (int) pc.LastZoneID;
                 ch.PawnState = (int) pc.PawnState;
                 ch.Position = pc.Position;
                 ch.Rotation = pc.Rotation.eulerAngles;
-                ch.FamePep = new int[2] {pc.FameLevel, pc.PepRank};
-                ch.FamePoints = pc.FamePoints;
-                ch.HealthMaxHealth = new int[2] {(int) pc.Health, pc.MaxHealth};
-                ch.BodyMindFocus = new int[3] {pc.Body, pc.Mind, pc.Focus};
-                ch.PhysiqueMoraleConcentration = new[] {pc.Physique, pc.Morale, pc.Concentration};
+                ch.FamePep = new int[2] {pc.Stats.FameLevel, pc.Stats.PepRank };
+                ch.FamePoints = pStats.FamePoints;
+                ch.HealthMaxHealth = new int[2] {(int) pc.Stats.Health, pc.Stats.MaxHealth };
+                ch.BodyMindFocus = new int[3] {pc.Stats.Body, pc.Stats.Mind, pc.Stats.Focus };
+                ch.PhysiqueMoraleConcentration = new[] {pc.Stats.Physique, pc.Stats.Morale, pc.Stats.Concentration };
                 ch.Money = pc.Money;
-                ch.ExtraBodyMindFocusAttributePoints = new int[4] {pc.ExtraBodyPoints, pc.ExtraMindPoints, pc.ExtraFocusPoints, pc.RemainingAttributePoints};
+                ch.ExtraBodyMindFocusAttributePoints = new int[4] {pStats.ExtraBodyPoints, pStats.ExtraMindPoints, pStats.ExtraFocusPoints, pStats.RemainingAttributePoints};
                 ch.Skills.Clear();
-                for (var i = 0; i < pc.skills.CharacterSkills.Count; i++)
+                for (var i = 0; i < pc.Skills.CharacterSkills.Count; i++)
                 {
-                    ch.Skills.Add(new DBSkill(pc.skills.CharacterSkills[i].resourceID, pc.skills.GetTokenSlots(pc.skills.CharacterSkills[i])));
+                    ch.Skills.Add(new DBSkill(pc.Skills.CharacterSkills[i].resourceID, pc.Skills.GetTokenSlots(pc.Skills.CharacterSkills[i])));
                 }
-                throw new NotImplementedException("Skilldeck saving");
-                //ch.SerializedSkillDeck = pc.ActiveSkillDeck.DBSerialize();
+                ch.SerializedSkillDeck = (pc.Skills as Game_PlayerSkills).DBSerializeDeck();
                 for (var i = 0; i < ch.Items.Count; i++)
                 {
                     if (ch.Items[i].DBID <= 0)

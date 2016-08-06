@@ -28,5 +28,12 @@ namespace Gameplay.RequirementSpecifier
         {
             return false;
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            var p = character as PlayerCharacter;
+            if (!p) return false;
+            return SBOperator.Operate(p.Team != null ? p.Team.memberCount : 1, Operator, RequiredSize);
+        }
     }
 }
