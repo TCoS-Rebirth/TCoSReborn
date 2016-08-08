@@ -16,7 +16,7 @@ CREATE TABLE `accounts` (
   `SessionKey` int(11) NOT NULL DEFAULT '-1',
   `LastUniverse` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`ID`,`Name`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=latin1;
 
 -- ----------------------------
 -- Table structure for `devnotes`
@@ -40,6 +40,11 @@ CREATE TABLE `knownuniverses` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- ----------------------------
+-- Records of knownuniverses
+-- ----------------------------
+INSERT INTO knownuniverses VALUES ('0', 'TCoS-Reborn');
+
+-- ----------------------------
 -- Table structure for `playercharacteritems`
 -- ----------------------------
 DROP TABLE IF EXISTS `playercharacteritems`;
@@ -58,6 +63,31 @@ CREATE TABLE `playercharacteritems` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- ----------------------------
+-- Table structure for `playercharacterpersistentvars`
+-- ----------------------------
+DROP TABLE IF EXISTS `playercharacterpersistentvars`;
+CREATE TABLE `playercharacterpersistentvars` (
+  `CharacterID` int(11) NOT NULL,
+  `ContextID` int(11) NOT NULL DEFAULT '-1',
+  `VarID` int(11) NOT NULL DEFAULT '-1',
+  `Value` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`CharacterID`,`ContextID`,`VarID`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- ----------------------------
+-- Table structure for `playercharacterquests`
+-- ----------------------------
+DROP TABLE IF EXISTS `playercharacterquests`;
+CREATE TABLE `playercharacterquests` (
+  `CharacterID` int(11) NOT NULL,
+  `QuestID` int(11) NOT NULL DEFAULT '-1',
+  `IsComplete` tinyint(1) NOT NULL DEFAULT '0',
+  `TargetIndex` int(11) NOT NULL DEFAULT '0',
+  `TargetProgress` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`CharacterID`,`QuestID`,`TargetIndex`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- ----------------------------
 -- Table structure for `playercharacters`
 -- ----------------------------
 DROP TABLE IF EXISTS `playercharacters`;
@@ -73,10 +103,7 @@ CREATE TABLE `playercharacters` (
   `Position` varchar(255) NOT NULL DEFAULT '(0,0,0)',
   `Rotation` varchar(255) NOT NULL DEFAULT '(0,0,0)',
   `FamePep` varchar(255) NOT NULL DEFAULT '1,0',
-  `FamePoints` int(11) NOT NULL DEFAULT '0',
-  `HealthMaxHealth` varchar(255) NOT NULL DEFAULT '100/100',
-  `BMF` varchar(255) NOT NULL DEFAULT '10,10,10',
-  `PMC` varchar(255) NOT NULL DEFAULT '100,10,10',
+  `Health` int(255) NOT NULL DEFAULT '100',
   `Money` int(11) NOT NULL DEFAULT '0',
   `BMFAttributeExtraPoints` varchar(255) NOT NULL DEFAULT '0,0,0,0',
   `SkillDeck` varchar(255) NOT NULL DEFAULT '0#',
@@ -93,31 +120,6 @@ CREATE TABLE `playercharacterskills` (
   `SkillID` int(11) NOT NULL DEFAULT '0',
   `SigilSlots` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`CharacterID`,`SkillID`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
--- ----------------------------
--- Table structure for `playercharacterquests`
--- ----------------------------
-DROP TABLE IF EXISTS `playercharacterquests`;
-CREATE TABLE `playercharacterquests` (
-  `CharacterID` int(11) NOT NULL,
-  `QuestID` int(11) NOT NULL DEFAULT '-1',
-  `IsComplete` boolean NOT NULL DEFAULT false,
-  `TargetIndex` int(11) NOT NULL DEFAULT '0',
-  `TargetProgress` int(11) NOT NULL DEFAULT '0',  
-  PRIMARY KEY (`CharacterID`,`questID`,`TargetIndex`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
--- ----------------------------
--- Table structure for `playercharacterpersistentvalues`
--- ----------------------------
-DROP TABLE IF EXISTS `playercharacterpersistentvars`;
-CREATE TABLE `playercharacterpersistentvars` (
-  `CharacterID` int(11) NOT NULL,
-  `ContextID` int(11) NOT NULL DEFAULT '-1',
-  `VarID` int(11) NOT NULL DEFAULT '-1',
-  `Value` int(11) NOT NULL DEFAULT '0',  
-  PRIMARY KEY (`CharacterID`,`ContextID`,`VarID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- ----------------------------
