@@ -116,7 +116,7 @@ namespace Database.Dynamic.Internal
             {
                 _updateExistingCharacterCommand =
                     new MySqlCommand(
-                        "UPDATE playercharacters SET Appearance=@app, LastMapID=@lm, Faction=@fac, ArcheType=@arch, PawnState=@state, Position=@pos, Rotation=@rot, FamePep=@fp, FamePoints=@famepoints, HealthMaxHealth=@hmh, BMF=@bmf, PMC=@pmc, Money=@money, BMFAttributeExtraPoints=@bmfaep, SkillDeck=@skilldeck WHERE AccountID = @accID AND CharacterID = @charID;",
+                        "UPDATE playercharacters SET Appearance=@app, LastMapID=@lm, Faction=@fac, ArcheType=@arch, PawnState=@state, Position=@pos, Rotation=@rot, FamePep=@fp, Health=@health, Money=@money, BMFAttributeExtraPoints=@bmfaep, SkillDeck=@skilldeck WHERE AccountID = @accID AND CharacterID = @charID;",
                         connection);
                 AddCharacterCommandParameters(_updateExistingCharacterCommand, pc);
                 _updateExistingCharacterCommand.Prepare();
@@ -137,7 +137,7 @@ namespace Database.Dynamic.Internal
             {
                 _saveNewCharacterCommand =
                     new MySqlCommand(
-                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,FamePoints,HealthMaxHealth,BMF,PMC,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@famepoints,@hmh,@bmf,@pmc,@money,@bmfaep,@skilldeck);",
+                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,Health,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@health,@money,@bmfaep,@skilldeck);",
                         connection);
                 AddCharacterCommandParameters(_saveNewCharacterCommand, pc);
                 _saveNewCharacterCommand.Prepare();
@@ -166,10 +166,7 @@ namespace Database.Dynamic.Internal
             cmd.Parameters.AddWithValue("@pos", SerializeVector3(pc.Position));
             cmd.Parameters.AddWithValue("@rot", SerializeVector3(pc.Rotation));
             cmd.Parameters.AddWithValue("@fp", SerializeIntList(pc.FamePep));
-            cmd.Parameters.AddWithValue("@famepoints", pc.FamePoints);
-            cmd.Parameters.AddWithValue("@hmh", SerializeIntList(pc.HealthMaxHealth));
-            cmd.Parameters.AddWithValue("@bmf", SerializeIntList(pc.BodyMindFocus));
-            cmd.Parameters.AddWithValue("@pmc", SerializeFloatList(pc.PhysiqueMoraleConcentration));
+            cmd.Parameters.AddWithValue("@health", pc.Health);
             cmd.Parameters.AddWithValue("@money", pc.Money);
             cmd.Parameters.AddWithValue("@bmfaep", SerializeIntList(pc.ExtraBodyMindFocusAttributePoints));
             cmd.Parameters.AddWithValue("@skilldeck", pc.SerializedSkillDeck);
@@ -191,11 +188,7 @@ namespace Database.Dynamic.Internal
             cmd.Parameters["@pos"].Value = SerializeVector3(pc.Position);
             cmd.Parameters["@rot"].Value = SerializeVector3(pc.Rotation);
             cmd.Parameters["@fp"].Value = SerializeIntList(pc.FamePep);
-            cmd.Parameters["@famepoints"].Value = pc.FamePoints;
-            cmd.Parameters["@hmh"].Value = SerializeIntList(pc.HealthMaxHealth);
-            cmd.Parameters["@bmf"].Value = SerializeIntList(pc.BodyMindFocus);
-            cmd.Parameters["@pmc"].Value =
-                SerializeFloatList(pc.PhysiqueMoraleConcentration);
+            cmd.Parameters["@health"].Value = pc.Health;
             cmd.Parameters["@money"].Value = pc.Money;
             cmd.Parameters["@bmfaep"].Value =
                 SerializeIntList(pc.ExtraBodyMindFocusAttributePoints);
@@ -377,7 +370,7 @@ namespace Database.Dynamic.Internal
                 _characterQuestTargetSaveCommand = new MySqlCommand(cmd, connection);
                 _characterQuestTargetSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
                 _characterQuestTargetSaveCommand.Parameters.AddWithValue("@questID", target != null? target.ResourceId : -1);
-                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@isComplete", target != null ? target.isCompleted : false);
+                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@isComplete", target != null && target.isCompleted);
                 _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarIndex", target != null ? target.targetIndex : 0);
                 _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarProg", target != null ? target.targetProgress : 0);
                 _characterQuestTargetSaveCommand.Prepare();
@@ -386,7 +379,7 @@ namespace Database.Dynamic.Internal
             {
                 _characterQuestTargetSaveCommand.Parameters["@charID"].Value = pc.DBID;
                 _characterQuestTargetSaveCommand.Parameters["@questID"].Value = target != null ? target.ResourceId : -1;
-                _characterQuestTargetSaveCommand.Parameters["@isComplete"].Value = target != null ? target.isCompleted : false;
+                _characterQuestTargetSaveCommand.Parameters["@isComplete"].Value = target != null && target.isCompleted;
                 _characterQuestTargetSaveCommand.Parameters["@tarIndex"].Value = target != null ? target.targetIndex : 0;
                 _characterQuestTargetSaveCommand.Parameters["@tarProg"].Value = target != null ? target.targetProgress : 0;
             }

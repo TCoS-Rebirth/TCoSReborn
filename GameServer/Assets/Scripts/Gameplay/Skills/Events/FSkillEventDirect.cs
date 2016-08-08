@@ -96,12 +96,12 @@ namespace Gameplay.Skills.Events
                 }
                 if (success)
                 {
-                    //OnHitTarget(sInfo, targets[i]);
+                    OnHitTarget(Skill, SkillPawn, targets[i]);
                 }
             }
             if (!success)
             {
-                //OnMissedTarget(sInfo, sInfo.SkillPawn);
+                OnMissedTarget(Skill, SkillPawn);
             }
         }
 
@@ -150,23 +150,21 @@ namespace Gameplay.Skills.Events
             return targets;
         }
 
-        //protected virtual void OnHitTarget(RunningSkillContext sInfo, Character target)
-        //{
-        //    if (HitFXEvent != null)
-        //    {
-        //        //Debug.Log(string.Format("[{0}] - executing OnHitTarget (hitfxevent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
-        //        HitFXEvent.Execute(sInfo);
-        //    }
-        //}
+        protected virtual void OnHitTarget(FSkill_Type skill, Character skillPawn, Character target)
+        {
+            if (HitFXEvent != null)
+            {
+                RunClientEvents(HitFXEvent);
+            }
+        }
 
-        //protected virtual void OnMissedTarget(RunningSkillContext sInfo, Character target)
-        //{
-        //    if (MissFXEvent != null)
-        //    {
-        //        //Debug.Log(string.Format("[{0}] - executing OnMissedTarget (missfxevent) in {1} of {2}", Time.time, this, sInfo.ExecutingSkill));
-        //        MissFXEvent.Execute(sInfo);
-        //    }
-        //}
+        protected virtual void OnMissedTarget(FSkill_Type Skill, Character skillPawn)
+        {
+            if (MissFXEvent != null)
+            {
+                RunClientEvents(MissFXEvent);
+            }
+        }
 
         public override void DeepClone()
         {

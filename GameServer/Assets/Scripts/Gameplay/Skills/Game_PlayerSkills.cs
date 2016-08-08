@@ -38,6 +38,9 @@ namespace Gameplay.Skills
             }
             sv_SetSkills(cSkills);
             LoadDBSerializedDeck(Owner.dbRef.SerializedSkillDeck);
+            var levelData = LevelProgression.Get.GetDataForLevel(Owner.Stats.GetFameLevel());
+            mTiers = levelData.combatTierRows;
+            mTierSlots = levelData.combatTierColumns;
         }
 
         public void sv2cl_SetSkills(List<FSkill_Type> aCharacterSkills, FSkill_Type[] aSkilldeckSkills)
@@ -102,7 +105,7 @@ namespace Gameplay.Skills
             {
                 Owner.ResyncClientTime();
             }
-            return base.ExecuteIndex(index, targetID, targetPosition, Time.time);
+            return base.ExecuteIndex(index, targetID, targetPosition, time);
         }
 
         protected override void AddActiveSkill(FSkill_Type aSkill, Character target, float aStartTime, float aDuration, float aSkillSpeed, bool aFreezeMovement, bool aFreezeRotation, int aTokenItemID, int AnimVarNr, Vector3 aLocation, Quaternion aRotation)

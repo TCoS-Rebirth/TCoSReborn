@@ -17,8 +17,8 @@ namespace Gameplay.Entities.Interactives
             sitTimer = 0.0f;
             if (instigator)
             {
-                instigator.Stats.FreezePosition = true;
-                instigator.Stats.FreezeRotation = true;
+                instigator.Stats.FreezeMovement(true);
+                instigator.Stats.FreezeRotation(true);
                 sitTimer = 1.20f;
 
                 var sitEv = CreateInstance<EV_Sit>();

@@ -204,13 +204,13 @@ namespace World
                     for (var n = 0; n < deployed.Count; n++)
                     {
                         var npc = deployed[n];
-                        if (npc.Stats.Health <= 0)
+                        if (npc.Stats.mRecord.CopyHealth <= 0)
                         {
                             dead.Add(npc);
                             deployed.Remove(npc);
                             n--;
                         }
-                        else if (npc.Stats.Health < npc.Stats.MaxHealth)
+                        else if (npc.Stats.mRecord.CopyHealth < npc.Stats.mRecord.MaxHealth)
                         {
                             hasInjured = true;
                         }
@@ -603,15 +603,15 @@ namespace World
             {
                 var n = deployed[i];
 //TODO: appropriate combat mode selection / parameters
-                if (meleeClasses.Contains(n.Stats.ClassType))
+                if (meleeClasses.Contains(n.Stats.GetCharacterClass()))
                 {
                     n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Melee);
                 }
-                else if (rangedClasses.Contains(n.Stats.ClassType))
+                else if (rangedClasses.Contains(n.Stats.GetCharacterClass()))
                 {
                     n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Ranged);
                 }
-                else if (casterClasses.Contains(n.Stats.ClassType))
+                else if (casterClasses.Contains(n.Stats.GetCharacterClass()))
                 {
                     n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Cast);
                 }
@@ -664,7 +664,7 @@ namespace World
             for (var i = 0; i < deployed.Count; i++)
             {
                 var n = deployed[i];
-                if ((n.Stats.Health < n.Stats.MaxHealth) && n.Stats.Health > 0)
+                if ((n.Stats.mRecord.CopyHealth < n.Stats.mRecord.MaxHealth) && n.Stats.mRecord.CopyHealth > 0)
                 {
                     return false;
                 }

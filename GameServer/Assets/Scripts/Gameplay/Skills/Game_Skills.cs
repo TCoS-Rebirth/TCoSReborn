@@ -34,6 +34,8 @@ namespace Gameplay.Skills
         protected int mCurrentTier;
         protected int mLastSkillIndex;
 
+        public int LastActiveSkillIndex { get { return mLastSkillIndex; } }
+
         public List<FSkill_Type> CharacterSkills = new List<FSkill_Type>();
         public FSkill_Type[] SkilldeckSkills = new FSkill_Type[30];
         protected RunningSkillData LastSkill;
@@ -247,6 +249,7 @@ namespace Gameplay.Skills
                 LockedRotation = aFreezeRotation,
                 SpecificTarget = target
             };
+            Owner.BroadcastRelevanceMessage(PacketCreator.S2R_GAME_SKILLS_SV2REL_ADDACTIVESKILL(Owner, LastSkill, aLocation, aTokenItemID));
             simulatedSkillAnimation = Owner.StartCoroutine(SimulateAnimationEvents(aSkill));
         }
 
@@ -264,7 +267,11 @@ namespace Gameplay.Skills
         protected void AdvanceToNextTier()
         {
             mCurrentTier++;
-            if (mCurrentTier > mTiers) RollbackToFirstTier();
+            if (mCurrentTier > mTiers)
+            {
+                RollbackToFirstTier();
+                return;
+            }
             CheckSwitchWeapon();
         }
 
@@ -276,10 +283,8 @@ namespace Gameplay.Skills
 
         void CheckSwitchWeapon()
         {
-            Debug.Log("TODO Refactor to combatstats");
-            //var s = GetActiveTierSlotSkill(mLastSkillIndex);
-            //Owner.CombatState.SwitchWeapon(s != null ? s.requiredWeapon : EWeaponCategory.EWC_MeleeOrUnarmed);
-            //Owner.CombatState
+            var s = GetActiveTierSlotSkill(mLastSkillIndex);
+            Owner.CombatState.sv_SwitchToWeaponType(s != null ? s.requiredWeapon : EWeaponCategory.EWC_None);
         }
 
         public FSkill_Type GetActiveTierSlotSkill(int aSlot)

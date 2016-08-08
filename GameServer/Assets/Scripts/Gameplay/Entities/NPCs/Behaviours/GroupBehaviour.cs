@@ -277,7 +277,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
             {
                 case NpcCharacter.MoveResult.ReachedTarget:
                 case NpcCharacter.MoveResult.TargetNotReachable:
-                    owner.Stats.SetHealth(owner.Stats.MaxHealth);
+                    owner.Stats.SetHealth(owner.Stats.mRecord.MaxHealth);
                     owner.TeleportTo(startPosition, startOrientation);
                     owner.CombatState.sv_SheatheWeapon();
                     state = NpcStates.Idle;

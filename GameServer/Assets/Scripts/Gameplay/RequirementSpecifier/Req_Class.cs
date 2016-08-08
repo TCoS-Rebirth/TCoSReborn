@@ -29,7 +29,7 @@ namespace Gameplay.RequirementSpecifier
 
             //TODO : Assign PlayerCharacters their proper class type (on login?)
             //Currently it is empty
-            else return (c.Stats.ClassType == RequiredClass);
+            else return (c.Stats.GetCharacterClass() == RequiredClass);
         }
 
         public override bool CheckPawn(Character character)

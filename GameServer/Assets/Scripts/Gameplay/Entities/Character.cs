@@ -158,7 +158,7 @@ namespace Gameplay.Entities
         public int GetEffectiveMoveSpeed()
         {
             var baseSpeed = _groundSpeed*GroundSpeedModifier;
-            return (int) (baseSpeed + _groundSpeed*0.01f*Stats.MovementSpeedBonus);
+            return (int) (baseSpeed + _groundSpeed*0.01f*Stats.mRecord.MovementSpeedBonus);
         }
 
         /// <summary>
@@ -347,11 +347,11 @@ namespace Gameplay.Entities
 
         public SkillApplyResult Damage(Character source, FSkill_Type s, int amount, Action<SkillApplyResult> callback)
         {
-            var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) Stats.SetHealth(Stats.Health - amount))};
+            var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) Stats.SetHealth(Stats.mRecord.CopyHealth - amount))};
             callback(result);
 
             //Valshaaran - added not already dead condition
-            if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Stats.Health, 0))
+            if ((PawnState != EPawnStates.PS_DEAD) && Mathf.Approximately(Stats.mRecord.CopyHealth, 0))
             {
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(source);
@@ -379,7 +379,7 @@ namespace Gameplay.Entities
         public SkillApplyResult Heal(Character source, FSkill_Type s, int amount)
         {
             var result = new SkillApplyResult(source, this, s);
-            result.healCaused = (int) Stats.SetHealth(Stats.Health + amount);
+            result.healCaused = (int) Stats.SetHealth(Stats.mRecord.CopyHealth + amount);
             OnHealReceived(result);
             return result;
         }

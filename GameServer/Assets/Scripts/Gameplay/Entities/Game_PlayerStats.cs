@@ -1,6 +1,7 @@
 using Common;
 using Database.Static;
 using Network;
+using UnityEngine;
 
 namespace Gameplay.Entities
 {
@@ -10,64 +11,65 @@ namespace Gameplay.Entities
         PlayerCharacter Owner;
 
         int famePoints;
+        int pepPoints;
+        byte remainingAttributePoints;
+        bool mayChoseClass;
 
         public int FamePoints
         {
             get { return famePoints; }
-            set { famePoints = value; }
-        }
-
-        int pepPoints;
+        }     
 
         public int PepPoints
         {
             get { return pepPoints; }
-            set { pepPoints = value; }
-        }
-
-        byte remainingAttributePoints;
+        }    
 
         public byte RemainingAttributePoints
         {
             get { return remainingAttributePoints; }
-            set { remainingAttributePoints = value; }
+        }
+
+        public bool MayChoseClass
+        {
+            get { return mayChoseClass; }
         }
 
         public override void Init(Character character)
         {
             base.Init(character);
             Owner = character as PlayerCharacter;
-            Body = Owner.dbRef.BodyMindFocus[0];
-            Mind = Owner.dbRef.BodyMindFocus[1];
-            Focus = Owner.dbRef.BodyMindFocus[2];
-            ExtraBodyPoints = (byte)Owner.dbRef.ExtraBodyMindFocusAttributePoints[0];
-            //{ can be left out too (calculate from body,mind,focus + levelprogression->leftover-points)
-            ExtraMindPoints = (byte)Owner.dbRef.ExtraBodyMindFocusAttributePoints[1];
-            ExtraFocusPoints = (byte)Owner.dbRef.ExtraBodyMindFocusAttributePoints[2];
-            FameLevel = Owner.dbRef.FamePep[0];
-            PepRank = Owner.dbRef.FamePep[1];
-            FamePoints = Owner.dbRef.FamePoints;
-            MaxHealth = Owner.dbRef.HealthMaxHealth[1]; //TODO: calculate value instead, later (from level & items etc)
-            Health = Owner.dbRef.HealthMaxHealth[0];
+            Debug.Log("TODO Calculate Body Mind and Focus + assigned points");
+            remainingAttributePoints = (byte)Owner.dbRef.ExtraBodyMindFocusAttributePoints[3];
+            famePoints = Owner.dbRef.FamePep[0];
+            pepPoints = Owner.dbRef.FamePep[1];
+            var levelData = LevelProgression.Get.GetLevelbyFamepoints(famePoints);
+            mBaseMaxHealth = levelData.level*100 + 100; //Test
+            mRecord.MaxHealth = mBaseMaxHealth;
+            mHealth = Owner.dbRef.Health;
+            mRecord.CopyHealth = mHealth;
+            mRecord.FameLevel = levelData.level;
+            var pepData = LevelProgression.Get.GetPepLevelByPePpoints(pepPoints);
+            mRecord.PePRank = pepData.Level;
         }
 
         public override void GiveFame(int amount)
         {
-            FamePoints += amount;
+            famePoints += amount;
             var mUpdateFamePoints = PacketCreator.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(Owner);
             Owner.SendToClient(mUpdateFamePoints);
 
             Owner.ReceiveChatMessage("", "Gained " + amount + " fame", EGameChatRanges.GCR_SYSTEM);
 
             //Return if max level
-            if (FameLevel >= GameConfiguration.CharacterDefaults.MaxFame) return;
+            if (GetFameLevel() >= GameConfiguration.CharacterDefaults.MaxFame) return;
 
             //Check for levelup
-            var nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+            var nextLevelData = GameData.Get.levelProg.GetDataForLevel(GetFameLevel() + 1);
             while (FamePoints >= nextLevelData.requiredFamePoints)
             {
-                SetFame(FameLevel + 1);
-                nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
+                mRecord.FameLevel += 1;
+                nextLevelData = GameData.Get.levelProg.GetDataForLevel(GetFameLevel() + 1);
             }
         }
 

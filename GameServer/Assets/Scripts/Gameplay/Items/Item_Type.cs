@@ -133,7 +133,7 @@ namespace Gameplay.Items
                     }
                 }
             }
-            if (aPawn.Stats.FameLevel < MinLevel)
+            if (aPawn.Stats.GetFameLevel() < MinLevel)
             {
                 return false;
             }

@@ -7,11 +7,11 @@ namespace Gameplay
     public class Game_Appearance: ScriptableObject
     {
 
-        Character Owner;
+        //Character Owner;
 
         public virtual void Init(Character owner)
         {
-            Owner = owner;
+            //Owner = owner;
         }
 
         public const int RACE_HUMAN = 0;

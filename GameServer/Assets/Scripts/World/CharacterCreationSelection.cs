@@ -345,11 +345,7 @@ namespace World
             newCharacter.Money = conf.player.StartMoney;
             newCharacter.FamePep[0] = GameConfiguration.CharacterDefaults.MinFame;
             newCharacter.FamePep[1] = GameConfiguration.CharacterDefaults.MinPep;
-            newCharacter.HealthMaxHealth[0] = conf.player.StartHealth;
-            newCharacter.HealthMaxHealth[1] = conf.player.StartHealth;
-            newCharacter.BodyMindFocus[0] = conf.player.StartBody;
-            newCharacter.BodyMindFocus[1] = conf.player.StartMind;
-            newCharacter.BodyMindFocus[2] = conf.player.StartFocus;
+            newCharacter.Health = conf.player.StartHealth;
             newCharacter.Faction = conf.player.StartFaction.ID;
 
             newCharacter.AccountID = m.Connection.player.Account.UID;

@@ -59,6 +59,9 @@ namespace Gameplay.Entities
         [Tooltip("This should be set via script")]
         public NPC_Type Type;
 
+        public int NPCFameLevel;
+        public int NPCPePRank;
+
         public ENPCMovementFlags MovementFlags
         {
             get { return _movementFlags; }
@@ -462,7 +465,7 @@ namespace Gameplay.Entities
                 //yield return null;
                 return;
             }
-            if (pathMoveState == MoveResult.Moving & !Stats.FreezePosition)
+            if (pathMoveState == MoveResult.Moving & !Stats.IsMovementFrozen())
             {
                 IsMoving = true;
                 if (VectorMath.SqrDistanceXZ(_destination, transform.position) > 0.25f)
@@ -957,12 +960,12 @@ namespace Gameplay.Entities
             int output = 0;
             foreach(var lt in Faction.Loot)
             {
-                output += lt.GenerateMoney(Stats.FameLevel);
+                output += lt.GenerateMoney(Stats.GetFameLevel());
             }
 
             foreach(var lt in Type.Loot)
             {
-                output += lt.GenerateMoney(Stats.FameLevel);
+                output += lt.GenerateMoney(Stats.GetFameLevel());
             }
             return output;
         }

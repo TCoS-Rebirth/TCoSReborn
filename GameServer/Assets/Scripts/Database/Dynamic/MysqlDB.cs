@@ -385,13 +385,10 @@ namespace Database.Dynamic
                                 Position = DatabaseHelper.DeSerializeVector3(reader.GetString(8)),
                                 Rotation = DatabaseHelper.DeSerializeVector3(reader.GetString(9)),
                                 FamePep = DatabaseHelper.DeserializeIntList(reader.GetString(10), 2).ToArray(),
-                                FamePoints = reader.GetInt32(11),
-                                HealthMaxHealth = DatabaseHelper.DeserializeIntList(reader.GetString(12), 2).ToArray(),
-                                BodyMindFocus = DatabaseHelper.DeserializeIntList(reader.GetString(13), 3).ToArray(),
-                                PhysiqueMoraleConcentration = DatabaseHelper.DeserializeFloatList(reader.GetString(14), 3).ToArray(),
-                                Money = reader.GetInt32(15),
-                                ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(16), 4).ToArray(),
-                                SerializedSkillDeck = reader.GetString(17)
+                                Health = reader.GetInt32(11),
+                                Money = reader.GetInt32(12),
+                                ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(13), 4).ToArray(),
+                                SerializedSkillDeck = reader.GetString(14)
                             };
                             _characterCache.Add(pc);
                             SetDBIDAllocated(pc.DBID);
@@ -570,13 +567,10 @@ namespace Database.Dynamic
                 ch.PawnState = (int) pc.PawnState;
                 ch.Position = pc.Position;
                 ch.Rotation = pc.Rotation.eulerAngles;
-                ch.FamePep = new int[2] {pc.Stats.FameLevel, pc.Stats.PepRank };
-                ch.FamePoints = pStats.FamePoints;
-                ch.HealthMaxHealth = new int[2] {(int) pc.Stats.Health, pc.Stats.MaxHealth };
-                ch.BodyMindFocus = new int[3] {pc.Stats.Body, pc.Stats.Mind, pc.Stats.Focus };
-                ch.PhysiqueMoraleConcentration = new[] {pc.Stats.Physique, pc.Stats.Morale, pc.Stats.Concentration };
+                ch.FamePep = new int[2] {pStats.FamePoints, pStats.PepPoints };
+                ch.Health = (int) pc.Stats.mRecord.CopyHealth;
                 ch.Money = pc.Money;
-                ch.ExtraBodyMindFocusAttributePoints = new int[4] {pStats.ExtraBodyPoints, pStats.ExtraMindPoints, pStats.ExtraFocusPoints, pStats.RemainingAttributePoints};
+                ch.ExtraBodyMindFocusAttributePoints = new int[4] {0, 0, 0, pStats.RemainingAttributePoints};
                 ch.Skills.Clear();
                 for (var i = 0; i < pc.Skills.CharacterSkills.Count; i++)
                 {

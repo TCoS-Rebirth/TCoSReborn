@@ -268,14 +268,6 @@
         Female
     }
 
-    public enum ECombatMode
-    {
-        CBM_Idle = 0,
-        CBM_Melee = 1,
-        CBM_Ranged = 2,
-        CBM_Cast = 3
-    }
-
     public enum EPawnEffectType
     {
         EPET_LevelUp,
@@ -537,50 +529,30 @@
         EWC_Shields
     }
 
-    public enum AppearancePart
+    public enum ECombatMode
     {
-        AP_ChestClothes,
-        AP_LeftGlove,
-        AP_RightGlove,
-        AP_Pants,
-        AP_Shoes,
-        AP_HeadGearArmour,
-        AP_LeftShoulderArmour,
-        AP_RightShoulderArmour,
-        AP_LeftGauntlet,
-        AP_RightGauntlet,
-        AP_ChestArmour,
-        AP_Belt,
-        AP_LeftThigh,
-        AP_RightThigh,
-        AP_LeftShin,
-        AP_RightShin,
-        AP_MainWeapon,
-        AP_OffhandWeapon,
-        AP_Hair,
-        AP_MainSheath,
-        AP_OffhandSheath,
-        AP_Body,
-        AP_Head,
-        AP_Tattoo,
-        AP_ClassTattoo
+        CBM_Idle = 0,
+        CBM_Melee = 1,
+        CBM_Ranged = 2,
+        CBM_Cast = 3
     }
 
-    public enum EDebugDrawFilters
+    public enum EAppMainWeaponType
     {
-        EDD_Position,
-        EDD_Location,
-        EDD_Cell,
-        EDD_Move,
-        EDD_Path,
-        EDD_Target,
-        EDD_Tactical,
-        EDD_Relevant,
-        EDD_History,
-        EDD_Skill,
-        EDD_Threat,
-        EDD_Astar,
-        EDD_Max
+        EMW_Undetermined = 0,
+        EMW_SingleHanded = 1,
+        EMW_DoubleHanded = 2,
+        EMW_DualWielding = 3,
+        EMW_Ranged = 4
+    }
+
+    public enum EWeaponCategory
+    {
+        EWC_None = 0,
+        EWC_Melee = 1,
+        EWC_Ranged = 2,
+        EWC_Unarmed = 3,
+        EWC_MeleeOrUnarmed = 4
     }
 
     public enum SBAnimWeaponFlags
@@ -687,6 +659,52 @@
         AnimAction_Submerge = 76,
         AnimAction_Emerge = 77,
         AnimAction_Dodge = 78
+    }
+
+    public enum AppearancePart
+    {
+        AP_ChestClothes,
+        AP_LeftGlove,
+        AP_RightGlove,
+        AP_Pants,
+        AP_Shoes,
+        AP_HeadGearArmour,
+        AP_LeftShoulderArmour,
+        AP_RightShoulderArmour,
+        AP_LeftGauntlet,
+        AP_RightGauntlet,
+        AP_ChestArmour,
+        AP_Belt,
+        AP_LeftThigh,
+        AP_RightThigh,
+        AP_LeftShin,
+        AP_RightShin,
+        AP_MainWeapon,
+        AP_OffhandWeapon,
+        AP_Hair,
+        AP_MainSheath,
+        AP_OffhandSheath,
+        AP_Body,
+        AP_Head,
+        AP_Tattoo,
+        AP_ClassTattoo
+    }
+
+    public enum EDebugDrawFilters
+    {
+        EDD_Position,
+        EDD_Location,
+        EDD_Cell,
+        EDD_Move,
+        EDD_Path,
+        EDD_Target,
+        EDD_Tactical,
+        EDD_Relevant,
+        EDD_History,
+        EDD_Skill,
+        EDD_Threat,
+        EDD_Astar,
+        EDD_Max
     }
 
     public enum EPhysics
@@ -1166,24 +1184,6 @@
         OORS_InRange = 0,
         OORS_TooFar = 1,
         OORS_TooClose = 2
-    }
-
-    public enum EWeaponCategory
-    {
-        EWC_None = 0,
-        EWC_Melee = 1,
-        EWC_Ranged = 2,
-        EWC_Unarmed = 3,
-        EWC_MeleeOrUnarmed = 4
-    }
-
-    public enum EAppMainWeaponType
-    {
-        EMW_Undetermined = 0,
-        EMW_SingleHanded = 1,
-        EMW_DoubleHanded = 2,
-        EMW_DualWielding = 3,
-        EMW_Ranged = 4
     }
 
     public enum EGameChatRanges

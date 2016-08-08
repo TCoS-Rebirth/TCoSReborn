@@ -20,7 +20,7 @@ namespace Gameplay.RequirementSpecifier
 
         public bool isMet(Character c)
         {
-            if (SBOperator.Operate(c.Stats.PepRank, Operator, RequiredPep))
+            if (SBOperator.Operate(c.Stats.GetPePRank(), Operator, RequiredPep))
                 return true;
             return false;
         }

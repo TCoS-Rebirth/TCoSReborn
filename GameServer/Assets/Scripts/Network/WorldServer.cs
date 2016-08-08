@@ -532,15 +532,7 @@ namespace Network
         void HandleToggleWeapon(Message m)
         {
             var pc = m.GetAssociatedCharacter();
-            if (pc.CombatState.CombatMode != ECombatMode.CBM_Idle)
-            {
-                pc.CombatState.sv_SheatheWeapon();
-            }
-            else
-            {
-                pc.CombatState.sv_DrawWeapon(ECombatMode.CBM_Melee);
-                Debug.Log("TODO implement correct initial state resolving function");
-            }
+            ((Game_PlayerCombatState)pc.CombatState).cl2sv_DrawSheatheWeapon();
         }
 
         void HandleSwitchWeapon(Message m)
@@ -548,7 +540,7 @@ namespace Network
             var pc = m.GetAssociatedCharacter();
             m.ReadInt32(); //int charID = 
             int weaponType = m.ReadByte();
-            pc.CombatState.SwitchToWeaponType((EAppMainWeaponType)weaponType);
+            pc.CombatState.sv_SwitchToWeaponType((EWeaponCategory)weaponType);
         }
 
         void HandleUseSkill(Message m)

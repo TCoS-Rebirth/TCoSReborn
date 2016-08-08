@@ -68,11 +68,11 @@ namespace Gameplay.Entities
             var app = ScriptableObject.CreateInstance<Game_PlayerAppearance>();
             app.Init(pc);
             pc.Appearance = app;
+            pc.Stats = ScriptableObject.CreateInstance<Game_PlayerStats>();
+            pc.Stats.Init(pc);
             var sk =  ScriptableObject.CreateInstance<Game_PlayerSkills>();
             sk.Init(pc);
             pc.Skills = sk;
-            pc.Stats = ScriptableObject.CreateInstance<Game_PlayerStats>();
-            pc.Stats.Init(pc);
             var cs = ScriptableObject.CreateInstance<Game_PlayerCombatState>();
             cs.Init(pc);
             pc.CombatState = cs;
@@ -122,7 +122,7 @@ namespace Gameplay.Entities
                 &&  pos.y < ActiveZone.killY 
                 &&  PawnState != EPawnStates.PS_DEAD)
             {
-                Stats.Health = 0;
+                Stats.SetHealth(0);
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(null);                
             }
@@ -228,7 +228,7 @@ namespace Gameplay.Entities
         public void Resurrect()
         {
             ActiveZone.TeleportToNearestRespawnLocation(this);
-            Stats.SetHealth(Stats.MaxHealth);
+            Stats.SetHealth(Stats.mRecord.MaxHealth);
             SetPawnState(EPawnStates.PS_ALIVE);
             PlayEffect(EPawnEffectType.EPET_ShapeUnshift);
         }
@@ -274,7 +274,7 @@ namespace Gameplay.Entities
             else {
                 //TODO
                 //Valshaaran - experimental quest XP formula : (quest points value) * (qpFrac / player fame level)?
-                float multFactor = qpFrac / Stats.FameLevel;
+                float multFactor = qpFrac / Stats.GetFameLevel();
                 Stats.GiveFame((int)(points * multFactor));
 
                 //This version just gives the unmodified points amount
@@ -450,9 +450,9 @@ namespace Gameplay.Entities
 
             #region Grant Fame, PEP
             //Valshaaran - placeholder formula, feel free to improve
-            int nFame = npc.Stats.FameLevel;
+            int nFame = npc.Stats.GetFameLevel();
             int baseKillPoints = 10;
-            float weightedKillPoints = (baseKillPoints * nFame * nFame) / Stats.FameLevel;
+            float weightedKillPoints = (baseKillPoints * nFame * nFame) / Stats.GetFameLevel();
             Stats.GiveFame((int)weightedKillPoints);
 
             //TODO: PEP

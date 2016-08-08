@@ -18,13 +18,13 @@ namespace Gameplay.Skills.Events
             {
                 case EEmitterOverwrite.EEO_Auto:
                     if (TargetPawn != null)
-                        TargetPawn.Skills.sv2clrel_RunEvent(Skill, ev, 0, SkillPawn, TriggerPawn, TargetPawn);
+                        TargetPawn.Skills.sv2clrel_RunEvent(Skill, ev, CF_01_CONSTANT_VALUE, SkillPawn, TriggerPawn, TargetPawn);
                     break;
                 case EEmitterOverwrite.EEO_SkillPawn:
-                    SkillPawn.Skills.sv2clrel_RunEvent(Skill, ev, 0, SkillPawn, SkillPawn, TargetPawn);
+                    SkillPawn.Skills.sv2clrel_RunEvent(Skill, ev, CF_01_CONSTANT_VALUE, SkillPawn, SkillPawn, TargetPawn);
                     break;
                 case EEmitterOverwrite.EEO_PaintLocation:
-                    SkillPawn.Skills.sv2clrel_RunEventL(Skill, ev, 0, SkillPawn, SkillPawn, Location, TargetPawn);
+                    SkillPawn.Skills.sv2clrel_RunEventL(Skill, ev, CF_01_CONSTANT_VALUE, SkillPawn, SkillPawn, Location, TargetPawn);
                     break;
             }
         }

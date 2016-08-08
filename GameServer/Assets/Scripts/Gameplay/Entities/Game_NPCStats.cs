@@ -11,22 +11,28 @@ namespace Gameplay.Entities
         {
             base.Init(character);
             Owner = character as NpcCharacter;
-            ClassType = Owner.Type.NPCClassClassification;
-            //NPC_Type with level 0 indicates random level generation by spawner
-            if (Owner.Type.FameLevel != 0)
-            {
-                FameLevel = Owner.Type.FameLevel;
-            }
-            else
-            {
-                FameLevel = Random.Range(Owner.RespawnInfo.levelMin, Owner.RespawnInfo.levelMax);
-            }
-            PepRank = Owner.Type.PePRank;
+            //TODO fix stat initialization
             var hp = 100;
-            var levelHP = 100;
-            Owner.Type.InitializeStats(FameLevel, PepRank, out hp, out levelHP, out Body, out Mind, out Focus);
-            MaxHealth = Mathf.Max(hp, levelHP, FameLevel * 10, 100); //TODO fix
-            Health = MaxHealth;
+            var levelHP = 100;   
+            Owner.NPCPePRank = Owner.Type.PePRank;
+            Owner.Type.InitializeStats(Owner.NPCFameLevel, Owner.NPCPePRank, out hp, out levelHP, out mRecord.Body, out mRecord.Mind, out mRecord.Focus);
+            //NPC_Type with level 0 indicates random level generation by spawner
+            Owner.NPCFameLevel = Owner.Type.FameLevel != 0 ? Owner.Type.FameLevel : Random.Range(Owner.RespawnInfo.levelMin, Owner.RespawnInfo.levelMax);
+            mCharacterClass = Owner.Type.NPCClassClassification;
+            mRecord.PePRank = Owner.Type.PePRank;
+            mRecord.MaxHealth = Mathf.Max(hp, levelHP, GetFameLevel() * 10, 100); //TODO fix
+            mHealth = mRecord.MaxHealth;
+            mRecord.CopyHealth = mHealth;
+        }
+
+        public override int GetFameLevel()
+        {
+            return Owner.NPCFameLevel;
+        }
+
+        public override int GetPePRank()
+        {
+            return Owner.NPCPePRank;
         }
     }
 }
