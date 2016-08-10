@@ -105,7 +105,7 @@ namespace Gameplay.Skills
             {
                 Owner.ResyncClientTime();
             }
-            return base.ExecuteIndex(index, targetID, targetPosition, time);
+            return base.ExecuteIndex(index, targetID, targetPosition, Time.time);
         }
 
         protected override void AddActiveSkill(FSkill_Type aSkill, Character target, float aStartTime, float aDuration, float aSkillSpeed, bool aFreezeMovement, bool aFreezeRotation, int aTokenItemID, int AnimVarNr, Vector3 aLocation, Quaternion aRotation)

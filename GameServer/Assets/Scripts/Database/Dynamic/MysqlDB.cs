@@ -390,6 +390,7 @@ namespace Database.Dynamic
                                 ExtraBodyMindFocusAttributePoints = DatabaseHelper.DeserializeIntList(reader.GetString(13), 4).ToArray(),
                                 SerializedSkillDeck = reader.GetString(14)
                             };
+                            pc.FameLevelCache = LevelProgression.Get.GetLevelbyFamepoints(pc.FamePep[0]).level;
                             _characterCache.Add(pc);
                             SetDBIDAllocated(pc.DBID);
                         }

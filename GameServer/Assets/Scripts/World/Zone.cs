@@ -11,6 +11,7 @@ using Utility;
 using ZoneScripts;
 using Gameplay.Entities.Interactives;
 using Database.Static;
+using World.Triggers;
 
 namespace World
 {

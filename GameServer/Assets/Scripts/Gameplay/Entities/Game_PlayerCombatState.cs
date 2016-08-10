@@ -1,5 +1,6 @@
 using System;
 using Common;
+using Gameplay.Items;
 using Network;
 
 namespace Gameplay.Entities
@@ -20,45 +21,48 @@ namespace Gameplay.Entities
 
         public void cl2sv_DrawSheatheWeapon()
         {
-            ECombatMode aMode = ECombatMode.CBM_Melee;
+            //added
+            var aMode = ECombatMode.CBM_Melee;
             var lastSkill = Owner.Skills.GetActiveTierSlotSkill(Owner.Skills.LastActiveSkillIndex);
             if (lastSkill != null)
             {
                 switch (lastSkill.requiredWeapon)
-                {            
-                    case (EWeaponCategory)1:                                                           
-                        aMode = (ECombatMode)1;                                                   
-                        break;                                                          
-                    case (EWeaponCategory)2:                                                           
-                        aMode = (ECombatMode)2;                                                 
-                        break;                                                             
-                    default:                                                            
-                        aMode = (ECombatMode)3;                                              
-                        break;    
+                {
+                    case EWeaponCategory.EWC_Melee:
+                        aMode = ECombatMode.CBM_Melee;
+                        break;
+                    case EWeaponCategory.EWC_Ranged:
+                        aMode = ECombatMode.CBM_Ranged;
+                        break;
+                    default:
+                        aMode = ECombatMode.CBM_Cast;
+                        break;
                 }
-            }   
-            //if (Outer.mPvPSettings != None
+            }
+            //added end
+
+            //if (Outer.mPvPSettings != null
             //  && !Outer.mPvPSettings.AllowDrawWeapon)
             //{
             //    sv_SheatheWeapon();   
             //}
-            if (mCombatMode == (ECombatMode)0)
+            if (mCombatMode == ECombatMode.CBM_Idle)
             {
                 if (sv_DrawWeapon(aMode))
                 {
                     return;
                 }
-                if (aMode != (ECombatMode)1 && sv_DrawWeapon((ECombatMode)1))
+                if (aMode != ECombatMode.CBM_Melee && sv_DrawWeapon(ECombatMode.CBM_Melee))
                 {
                     return;
                 }
-                if (aMode != (ECombatMode)2 && sv_DrawWeapon((ECombatMode)2))
+                if (aMode != ECombatMode.CBM_Ranged && sv_DrawWeapon(ECombatMode.CBM_Ranged))
                 {
                     return;
                 }
-                if (aMode != (ECombatMode)3 && sv_DrawWeapon((ECombatMode)3))
+                if (aMode != ECombatMode.CBM_Cast)
                 {
-                    return;
+                    sv_DrawWeapon(ECombatMode.CBM_Cast);
                 }
             }
             else
@@ -67,11 +71,48 @@ namespace Gameplay.Entities
             }
         }
 
+        public void sv2cl_SetWeapon(ECombatMode aMode)
+        {
+            Item_Type newMainWeapon;
+            Item_Type newOffhandWeapon;
+            GetMainWeapon().OnSheathe(Owner);
+            GetOffhandWeapon().OnSheathe(Owner);
+            ResolveWeapons(aMode, out newMainWeapon, out newOffhandWeapon);
+            mMainWeapon = newMainWeapon != null ? newMainWeapon.resourceID : 0;
+            mOffhandWeapon = newOffhandWeapon != null ? newOffhandWeapon.resourceID : 0;
+            mWeaponFlag = ResolveWeaponFlag(aMode, newMainWeapon, newOffhandWeapon);
+            if (aMode != ECombatMode.CBM_Cast)
+            {
+                if (newMainWeapon != null)
+                {
+                    newMainWeapon.OnDraw(Owner);
+                }
+                if (newOffhandWeapon != null)
+                {
+                    newOffhandWeapon.OnDraw(Owner);
+                }
+            }
+            else
+            {
+                GetMainWeapon().OnSheathe(Owner);
+                GetOffhandWeapon().OnSheathe(Owner);
+                mMainWeapon = 0;
+                mOffhandWeapon = 0;
+            }
+            //Owner.ClearAnimsByType(1, 0.30000001);
+            mCombatMode = aMode;
+        }
+
+        public void cl2sv_SwitchWeaponType(EWeaponCategory aWeaponType)
+        {
+            sv_SwitchToWeaponType(aWeaponType);
+        }
+
         public override bool sv_DrawWeapon(ECombatMode aInitialMode)
         {
             if (base.sv_DrawWeapon(aInitialMode))
             {
-                Owner.SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON((int)GetWeaponFlag()));
+                Owner.SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(aInitialMode));
                 return true;
             }
             return false;
@@ -87,14 +128,12 @@ namespace Gameplay.Entities
             return false;
         }
 
-        public override bool sv_SwitchToWeaponType(EWeaponCategory aWeaponType)
+        protected override bool sv_SwitchToMode(ECombatMode aMode)
         {
-            if (base.sv_SwitchToWeaponType(aWeaponType))
-            {
-                Owner.SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON((int)aWeaponType));
-                return true;
-            }
-            return false;
+            if (aMode == mCombatMode) return true;
+            if (!base.sv_SwitchToMode(aMode)) return false;
+            Owner.SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(aMode));
+            return true;
         }
     }
 }

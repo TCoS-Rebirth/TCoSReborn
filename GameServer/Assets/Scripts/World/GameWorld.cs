@@ -236,8 +236,8 @@ namespace World
                 if (p.ActiveCharacter.ActiveZone != null)
                 {
                     p.ActiveCharacter.ActiveZone.RemoveFromZone(p.ActiveCharacter);
-                    Destroy(p.ActiveCharacter.gameObject);
                 }
+                Destroy(p.ActiveCharacter.gameObject);
             }
             p.IsIngame = false;
         }

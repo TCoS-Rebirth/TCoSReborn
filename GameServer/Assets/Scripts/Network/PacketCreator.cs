@@ -264,10 +264,10 @@ namespace Network
         #endregion
 
         #region Combat state
-        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(int weaponFlag)
+        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(ECombatMode mode)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON);
-            m.WriteByte((byte)weaponFlag);
+            m.WriteByte((byte)mode);
             return m;
         }
 
@@ -277,10 +277,10 @@ namespace Network
             return m;
         }
 
-        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(int weaponFlag)
+        public static Message S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(ECombatMode mode)
         {
             var m = new Message(GameHeader.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON);
-            m.WriteByte((byte)weaponFlag);
+            m.WriteByte((byte)mode);
             return m;
         }
 
@@ -687,9 +687,9 @@ namespace Network
         public static Message S2R_GAME_PAWN_SV2REL_COMBATMESSAGEDEATH(Character dead, Character killer)
         {
             var m = new Message(GameHeader.S2R_GAME_PAWN_SV2REL_COMBATMESSAGEDEATH);
-            m.WriteInt32(killer.RelevanceID);
-            m.WriteInt32(killer.RelevanceID);
-            m.WriteInt32(dead.RelevanceID);
+            m.WriteInt32(killer != null?killer.RelevanceID:0);
+            m.WriteInt32(killer != null?killer.RelevanceID:0);
+            m.WriteInt32(dead!=null?dead.RelevanceID:0);
             return m;
         }
 
@@ -697,9 +697,8 @@ namespace Network
         {
             var m = new Message(GameHeader.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEDEATH);
 
-            if (killer) m.WriteInt32(killer.RelevanceID);
-            else m.WriteInt32(0);   //Valshaaran - experimental for kill below Y coord
-                 
+            m.WriteInt32(killer ? killer.RelevanceID : 0); //Valshaaran - experimental for kill below Y coord
+
             return m;
 
         }
@@ -1595,7 +1594,7 @@ namespace Network
             for (var f = 0; f < characters.Count; f++)
             {
                 m.WriteInt32(characters[f].DBID);
-                m.WriteInt32(characters[f].FamePep[0]); //famevalue
+                m.WriteInt32(characters[f].FameLevelCache); //famevalue
             }
             return m;
         }

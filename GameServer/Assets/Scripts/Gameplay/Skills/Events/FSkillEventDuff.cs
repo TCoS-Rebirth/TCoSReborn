@@ -61,13 +61,6 @@ namespace Gameplay.Skills.Events
             }
         }
 
-        public override bool Execute()
-        {
-            base.Execute();
-            
-            return true;
-        }
-
         public bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
             targetPawn.AddDuff(this, Duration, StackType, StackCount, Visible); 

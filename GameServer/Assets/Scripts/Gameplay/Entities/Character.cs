@@ -20,7 +20,8 @@ namespace Gameplay.Entities
 
         float _groundSpeedModifier = MOVESPEED_MULTIPLIER;
 
-        [SerializeField, ReadOnly] EPawnStates _pawnState = EPawnStates.PS_ALIVE;
+        [SerializeField, ReadOnly]
+        EPawnStates _pawnState = EPawnStates.PS_ALIVE;
 
         //[ReadOnly] EControllerStates _controllerState = EControllerStates.CPS_PAWN_ALIVE;
 
@@ -31,14 +32,17 @@ namespace Gameplay.Entities
 
         Vector3 _velocity;
 
-        [SerializeField, ReadOnly] ClassArcheType archeType = ClassArcheType.Warrior;
+        [SerializeField, ReadOnly]
+        ClassArcheType archeType = ClassArcheType.Warrior;
 
         /// <summary>
         ///     Used to calculate grounded position if pathfinding
         /// </summary>
-        [NonSerialized] public float BodyCenterHeight = 1f;
+        [NonSerialized]
+        public float BodyCenterHeight = 1f;
 
-        [SerializeField, ReadOnly] Taxonomy faction;
+        [SerializeField, ReadOnly]
+        Taxonomy faction;
 
         protected Rigidbody PhysicsBody;
 
@@ -148,7 +152,7 @@ namespace Gameplay.Entities
             }
             c.radius = 0.4f;
             c.height = 1.8f;
-            BodyCenterHeight = c.height*0.5f;
+            BodyCenterHeight = c.height * 0.5f;
             c.center = new Vector3(0, 1f, 0f);
         }
 
@@ -157,8 +161,8 @@ namespace Gameplay.Entities
         /// </summary>
         public int GetEffectiveMoveSpeed()
         {
-            var baseSpeed = _groundSpeed*GroundSpeedModifier;
-            return (int) (baseSpeed + _groundSpeed*0.01f*Stats.mRecord.MovementSpeedBonus);
+            var baseSpeed = _groundSpeed * GroundSpeedModifier;
+            return (int)(baseSpeed + _groundSpeed * 0.01f * Stats.mRecord.MovementSpeedBonus);
         }
 
         /// <summary>
@@ -198,6 +202,16 @@ namespace Gameplay.Entities
             OnDamaged = null;
         }
 
+        public void OnSheatheWeapon(SBAnimWeaponFlags WeaponFlag)
+        {
+            CombatState.OnDoneSheathing(WeaponFlag != SBAnimWeaponFlags.AnimWeapon_DualWielding);
+        }
+
+        public void OnDrawWeapon(SBAnimWeaponFlags WeaponFlag)
+        {
+            CombatState.OnDoneDrawing(WeaponFlag != SBAnimWeaponFlags.AnimWeapon_DualWielding);
+        }
+
         #region Emotes
 
         public virtual void DoEmote(EContentEmote emote)
@@ -233,13 +247,14 @@ namespace Gameplay.Entities
                 {
                     Physics = EPhysics.PHYS_SitGround;
                 }
-                
+
                 return true;
             }
             return false;
         }
 
-        public void GoToState(EControllerStates state) {
+        public void GoToState(EControllerStates state)
+        {
 
             string stateString;
 
@@ -300,7 +315,7 @@ namespace Gameplay.Entities
         public DuffInfoData AddDuff(FSkillEventDuff newDuff, float duration, EStackType stackType, int stackCount,
             bool visible)
         {
-            var duffInfo = new DuffInfoData(Instantiate(newDuff), duration, visible) {applyTime = Time.time};
+            var duffInfo = new DuffInfoData(Instantiate(newDuff), duration, visible) { applyTime = Time.time };
             duffInfo.ApplyEffects(this);
             duffs.Add(duffInfo);
             OnDuffsChanged();
@@ -347,7 +362,7 @@ namespace Gameplay.Entities
 
         public SkillApplyResult Damage(Character source, FSkill_Type s, int amount, Action<SkillApplyResult> callback)
         {
-            var result = new SkillApplyResult(source, this, s) {damageCaused = Mathf.Abs((int) Stats.SetHealth(Stats.mRecord.CopyHealth - amount))};
+            var result = new SkillApplyResult(source, this, s) { damageCaused = Mathf.Abs((int)Stats.SetHealth(Stats.mRecord.CopyHealth - amount)) };
             callback(result);
 
             //Valshaaran - added not already dead condition
@@ -379,7 +394,7 @@ namespace Gameplay.Entities
         public SkillApplyResult Heal(Character source, FSkill_Type s, int amount)
         {
             var result = new SkillApplyResult(source, this, s);
-            result.healCaused = (int) Stats.SetHealth(Stats.mRecord.CopyHealth + amount);
+            result.healCaused = (int)Stats.SetHealth(Stats.mRecord.CopyHealth + amount);
             OnHealReceived(result);
             return result;
         }

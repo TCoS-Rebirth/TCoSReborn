@@ -2,6 +2,7 @@
 using Gameplay.RequirementSpecifier;
 using System.Collections.Generic;
 using UnityEngine;
+using World.Triggers;
 
 namespace World
 {

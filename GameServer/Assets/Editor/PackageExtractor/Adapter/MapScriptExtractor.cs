@@ -11,6 +11,7 @@ using Utility;
 using System.IO;
 using UnityEditor;
 using Gameplay.Events;
+using World.Triggers;
 
 namespace PackageExtractor.Adapter
 {

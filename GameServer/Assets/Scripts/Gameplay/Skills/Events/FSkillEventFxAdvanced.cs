@@ -21,5 +21,6 @@ namespace Gameplay.Skills.Events
 
             [ReadOnly] public EEmitterOverwrite Location;
         }
+
     }
 }

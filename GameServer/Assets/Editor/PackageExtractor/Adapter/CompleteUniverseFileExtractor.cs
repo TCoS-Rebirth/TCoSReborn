@@ -69,7 +69,7 @@ namespace PackageExtractor.Adapter
                 foreach (var portal in portals)
                 {
                     portal.Destination = null;
-                    portal.PortalTag = "";
+                    portal.NavigationTag = "";
                     portal.TargetZone = null;
                 }
             }
@@ -142,7 +142,7 @@ namespace PackageExtractor.Adapter
                                         continue;
                                     }
                                     sbwp.Destination = ps;
-                                    sbwp.PortalTag = worldPortalTag;
+                                    sbwp.NavigationTag = worldPortalTag;
                                     sbwp.TargetZone = targetZone;
                                 }
                             }

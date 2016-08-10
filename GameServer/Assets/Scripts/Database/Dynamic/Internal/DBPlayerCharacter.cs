@@ -27,6 +27,7 @@ namespace Database.Dynamic.Internal
         public Vector3 Position;
         public Vector3 Rotation;
         public string SerializedSkillDeck = "0#";
+        public int FameLevelCache;
 
         public List<DBSkill> Skills = new List<DBSkill>();
 
