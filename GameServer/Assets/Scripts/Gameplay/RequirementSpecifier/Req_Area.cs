@@ -22,5 +22,10 @@ namespace Gameplay.RequirementSpecifier
             //TODO: Implement Req_Area
             throw new NotImplementedException();
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

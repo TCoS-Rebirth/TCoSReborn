@@ -6,7 +6,7 @@ namespace Gameplay.Events
 {
     public class EV_SkillEvent : Content_Event
     {
-        public SkillEventDuff duffEvent;
+        public FSkillEventDuff duffEvent;
         public int duffEventID;
         public string temporaryDuffEventName;
 

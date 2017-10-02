@@ -23,5 +23,10 @@ namespace Gameplay.RequirementSpecifier
         {
             throw new NotImplementedException();
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

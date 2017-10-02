@@ -7,7 +7,7 @@ namespace Gameplay.Skills
     public class SkillApplyResult
     {
         public SkillEffect appliedEffect;
-        public FSkill appliedSkill;
+        public FSkill_Type appliedSkill;
         public ECharacterStateHealthType changedStat;
         public int damageCaused;
         public int damageResisted;
@@ -17,7 +17,7 @@ namespace Gameplay.Skills
         public Character skillTarget;
         public int statChange;
 
-        public SkillApplyResult(Character skillSource, Character skillTarget, FSkill skill)
+        public SkillApplyResult(Character skillSource, Character skillTarget, FSkill_Type skill)
         {
             this.skillSource = skillSource;
             this.skillTarget = skillTarget;

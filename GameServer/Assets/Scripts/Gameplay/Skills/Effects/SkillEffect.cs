@@ -14,7 +14,7 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public int resourceID;
 
-        public virtual bool Fire(SkillContext sInfo, Character target)
+        public virtual bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
             return false;
         }

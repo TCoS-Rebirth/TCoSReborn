@@ -3,6 +3,7 @@ using Gameplay.RequirementSpecifier;
 using Network;
 using System.Collections.Generic;
 using UnityEngine;
+using World.Triggers;
 
 namespace World
 {

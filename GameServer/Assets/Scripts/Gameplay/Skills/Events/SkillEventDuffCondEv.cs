@@ -13,7 +13,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public EEffectType EffectType;
 
-        [ReadOnly] public SkillEvent Event;
+        [ReadOnly] public FSkill_Event Event;
 
         [ReadOnly] public float IncreasePerUse;
 
@@ -31,7 +31,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public int Uses;
 
-        public void Execute(SkillContext sInfo)
+        public void Execute(RunningSkillContext sInfo)
         {
             //needs!
         }

@@ -9,19 +9,21 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public ValueSpecifier value;
 
-        public override bool Fire(SkillContext sInfo, Character target)
+        public override bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
             if (state == ECharacterStateHealthType.ECSTH_Health)
             {
                 return false;
             }
-            var sap = new SkillApplyResult(sInfo.Caster, target, sInfo.ExecutingSkill);
-            sap.changedStat = state;
-            sap.appliedEffect = this;
-            if (target != null)
+            var sap = new SkillApplyResult(skillPawn, targetPawn, skill)
             {
-                sap.statChange = target.SetCharacterStat(state, target.GetCharacterStat(state) + value.CalculateValue(sInfo));
-                sInfo.Caster.OnStatChangeCaused(sap);
+                changedStat = state,
+                appliedEffect = this
+            };
+            if (targetPawn != null)
+            {
+                sap.statChange = targetPawn.Stats.SetCharacterStat(state, targetPawn.Stats.GetCharacterStat(state) + value.CalculateValue(skill, skillPawn, targetPawn));
+                skillPawn.OnStatChangeCaused(sap);
                 return true;
             }
             return false;

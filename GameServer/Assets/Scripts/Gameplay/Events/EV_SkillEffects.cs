@@ -6,7 +6,7 @@ namespace Gameplay.Events
 {
     public class EV_SkillEffects : Content_Event
     {
-        public FSkill Skill;
+        public FSkill_Type Skill;
         public int skillID;
         public string temporarySkillName;
 

@@ -8,12 +8,12 @@ namespace Gameplay.Skills
     public class DuffInfoData
     {
         public float applyTime;
-        public SkillEventDuff duff;
+        public FSkillEventDuff duff;
         public float duration;
         public int stackCount;
         public bool visible;
 
-        public DuffInfoData(SkillEventDuff duff, float duration, bool visible)
+        public DuffInfoData(FSkillEventDuff duff, float duration, bool visible)
         {
             this.duff = duff;
             this.duration = duration;

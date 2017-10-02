@@ -32,5 +32,14 @@ namespace Gameplay.RequirementSpecifier
             }
             return true;
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            var p = character as PlayerCharacter;
+            if (p != null) return isMet(p);
+            var n = character as NpcCharacter;
+            if (n != null) return isMet(n);
+            return false;
+        }
     }
 }

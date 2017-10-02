@@ -131,6 +131,10 @@ namespace World
 
         void Start()
         {
+            if (!Application.isEditor)
+            {
+                Application.targetFrameRate = 30;
+            }
             if ((_serverConfiguration = LoadConfigFile()) == null)
             {
                 Debug.LogError("Config file not found (default file created");
@@ -232,8 +236,8 @@ namespace World
                 if (p.ActiveCharacter.ActiveZone != null)
                 {
                     p.ActiveCharacter.ActiveZone.RemoveFromZone(p.ActiveCharacter);
-                    Destroy(p.ActiveCharacter.gameObject);
                 }
+                Destroy(p.ActiveCharacter.gameObject);
             }
             p.IsIngame = false;
         }

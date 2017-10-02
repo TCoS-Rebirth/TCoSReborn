@@ -2,6 +2,7 @@
 using Gameplay.RequirementSpecifier;
 using System.Collections.Generic;
 using UnityEngine;
+using World.Triggers;
 
 namespace World
 {
@@ -30,7 +31,7 @@ namespace World
                 CharsInside.Add(ch);
                 if (CharsInside.Count == 1)
                     AttachedSpawner.TriggerSpawn(ch.ActiveZone);
-                else if (AttachedSpawner.liveSpawns() == 0)
+                else if (AttachedSpawner.SpawnsAlive == 0)
                 {
                     //Handle other players attached, but spawner spawns are empty
                     AttachedSpawner.TriggerSpawn(ch.ActiveZone);

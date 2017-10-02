@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Common;
 using Database.Dynamic.Internal;
 using Database.Static;
@@ -22,21 +23,17 @@ namespace Gameplay.Entities
 {
     public sealed class PlayerCharacter : Character
     {
+
+        public PlayerInfo Owner;
+        public bool DebugMode;
+
         byte _moveFrame;
 
         public DBPlayerCharacter dbRef;
 
-        #region Guild
-
         public PlayerGuild Guild;
 
-        #endregion
-
-        #region Team
-
         public PlayerTeam Team;
-
-        #endregion
 
         /// <summary>
         ///     used to sync player character movement
@@ -46,8 +43,6 @@ namespace Gameplay.Entities
             get { return _moveFrame; }
             set { _moveFrame = value; }
         }
-
-        #region Factory
 
         /// <summary>
         ///     Creates a new player character instance and initializes it
@@ -62,73 +57,39 @@ namespace Gameplay.Entities
             go.transform.rotation = Quaternion.Euler(dbc.Rotation);
             pc.Owner = p;
             pc.dbRef = dbc;
-            pc.itemManager = new Player_ItemManager(pc.OnInventoryItemChanged);
-            pc.SetupFromDBRef();
+            pc.LastZoneID = (MapIDs)dbc.LastZoneID;
+            pc.PawnState = (EPawnStates)dbc.PawnState;
+            pc.ArcheType = (ClassArcheType)dbc.ArcheType;
+            pc.Money = dbc.Money;
+            pc.Faction = GameData.Get.factionDB.GetFaction(dbc.Faction);
+            var it = ScriptableObject.CreateInstance<Game_PlayerItemManager>();
+            it.Init(pc);
+            pc.Items = it;
+            var app = ScriptableObject.CreateInstance<Game_PlayerAppearance>();
+            app.Init(pc);
+            pc.Appearance = app;
+            pc.Stats = ScriptableObject.CreateInstance<Game_PlayerStats>();
+            pc.Stats.Init(pc);
+            var sk =  ScriptableObject.CreateInstance<Game_PlayerSkills>();
+            sk.Init(pc);
+            pc.Skills = sk;
+            var cs = ScriptableObject.CreateInstance<Game_PlayerCombatState>();
+            cs.Init(pc);
+            pc.CombatState = cs;
+            pc.questData = ScriptableObject.CreateInstance<QuestDataContainer>();
+            pc.questData.LoadForPlayer(dbc.QuestTargets, pc);
+            pc.persistentVars = ScriptableObject.CreateInstance<PersistentVarsContainer>();
+            pc.persistentVars.LoadForPlayer(dbc.PersistentVars, pc);
             pc.SetupCollision();
-            pc.InitializeStats();
             pc.InitEnabled = true;
             pc.InitColl = ECollisionType.COL_Colliding;
             return pc;
-        }
-
-        #endregion
-
-        void SetupFromDBRef()
-        {
-            ArcheType = (ClassArcheType) dbRef.ArcheType;
-            Appearance = dbRef.Appearance;
-            Body = dbRef.BodyMindFocus[0];
-            Mind = dbRef.BodyMindFocus[1];
-            Focus = dbRef.BodyMindFocus[2];
-            ExtraBodyPoints = (byte) dbRef.ExtraBodyMindFocusAttributePoints[0];
-            //{ can be left out too (calculate from body,mind,focus + levelprogression->leftover-points)
-            ExtraMindPoints = (byte) dbRef.ExtraBodyMindFocusAttributePoints[1];
-            ExtraFocusPoints = (byte) dbRef.ExtraBodyMindFocusAttributePoints[2];
-            Faction = GameData.Get.factionDB.GetFaction(dbRef.Faction);
-            FameLevel = dbRef.FamePep[0];
-            PepRank = dbRef.FamePep[1];
-            FamePoints = dbRef.FamePoints;
-            MaxHealth = dbRef.HealthMaxHealth[1]; //TODO: calculate value instead, later (from level & items etc)
-            Health = dbRef.HealthMaxHealth[0];
-            LastZoneID = (MapIDs) dbRef.LastZoneID;
-            Money = dbRef.Money;
-            PawnState = (EPawnStates) dbRef.PawnState;
-            itemManager.LoadItems(dbRef.Items);
-            for (var i = 0; i < dbRef.Skills.Count; i++)
-            {
-                var s = GameData.Get.skillDB.GetSkill(dbRef.Skills[i].ResourceId);
-                if (s != null)
-                {
-                    s.SigilSlots = dbRef.Skills[i].SigilSlots;
-                    Skills.Add(s);
-                }
-            }
-            ActiveSkillDeck = ScriptableObject.CreateInstance<SkillDeck>();
-            ActiveSkillDeck.LoadForPlayer(dbRef.SerializedSkillDeck, this);
-
-            questData = ScriptableObject.CreateInstance<QuestDataContainer>();
-            questData.LoadForPlayer(dbRef.QuestTargets, this);
-
-            persistentVars = ScriptableObject.CreateInstance<PersistentVarsContainer>();
-            persistentVars.LoadForPlayer(dbRef.PersistentVars, this);
         }
 
         void OnDrawGizmos()
         {
             Gizmos.DrawIcon(transform.position, "Player.psd");
         }
-
-        #region Duffs
-
-        protected override void OnDuffsChanged()
-        {
-            base.OnDuffsChanged();
-            SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS(this, Duffs));
-        }
-
-        #endregion
-
-        #region Client specific
 
         /// <summary>
         ///     Sends a Message directly to the client associated with this player instance (bypasses relevance checks)
@@ -138,14 +99,10 @@ namespace Gameplay.Entities
             Owner.Connection.SendMessage(m);
         }
 
-        #endregion
-
-        #region InternalInfo
-
-        public PlayerInfo Owner;
-        public bool DebugMode;
-
-        #endregion
+        public void ResyncClientTime()
+        {
+            SendToClient(PacketCreator.S2C_GAME_PLAYERCONTROLLER_SV2CL_UPDATESERVERTIME(Time.time));
+        }
 
         #region Movement
 
@@ -165,7 +122,7 @@ namespace Gameplay.Entities
                 &&  pos.y < ActiveZone.killY 
                 &&  PawnState != EPawnStates.PS_DEAD)
             {
-                Health = 0;
+                Stats.SetHealth(0);
                 SetPawnState(EPawnStates.PS_DEAD);
                 OnDiedThroughDamage(null);                
             }
@@ -217,221 +174,30 @@ namespace Gameplay.Entities
             if (base.SitDown(onChairFlag))
             {
 
-                Message mMove = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Position, Velocity, Physics);
+                var mMove = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_FORCEMOVEMENT(Position, Velocity, Physics);
                 SendToClient(mMove);
 
-                Message mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(onChairFlag);
+                var mSit = PacketCreator.S2C_GAME_PLAYERPAWN_SV2CL_SITDOWN(onChairFlag);
                 SendToClient(mSit);
 
                 return true;
             }
-            else return false;
+            return false;
         }
 
         #endregion
 
-        #region Stats
-
-        /// <summary>
-        ///     <see cref="Character.SetPawnState" />
-        /// </summary>
-        public override void SetPawnState(EPawnStates newState)
+        protected override void OnDuffsChanged()
         {
-            base.SetPawnState(newState);
-            SendToClient(PacketCreator.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(this));
+            base.OnDuffsChanged();
+            SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_UPDATEDUFFS(this, Duffs));
         }
-
-        /// <summary>
-        ///     Notifies the client through combat message log, Sheates the weapon and sets the combatstate to idle TODO cleanup
-        /// </summary>
-        /// <param name="source"></param>
-        protected override void OnDiedThroughDamage(Character source)
-        {
-            base.OnDiedThroughDamage(source);
-            CombatMode = ECombatMode.CBM_Idle;
-            SheatheWeapon();
-            SendToClient(PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEDEATH(source));
-        }
-
-        protected override void OnHealthChanged()
-        {
-            base.OnHealthChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEHEALTH(this));
-        }
-
-        protected override void OnMaxHealthChanged()
-        {
-            base.OnMaxHealthChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMAXHEALTH(this));
-        }
-
-        protected override void OnPhysiqueChanged()
-        {
-            base.OnPhysiqueChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEPHYSIQUE(this));
-        }
-
-        protected override void OnMoraleChanged()
-        {
-            base.OnMoraleChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMORALE(this));
-        }
-
-        protected override void OnConcentrationChanged()
-        {
-            base.OnConcentrationChanged();
-            SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATECONCENTRATION(this));
-        }
-
-        //protected override void OnMovementSpeedBonusChanged()
-        //{
-        //    base.OnMovementSpeedBonusChanged();
-        //    SendToClient(PacketCreator.S2R_GAME_CHARACTERSTATS_SV2CLREL_UPDATEMOVEMENTSPEED(this));
-        //}
 
         protected override void OnLeavingZone(Zone z)
         {
             base.OnLeavingZone(z);
             relevantObjects.Clear();
         }
-
-        #endregion
-
-        #region Personality/CharacterAppearance
-
-        public CharacterAppearance Appearance;
-
-        public byte[] GetPackedLOD(int index)
-        {
-            switch (index)
-            {
-                case 0:
-                {
-                    var lod = new LODHelper(13);
-                    lod.Add(Appearance.Voice, 8);
-                    lod.Add(0, 8);
-                    lod.Add(0, 8);
-                    lod.Add(0, 4); //4th tattoo
-                    lod.Add(Appearance.TattooRight, 4);
-                    lod.Add(Appearance.TattooLeft, 4);
-                    lod.Add(Appearance.ChestTattoo, 4);
-                    var it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTGAUNTLET);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //gauntletRight color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //gauntletRight color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTGAUNTLET);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //it color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //gauntletleft color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTGLOVE);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //glovesRight color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //glovesRight color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTGLOVE);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //glovesLeft color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //glovesLeft color2
-                    return lod.GetByteArray();
-                }
-                case 1:
-                {
-                    var lod = new LODHelper(20);
-                    var it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTSHIN);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //shinRight color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //shinRight color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTSHIN);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //shinLeft color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //shinLeft color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTTHIGH);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //thighRight color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //thighRight color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTTHIGH);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //thighLeft color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //thighLeft color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_BELT);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //belt color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //belt color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTSHOULDER);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //shoulderRight color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //shoulderRight color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTSHOULDER);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //shoulderLeft color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //shoulderLeft color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_HELMET);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //helmet color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //helmet color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_SHOES);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //shoes color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //shoes color2
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_PANTS);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //pants color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //pants color2
-                    return lod.GetByteArray();
-                }
-                case 2:
-                {
-                    var lod = new LODHelper(15);
-                    lod.Add(0, 8); //unused
-                    lod.Add(0, 4); //unused
-                    var it = itemManager.GetEquippedItem(EquipmentSlot.ES_RANGEDWEAPON);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //ranged weapon id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_SHIELD);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 8); //shield id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 8); //melee weapon id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTSHIN);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //shinRight id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTSHIN);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //shinLeft id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTTHIGH);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //thighRight id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTTHIGH);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //thighLeft id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_BELT);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //belt id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTGAUNTLET);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //gauntletRight id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTGAUNTLET);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //gauntletLeft id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTSHOULDER);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //shoulderRight id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTSHOULDER);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //shoulderLeft id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_HELMET);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //helmet id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_SHOES);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 7); //shoes id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_PANTS);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 7); //pants id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_RIGHTGLOVE);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //glove right id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_LEFTGLOVE);
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //glove left id
-                    return lod.GetByteArray();
-                }
-                case 3:
-                {
-                    var lod = new LODHelper(10);
-                    lod.Add(0, 1); //unused
-                    var it = itemManager.GetEquippedItem(EquipmentSlot.ES_CHESTARMOUR);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //chest armor color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //chest armor color2
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 6); //chest armor id
-                    it = itemManager.GetEquippedItem(EquipmentSlot.ES_CHEST);
-                    lod.Add(it != null ? (int)it.Color1 : 0, 8); //chest color1
-                    lod.Add(it != null ? (int)it.Color2 : 0, 8); //chest color2
-                    lod.Add(it != null ? GameData.Get.itemDB.GetSetIndex(it) : 0, 8); // chest cloth id
-                    lod.Add(Appearance.HairColor, 8);
-                    lod.Add(Appearance.HairStyle, 6);
-                    lod.Add(Appearance.BodyColor, 8);
-                    lod.Add(0, 1); //displayLogo
-                    lod.Add(Appearance.HeadType, 6);
-                    lod.Add(Appearance.BodyType, 2);
-                    lod.Add((byte) Appearance.Gender, 1);
-                    lod.Add(Appearance.Race, 1);
-                    return lod.GetByteArray();
-                }
-            }
-            return null;
-        }
-
-        #endregion
 
         #region Actions
 
@@ -462,176 +228,9 @@ namespace Gameplay.Entities
         public void Resurrect()
         {
             ActiveZone.TeleportToNearestRespawnLocation(this);
-            SetHealth(MaxHealth);
+            Stats.SetHealth(Stats.mRecord.MaxHealth);
             SetPawnState(EPawnStates.PS_ALIVE);
             PlayEffect(EPawnEffectType.EPET_ShapeUnshift);
-        }
-
-        #endregion
-
-        #region Skills
-
-        /// <summary>
-        ///     Initiated by the client on Skilldeck assignments. Updates the serverside skilldeck
-        /// </summary>
-        public void SetSkillDeck(int[] newSkillDeck)
-        {
-            if (newSkillDeck.Length != 30)
-            {
-                Debug.LogWarning("SetSkillDeck length mismatch");
-                return;
-            }
-            ActiveSkillDeck.Reset();
-            for (var i = 0; i < newSkillDeck.Length; i++)
-            {
-                if (newSkillDeck[i] <= 0)
-                {
-                    continue;
-                }
-                ActiveSkillDeck[i] = GetSkill(newSkillDeck[i]);
-            }
-            SendToClient(PacketCreator.S2C_GAME_PLAYERSKILLS_SV2CL_SETSKILLS(this, Skills,
-                ActiveSkillDeck.ToArray()));
-        }
-
-        /// <summary>
-        ///     Adds a skill to this characters skill-list (if found by the given <see cref="id" />) TODO check requirements like
-        ///     level, class points etc
-        /// </summary>
-        /// <param name="id"></param>
-        public void LearnSkill(int id)
-        {
-            var s = GameData.Get.skillDB.GetSkill(id);
-            if (s != null)
-            {
-                LearnSkill(s);
-            }
-            else
-            {
-                Debug.Log("(LearnSkill) missing: " + id);
-            }
-        }
-
-        /// <summary>
-        ///     Initiated by the client, indicates a skill use request. Executes the requested skill (if available) and handles
-        ///     errors with skillcasting
-        /// </summary>
-        public void ClientUseSkill(int slotIndex, int targetID, Vector3 camPos, Vector3 targetPosition, float clientTime)
-        {
-            if (Mathf.Abs(clientTime - Time.time) > 0.5f)
-            {
-                SendToClient(PacketCreator.S2C_GAME_PLAYERCONTROLLER_SV2CL_UPDATESERVERTIME(Time.time));
-            }
-            var s = ActiveSkillDeck.GetSkillFromActiveTier(slotIndex);
-            var result = ESkillStartFailure.SSF_INVALID_SKILL;
-            if (s != null)
-            {
-                result = UseSkill(s.resourceID, targetID, targetPosition, clientTime, camPos);
-            }
-            if (result == ESkillStartFailure.SSF_ALLOWED)
-            {
-                ActiveSkillDeck.SetActiveSlot(slotIndex);
-            }
-            else
-            {
-                DebugChatMessage("Skill result: " + result);
-            }
-        }
-
-        protected override void OnLearnedSkill(FSkill s)
-        {
-            var m = PacketCreator.S2C_GAME_SKILLS_SV2CL_LEARNSKILL(s);
-            SendToClient(m);
-        }
-
-        protected override void OnStartCastSkill(SkillContext s)
-        {
-            base.OnStartCastSkill(s);
-            SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_ADDACTIVESKILL(this, s));
-        }
-
-        protected override void OnEndCastSkill(SkillContext s)
-        {
-            base.OnEndCastSkill(s);
-            SendToClient(PacketCreator.S2C_GAME_SKILLS_SV2CL_CLEARLASTSKILL(this, s.ExecutingSkill));
-        }
-
-        public override void OnDamageCaused(SkillApplyResult sap)
-        {
-            var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTDAMAGE(sap.skillTarget.RelevanceID,
-                sap.appliedSkill.resourceID, sap.damageCaused, sap.damageResisted);
-            SendToClient(m);
-        }
-
-        public override void OnHealingCaused(SkillApplyResult sap)
-        {
-            if (sap.healCaused > 0)
-            {
-                var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTHEAL(sap.skillTarget.RelevanceID,
-                    sap.appliedSkill.resourceID, sap.healCaused);
-                SendToClient(m);
-            }
-        }
-
-        public override void OnStatChangeCaused(SkillApplyResult sap)
-        {
-            SendToClient(
-                PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTSTATE(sap.skillTarget.RelevanceID,
-                    sap.appliedSkill.resourceID, sap.appliedEffect.resourceID, sap.statChange));
-        }
-
-        #endregion
-
-        #region Items
-
-        //rework
-        [SerializeField] Player_ItemManager itemManager;
-
-        public Player_ItemManager ItemManager
-        {
-            get { return itemManager; }
-        }
-
-        void OnInventoryItemChanged(Game_Item item, EItemChangeNotification notificationType,
-            EItemLocationType locationType, int slotID, int locationID)
-        {
-            if (item == null)
-            {
-                var m = PacketCreator.S2C_GAME_PLAYERITEMMANAGER_SV2CL_REMOVEITEM(locationType, slotID, 0);
-                SendToClient(m);
-            }
-            else
-            {
-                var m = PacketCreator.S2C_GAME_PLAYERITEMMANAGER_SV2CL_SETITEM(item, notificationType);
-                SendToClient(m);
-            }
-        }
-
-        public void GiveInventory(Content_Inventory cInv)
-        {
-            foreach (var cItem in cInv.Items)
-            {
-
-                Game_Item gi = ScriptableObject.CreateInstance<Game_Item>();
-                gi.SetupFromCItem(cItem);
-
-                //TODO: Handle attuned status?
-                //if (attuned) { gi.Attuned = 1; }
-
-                ItemManager.AddItem(gi);
-            }                            
-        }
-
-        public bool HasInventory(Content_Inventory cInv)
-        {
-            foreach (var cItem in cInv.Items)
-            {
-                if (!ItemManager.HasItemStack(cItem))
-                {
-                    return false;
-                }
-            }
-            return true;
         }
 
         #endregion
@@ -667,97 +266,20 @@ namespace Gameplay.Entities
 
         #region Leveling
 
-        float famePoints;
-
-        public float FamePoints
-        {
-            get { return famePoints; }
-            set { famePoints = value; }
-        }
-
-        protected override void OnFameChanged()
-        {
-            //TODO: grant attribute points, update stats, etc.
-            Message m = PacketCreator.S2R_GAME_PLAYERSTATS_SV2CLREL_ONLEVELUP(this);
-            BroadcastRelevanceMessage(m);
-            SendToClient(m);
-        }
-
-        public void GiveFame(int points)
-        {
-            famePoints += points;
-            Message mUpdateFamePoints = PacketCreator.S2C_GAME_PLAYERSTATS_SV2CL_UPDATEFAMEPOINTS(this);
-            SendToClient(mUpdateFamePoints);
-
-            ReceiveChatMessage("", "Gained " + points + " fame", EGameChatRanges.GCR_SYSTEM);
-
-            //Return if max level
-            if (FameLevel >= GameConfiguration.CharacterDefaults.MaxFame) return;
-
-            //Check for levelup
-            var nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
-            while (FamePoints >= nextLevelData.requiredFamePoints)
-            {
-                SetFame(FameLevel + 1);
-                nextLevelData = GameData.Get.levelProg.GetDataForLevel(FameLevel + 1);
-            }            
-            
-        }
-
         public void GiveQuestFame(int points, int qpFrac)
         {
             
 
-            if (qpFrac <= 0) { GiveFame(points); }
+            if (qpFrac <= 0) { Stats.GiveFame(points); }
             else {
                 //TODO
                 //Valshaaran - experimental quest XP formula : (quest points value) * (qpFrac / player fame level)?
-                float multFactor = qpFrac / FameLevel;
-                GiveFame((int)(points * multFactor));
+                float multFactor = qpFrac / Stats.GetFameLevel();
+                Stats.GiveFame((int)(points * multFactor));
 
                 //This version just gives the unmodified points amount
                 //GiveFame(points);
             }
-        }
-
-        int pepPoints;
-
-        public int PepPoints
-        {
-            get { return pepPoints; }
-            set { pepPoints = value; }
-        }
-
-        byte extraBodyPoints;
-
-        public byte ExtraBodyPoints
-        {
-            get { return extraBodyPoints; }
-            set { extraBodyPoints = value; }
-        }
-
-        byte extraMindPoints;
-
-        public byte ExtraMindPoints
-        {
-            get { return extraMindPoints; }
-            set { extraMindPoints = value; }
-        }
-
-        byte extraFocusPoints;
-
-        public byte ExtraFocusPoints
-        {
-            get { return extraFocusPoints; }
-            set { extraFocusPoints = value; }
-        }
-
-        byte remainingAttributePoints;
-
-        public byte RemainingAttributePoints
-        {
-            get { return remainingAttributePoints; }
-            set { remainingAttributePoints = value; }
         }
 
         #endregion
@@ -785,48 +307,38 @@ namespace Gameplay.Entities
             SendToClient(m);
         }
 
-        public override void RunEvent(SkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
-            Character triggerPawn, Character targetPawn)
-        {
-            base.RunEvent(sInfo, fxEvent, skillPawn, triggerPawn, targetPawn);
-            SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
-                sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn,
-                sInfo.currentSkillTime));
-        }
-
-        public override void RunEventL(SkillContext sInfo, SkillEventFX fxEvent, Character skillPawn,
-            Character triggerPawn, Vector3 location, Character targetPawn)
-        {
-            base.RunEventL(sInfo, fxEvent, skillPawn, triggerPawn, location, targetPawn);
-            SendToClient(PacketCreator.S2R_GAME_SKILLS_SV2CLREL_RUNEVENT(this,
-                sInfo.ExecutingSkill.resourceID, fxEvent.resourceID, 1, skillPawn, triggerPawn, targetPawn, location,
-                sInfo.currentSkillTime));
-        }
-
         #endregion
 
         #region Combat
 
-        public override void DrawWeapon()
+        //public override void SwitchWeapon(EWeaponCategory newWeapon)
+        //{
+        //    Debug.Log("weapon change request: " + newWeapon);
+        //    //var prevWeapon = equippedWeaponType;
+        //    base.SwitchWeapon(newWeapon);
+        //    if (CombatMode != ECombatMode.CBM_Idle)
+        //    {
+        //        SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(this));
+        //    }
+        //}
+
+        public override void SetPawnState(EPawnStates newState)
         {
-            base.DrawWeapon();
-            SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_DRAWWEAPON(this));
+            base.SetPawnState(newState);
+            SendToClient(PacketCreator.S2R_GAME_PAWN_SV2CLREL_UPDATENETSTATE(this));
         }
 
-        public override void SheatheWeapon()
+        /// <summary>
+        ///     Notifies the client through combat message log, Sheathes the weapon and sets the combatstate to idle TODO cleanup
+        /// </summary>
+        /// <param name="source"></param>
+        protected override void OnDiedThroughDamage(Character source)
         {
-            base.SheatheWeapon();
-            equippedWeaponType = EWeaponCategory.EWC_None;
-            SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SHEATHEWEAPON());
-        }
-
-        public override void SwitchWeapon(EWeaponCategory newWeapon)
-        {
-            base.SwitchWeapon(newWeapon);
-            if (CombatMode != ECombatMode.CBM_Idle)
-            {
-                SendToClient(PacketCreator.S2C_GAME_PLAYERCOMBATSTATE_SV2CL_SETWEAPON(this));
-            }
+            base.OnDiedThroughDamage(source);
+            CombatState.sv_SheatheWeapon();
+            //CombatMode = ECombatMode.CBM_Idle;
+            //SheatheWeapon();
+            SendToClient(PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEDEATH(source));
         }
 
         protected override void OnDamageReceived(SkillApplyResult sap)
@@ -838,10 +350,34 @@ namespace Gameplay.Entities
                 SendToClient(m);
             }
         }
+        public override void OnDamageCaused(SkillApplyResult sap)
+        {
+            var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTDAMAGE(sap.skillTarget.RelevanceID,
+                sap.appliedSkill.resourceID, sap.damageCaused, sap.damageResisted);
+            SendToClient(m);
+        }
+
+        public override void OnHealingCaused(SkillApplyResult sap)
+        {
+            if (sap.healCaused > 0)
+            {
+                var m = PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTHEAL(sap.skillTarget.RelevanceID,
+                    sap.appliedSkill.resourceID, sap.healCaused);
+                SendToClient(m);
+            }
+        }
+
+        public override void OnStatChangeCaused(SkillApplyResult sap)
+        {
+            SendToClient(
+                PacketCreator.S2C_GAME_PAWN_SV2CL_COMBATMESSAGEOUTPUTSTATE(sap.skillTarget.RelevanceID,
+                    sap.appliedSkill.resourceID, sap.appliedEffect.resourceID, sap.statChange));
+        }
+
 
         public void OnNPCKill(NpcCharacter npc)
         {
-            var npct = npc.typeRef;
+            var npct = npc.Type;
 
             #region Quest progress
             //Quest progress                
@@ -914,10 +450,10 @@ namespace Gameplay.Entities
 
             #region Grant Fame, PEP
             //Valshaaran - placeholder formula, feel free to improve
-            int nFame = npc.FameLevel;
+            int nFame = npc.Stats.GetFameLevel();
             int baseKillPoints = 10;
-            float weightedKillPoints = (baseKillPoints * nFame * nFame) / FameLevel;
-            GiveFame((int)weightedKillPoints);
+            float weightedKillPoints = (baseKillPoints * nFame * nFame) / Stats.GetFameLevel();
+            Stats.GiveFame((int)weightedKillPoints);
 
             //TODO: PEP
 
@@ -926,7 +462,7 @@ namespace Gameplay.Entities
             #region Loot
 
             var lootTables = npc.Faction.Loot;
-            lootTables.AddRange(npc.typeRef.Loot);
+            lootTables.AddRange(npc.Type.Loot);
 
             if (Team == null)
             {
@@ -1214,7 +750,7 @@ namespace Gameplay.Entities
             GiveMoney(quest.money);
 
             //Item rewards (Content_Inventory)
-            GiveInventory(quest.rewardItems);         
+            Items.GiveInventory(quest.rewardItems);         
 
             //Send complete quest packet            
             Message mQuestFinish = PacketCreator.S2C_GAME_PLAYERQUESTLOG_SV2CL_FINISHQUEST(quest.resourceID);

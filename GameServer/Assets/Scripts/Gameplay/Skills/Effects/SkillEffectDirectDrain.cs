@@ -1,5 +1,7 @@
-﻿using Common;
+﻿using System;
+using Common;
 using Gameplay.Entities;
+using UnityEngine;
 
 namespace Gameplay.Skills.Effects
 {
@@ -15,21 +17,35 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public ValueSpecifier multiplierVS;
 
-        public override bool Fire(SkillContext sInfo, Character target)
+        public override bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
-            if (target != null)
+            if (targetPawn != null)
             {
-                var drainedValue = (int) drainedAmount.CalculateValue(sInfo);
-                var realDrainedAmount = target.SetCharacterStat(drainedCharacterStat, target.GetCharacterStat(drainedCharacterStat) + drainedValue);
-                if (multiplierVS != null)
+                var drainValue = (int)drainedAmount.CalculateValue(skill, skillPawn, targetPawn);
+                //if (multiplierVS != null) //could this be for gain only?
+                //{
+                //    drainValue = (int)(drainValue * multiplierVS.CalculateValue(skill, skillPawn, targetPawn));
+                //}
+                //else
+                //{
+                //    drainValue = (int)(drainValue * multiplier);
+                //}
+                switch (drainedCharacterStat)
                 {
-                    realDrainedAmount = (int) (realDrainedAmount*multiplierVS.CalculateValue(sInfo));
+                    case ECharacterStateHealthType.ECSTH_Physique:
+                        targetPawn.Stats.IncreasePhysique(drainValue);
+                        break;
+                    case ECharacterStateHealthType.ECSTH_Morale:
+                        targetPawn.Stats.IncreaseMorale(drainValue);
+                        break;
+                    case ECharacterStateHealthType.ECSTH_Concentration:
+                        targetPawn.Stats.IncreaseConcentration(drainValue);
+                        break;
+                    case ECharacterStateHealthType.ECSTH_Health:
+                        targetPawn.Stats.SetHealth(targetPawn.Stats.mRecord.CopyHealth + drainValue);
+                        break;
                 }
-                else
-                {
-                    realDrainedAmount = (int) (realDrainedAmount*multiplier);
-                }
-                target.SetCharacterStat(gainedCharacterStat, realDrainedAmount);
+                Debug.Log("TODO: gain character stat from draining");
                 return true;
             }
             return false;

@@ -9,7 +9,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public SkillEffectDirect effect;
 
-        [ReadOnly] public SkillEventFX ExecuteFXEvent;
+        [ReadOnly] public FSkillEventFx ExecuteFXEvent;
 
         [ReadOnly] public string internalName;
 
@@ -19,7 +19,7 @@ namespace Gameplay.Skills.Events
 
         [ReadOnly] public int resourceID;
 
-        public void Execute(SkillContext sInfo)
+        public void Execute(RunningSkillContext sInfo)
         {
             //needs!
         }

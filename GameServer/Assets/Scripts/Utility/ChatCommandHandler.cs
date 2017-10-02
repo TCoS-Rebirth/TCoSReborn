@@ -256,7 +256,7 @@ namespace Utility
                 int val;
                 if (int.TryParse(parts[1], out val) && val >= -5 && val <= 5)
                 {
-                    p.SetCharacterStat(ECharacterStateHealthType.ECSTH_Physique, val);
+                    p.Stats.SetCharacterStat(ECharacterStateHealthType.ECSTH_Physique, val);
                 }
                 else
                 {
@@ -287,7 +287,7 @@ namespace Utility
             {
                 int points;
                 if (int.TryParse(arg[1], out points)) {
-                    p.GiveFame(points);
+                    p.Stats.GiveFame(points);
                     ResponseMessage(p, points + " fame points added");
                 }
                 else ResponseMessage(p, "Invalid value");

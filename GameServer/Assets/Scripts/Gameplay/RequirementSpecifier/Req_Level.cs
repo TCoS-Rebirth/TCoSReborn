@@ -22,7 +22,12 @@ namespace Gameplay.RequirementSpecifier
 
         public bool isMet(Character c)
         {
-            return SBOperator.Operate(c.FameLevel, Operator, RequiredLevel);
+            return SBOperator.Operate(c.Stats.GetFameLevel(), Operator, RequiredLevel);
+        }
+
+        public override bool CheckPawn(Character character)
+        {
+            return isMet(character);
         }
     }
 }

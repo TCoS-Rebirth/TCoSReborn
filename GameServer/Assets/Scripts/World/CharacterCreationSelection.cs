@@ -166,8 +166,20 @@ namespace World
             int raceId = (byte) (lod3[9] & 0x01);
 
             //Lods end
-            newCharacter.Appearance = new CharacterAppearance(raceId, genderId, bodyTypeId, headTypeId, bodyColour, chestTattooId, leftArmTattooId, rightArmTattooId, hairStyleId,
-                hairColour, voiceId);
+            newCharacter.Appearance = new DBPlayerCharacter.DBAppearance
+                (
+                raceId,
+                genderId,
+                bodyTypeId,
+                headTypeId,
+                bodyColour,
+                chestTattooId,
+                leftArmTattooId,
+                rightArmTattooId,
+                hairStyleId,
+                hairColour,
+                voiceId
+                );
 
             var it = GameData.Get.itemDB.GetSetItem(torsoId, EquipmentSlot.ES_CHEST);
             if (it != null)
@@ -333,11 +345,7 @@ namespace World
             newCharacter.Money = conf.player.StartMoney;
             newCharacter.FamePep[0] = GameConfiguration.CharacterDefaults.MinFame;
             newCharacter.FamePep[1] = GameConfiguration.CharacterDefaults.MinPep;
-            newCharacter.HealthMaxHealth[0] = conf.player.StartHealth;
-            newCharacter.HealthMaxHealth[1] = conf.player.StartHealth;
-            newCharacter.BodyMindFocus[0] = conf.player.StartBody;
-            newCharacter.BodyMindFocus[1] = conf.player.StartMind;
-            newCharacter.BodyMindFocus[2] = conf.player.StartFocus;
+            newCharacter.Health = conf.player.StartHealth;
             newCharacter.Faction = conf.player.StartFaction.ID;
 
             newCharacter.AccountID = m.Connection.player.Account.UID;

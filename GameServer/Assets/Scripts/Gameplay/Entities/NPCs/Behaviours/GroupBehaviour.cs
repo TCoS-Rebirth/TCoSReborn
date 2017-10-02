@@ -62,7 +62,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         }
 
         //TODO: add threat from source character to own table / group table?
-        public override void OnDamage(Character source, FSkill s, int amount)
+        public override void OnDamage(Character source, FSkill_Type s, int amount)
         {
             if (!canPath)
             {
@@ -72,8 +72,8 @@ namespace Gameplay.Entities.NPCs.Behaviours
             {
                 owner.CancelMovement();
                 target = source;
-                owner.equippedWeaponType = EWeaponCategory.EWC_MeleeOrUnarmed;
-                owner.DrawWeapon();
+                owner.CombatState.sv_DrawWeapon(ECombatMode.CBM_Melee);
+                Debug.Log("TODO replace with correct initial state resolving function");
             }
         }
 
@@ -277,9 +277,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
             {
                 case NpcCharacter.MoveResult.ReachedTarget:
                 case NpcCharacter.MoveResult.TargetNotReachable:
-                    owner.SetHealth(owner.MaxHealth);
+                    owner.Stats.SetHealth(owner.Stats.mRecord.MaxHealth);
                     owner.TeleportTo(startPosition, startOrientation);
-                    owner.SheatheWeapon();
+                    owner.CombatState.sv_SheatheWeapon();
                     state = NpcStates.Idle;
                     owner.SetMoveSpeed(ENPCMovementFlags.ENMF_Walking);
                     return;
@@ -300,9 +300,9 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
             if (Time.time - lastAttack > 2f)
             {
-                if (!owner.IsCasting)
+                if (!owner.Skills.IsCasting)
                 {
-                    var result = owner.UseSkillIndex(0, target.RelevanceID, _currentPosition, Time.time);
+                    var result = owner.Skills.ExecuteIndex(0, target.RelevanceID, _currentPosition, Time.time);
                     if (result == ESkillStartFailure.SSF_INVALID_SKILL)
                     {
                         state = NpcStates.Fleeing;

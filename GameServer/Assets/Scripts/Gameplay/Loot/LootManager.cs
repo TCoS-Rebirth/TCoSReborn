@@ -111,7 +111,7 @@ namespace Gameplay.Loot
                 var transID = transIDs[t];
                 var lootItemID = lootItemIDs[t];
 
-                if (!pc.ItemManager.hasFreeSpace(1))    //TODO: Allow if can be stacked with existing stack?
+                if (!pc.Items.HasFreeSpace(1))    //TODO: Allow if can be stacked with existing stack?
                 {
                     //inv full notification
                     Message mRej = PacketCreator.S2C_GAME_LOOTING_SV2CL_LOOTITEMREJECTED(transID, lootItemID, ELootRejectedReason.LIR_INV_FULL);
@@ -144,7 +144,7 @@ namespace Gameplay.Loot
                                 //Give item to player
                                 var gameItem = ScriptableObject.CreateInstance<Game_Item>();
                                 gameItem.SetupFromLoot(li);
-                                pc.ItemManager.AddItem(gameItem);
+                                pc.Items.AddItem(gameItem);
 
                                 li.Given = true;
                                 break;

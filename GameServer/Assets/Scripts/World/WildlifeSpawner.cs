@@ -59,8 +59,6 @@ namespace World
                 var newSI = new SpawnInfo();
                 newSI.setupFromSpawner(this, rayCast, rndRot);
 
-            
-
                 var newNPC = NpcCharacter.Create(npc, rayCast, rndRot, newSI);
 
                 if (newNPC != null)
@@ -69,9 +67,10 @@ namespace World
                     if (newNPC.Faction == null)
                         newNPC.Faction = GameData.Get.factionDB.defaultFaction;
                     //Roll level if not specified
-                    if (newNPC.FameLevel == 0)
-                        newNPC.FameLevel = Random.Range(LevelMin, LevelMax);
-
+                    if (newNPC.Stats.GetFameLevel() == 0)
+                        newNPC.Stats.mRecord.FameLevel = Random.Range(LevelMin, LevelMax);
+                    newNPC.OnPawnStateChanged += OnSpawnStateChanged;
+                    spawnsAlive++;
                     newNPC.InitEnabled = true;
                     newNPC.InitColl = ECollisionType.COL_Colliding;
 
@@ -116,7 +115,7 @@ namespace World
             }
             else
             {
-                var numSpawns = liveSpawns();
+                var numSpawns = spawnsAlive;
                 if (numSpawns == 0 || numSpawns < (int) (spawnNumMult*SpawnMin))
                 {
                     respawnPending = true;

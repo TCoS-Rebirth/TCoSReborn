@@ -9,12 +9,12 @@ namespace Gameplay.Skills.Effects
 
         [ReadOnly] public ValueSpecifier heal;
 
-        public override bool Fire(SkillContext sInfo, Character target)
+        public override bool Apply(FSkill_Type skill, Character skillPawn, Character targetPawn)
         {
-            if (target != null)
+            if (targetPawn != null)
             {
-                var result = target.Heal(sInfo.Caster, sInfo.ExecutingSkill, Mathf.Abs((int) heal.CalculateValue(sInfo)));
-                sInfo.Caster.OnHealingCaused(result);
+                var result = targetPawn.Heal(skillPawn, skill, Mathf.Abs((int) heal.CalculateValue(skill, skillPawn, targetPawn)));
+                skillPawn.OnHealingCaused(result);
                 return true;
             }
             return false;

@@ -3,25 +3,51 @@ using UnityEngine;
 
 namespace World
 {
-    [RequireComponent(typeof (BoxCollider))]
-    public class SBWorldPortal : Trigger
+    public class SBWorldPortal : SBBasePortal
     {
         public float collisionHeight;
 
         public float collisionRadius;
 
-        //public SBWorldPortal EntryPortal;
-
         public PlayerStart Destination;
-
-        public string PortalTag; //'Tag'
 
         public Zone TargetZone;
 
         void Start()
         {
-            var col = GetComponent<BoxCollider>();
+            var col = GetComponent<Collider>();
             col.isTrigger = true;
+        }
+
+        [ContextMenu("FixColliders")]
+        public void FixColliders()
+        {
+            var portals = FindObjectsOfType<SBWorldPortal>();
+            foreach (var portal in portals)
+            {
+                var cols = portal.GetComponents<Collider>();
+                CapsuleCollider requiredCollider = null;
+                foreach (var col in cols)
+                {
+                    var sc = col as CapsuleCollider;
+                    if (sc != null)
+                    {
+                        if (requiredCollider != null)
+                        {
+                            DestroyImmediate(sc, false);
+                            continue;
+                        }
+                        requiredCollider = sc;
+                    }
+                    if (col is BoxCollider)
+                    {
+                        DestroyImmediate(col, false);
+                    }
+                }
+                if (requiredCollider == null) requiredCollider = portal.gameObject.AddComponent<CapsuleCollider>();
+                requiredCollider.radius = portal.collisionRadius;
+                requiredCollider.height = portal.collisionHeight;
+            }
         }
 
         protected override void OnEnteredTrigger(Character ch)

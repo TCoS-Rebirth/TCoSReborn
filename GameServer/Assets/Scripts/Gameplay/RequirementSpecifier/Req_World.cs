@@ -24,5 +24,10 @@ namespace Gameplay.RequirementSpecifier
                 return true;
             return false;
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            return (character.LastZoneID == (MapIDs) RequiredWorld);
+        }
     }
 }

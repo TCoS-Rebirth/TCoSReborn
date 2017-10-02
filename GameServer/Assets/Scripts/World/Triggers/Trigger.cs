@@ -1,10 +1,10 @@
-﻿using Gameplay.Entities;
+﻿using System.Collections.Generic;
+using Gameplay.Entities;
 using Gameplay.Events;
 using Gameplay.RequirementSpecifier;
-using System.Collections.Generic;
 using UnityEngine;
 
-namespace World
+namespace World.Triggers
 {
     [RequireComponent(typeof(CapsuleCollider))]
     public class Trigger : MonoBehaviour
@@ -47,7 +47,7 @@ namespace World
                 var count = 0;
                 foreach (var ch in CharsInside)
                 {
-                    if (ch as PlayerCharacter != null) { count++; }
+                    if (ch is PlayerCharacter) { count++; }
                 }
                 return count;
             }
@@ -149,6 +149,11 @@ namespace World
         {
             foreach (var req in Requirements)
             {
+                if (req == null)
+                {
+                    Debug.Log("Requirement is null!");
+                    continue;
+                }
                 if (!req.isMet(nc))
                 {
                     return false;

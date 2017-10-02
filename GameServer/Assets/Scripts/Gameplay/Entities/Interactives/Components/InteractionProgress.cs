@@ -36,7 +36,7 @@ namespace Gameplay.Entities.Interactives
                 {
                     instigatorPlayer = instigator;
                     location = instigatorPlayer.Position;
-                    health = instigatorPlayer.Health;
+                    health = instigatorPlayer.Stats.mRecord.CopyHealth;
                     isShifted = instigatorPlayer.IsShifted;
                     //ActiveSkillsCount = InstigatorPlayer.Skills.GetActiveSkillCount(); TODO
                     if (ProgressSeconds > 0.0f) timer = ProgressSeconds;
@@ -90,7 +90,7 @@ namespace Gameplay.Entities.Interactives
             if (instigatorPlayer && instigatorPlayer.IsInteracting)
             {
                 if (    instigatorPlayer.Position != location
-                    ||  instigatorPlayer.Health < health
+                    ||  instigatorPlayer.Stats.mRecord.CopyHealth < health
                     ||  instigatorPlayer.IsShifted != isShifted
                     )   //TODO: if active skill count changed
                 {

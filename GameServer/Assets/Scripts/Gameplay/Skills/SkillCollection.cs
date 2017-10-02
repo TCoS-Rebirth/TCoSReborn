@@ -18,7 +18,7 @@ namespace Gameplay.Skills
             Test
         }
 
-        [ReadOnly] public List<FSkill> skills = new List<FSkill>();
+        [ReadOnly] public List<FSkill_Type> skills = new List<FSkill_Type>();
 
         [ReadOnly] public SkillCollectionType type;
 
@@ -28,7 +28,7 @@ namespace Gameplay.Skills
             skills = skills.OrderBy(x => x.name, new AlphanumComparer()).ToList();
         }
 
-        public FSkill FindSkill(string skillName)
+        public FSkill_Type FindSkill(string skillName)
         {
             for (var i = 0; i < skills.Count; i++)
             {
@@ -40,7 +40,7 @@ namespace Gameplay.Skills
             return null;
         }
 
-        public FSkill GetSkill(int id)
+        public FSkill_Type GetSkill(int id)
         {
             for (var i = 0; i < skills.Count; i++)
             {

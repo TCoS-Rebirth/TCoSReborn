@@ -43,7 +43,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
         }
 
-        public virtual void OnDamage(Character source, FSkill s, int amount)
+        public virtual void OnDamage(Character source, FSkill_Type s, int amount)
         {
         }
 
@@ -55,7 +55,7 @@ namespace Gameplay.Entities.NPCs.Behaviours
         {
         }
 
-        public virtual void OnEndedCast(FSkill s)
+        public virtual void OnEndedCast(FSkill_Type s)
         {
         }
 

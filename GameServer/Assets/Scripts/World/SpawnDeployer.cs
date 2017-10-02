@@ -204,13 +204,13 @@ namespace World
                     for (var n = 0; n < deployed.Count; n++)
                     {
                         var npc = deployed[n];
-                        if (npc.Health <= 0)
+                        if (npc.Stats.mRecord.CopyHealth <= 0)
                         {
                             dead.Add(npc);
                             deployed.Remove(npc);
                             n--;
                         }
-                        else if (npc.Health < npc.MaxHealth)
+                        else if (npc.Stats.mRecord.CopyHealth < npc.Stats.mRecord.MaxHealth)
                         {
                             hasInjured = true;
                         }
@@ -316,14 +316,14 @@ namespace World
             for (var d = 0; d < deployed.Count; d++)
             {
                 var member = deployed[d];
-                if (!bosses.Contains(member.typeRef))
+                if (!bosses.Contains(member.Type))
                 {
                     //exclude live bosses from count
                     var countedDeployed = false; //flag so we only count a member once if they match
                     for (var i = 0; i < targetUnit.ReqClassTypes.Count; i++)
                     {
                         var type = targetUnit.ReqClassTypes[i];
-                        if (member.typeRef.ClassTypes.Contains(type))
+                        if (member.Type.ClassTypes.Contains(type))
                         {
                             if (!countedDeployed)
                             {
@@ -510,6 +510,7 @@ namespace World
                 else
                     newNPC.Faction = GameData.Get.factionDB.defaultFaction;
 
+                newNPC.OnDamaged += OnSpawnWasDamaged;
                 deployed.Add(newNPC);
                 zone.AddToZone(newNPC);
 
@@ -582,7 +583,7 @@ namespace World
                 for (var i = 0; i < deployed.Count; i++)
                 {
                     var mem = deployed[i];
-                    if (mem.typeRef == boss)
+                    if (mem.Type == boss)
                     {
                         isPresent = true;
                         break;
@@ -602,21 +603,21 @@ namespace World
             {
                 var n = deployed[i];
 //TODO: appropriate combat mode selection / parameters
-                if (meleeClasses.Contains(n.ClassType))
+                if (meleeClasses.Contains(n.Stats.GetCharacterClass()))
                 {
-                    n.CombatMode = ECombatMode.CBM_Melee;
+                    n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Melee);
                 }
-                else if (rangedClasses.Contains(n.ClassType))
+                else if (rangedClasses.Contains(n.Stats.GetCharacterClass()))
                 {
-                    n.CombatMode = ECombatMode.CBM_Ranged;
+                    n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Ranged);
                 }
-                else if (casterClasses.Contains(n.ClassType))
+                else if (casterClasses.Contains(n.Stats.GetCharacterClass()))
                 {
-                    n.CombatMode = ECombatMode.CBM_Cast;
+                    n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Cast);
                 }
                 else
                 {
-                    n.CombatMode = ECombatMode.CBM_Melee;
+                    n.CombatState.sv_DrawWeapon(ECombatMode.CBM_Melee);
                 } //default
             }
         }
@@ -626,24 +627,36 @@ namespace World
             for (var i = 0; i < deployed.Count; i++)
             {
                 var n = deployed[i];
-                n.CombatMode = ECombatMode.CBM_Idle;
+                n.CombatState.sv_SheatheWeapon();
             }
         }
 
+        bool spawnWasDamaged;
+
+        void OnSpawnWasDamaged(Character ch)
+        {
+            spawnWasDamaged = true;
+        }
         //TODO : Replace placeholder implementation
         //We want : If aggro triggered, enter combat
         //Hack: For unit testing, move to combat on any member health damage
         bool isCombatTriggered()
         {
-            for (var i = 0; i < deployed.Count; i++)
+            if (spawnWasDamaged)
             {
-                var n = deployed[i];
-                if ((n.Health < n.MaxHealth) && n.Health > 0)
-                {
-                    return true;
-                }
+                spawnWasDamaged = false;
+                return true;
             }
             return false;
+            //for (var i = 0; i < deployed.Count; i++)
+            //{
+            //    var n = deployed[i];
+            //    if ((n.Health < n.MaxHealth) && n.Health > 0)
+            //    {
+            //        return true;
+            //    }
+            //}
+            //return false;
         }
 
         bool isCombatEnded()
@@ -651,7 +664,7 @@ namespace World
             for (var i = 0; i < deployed.Count; i++)
             {
                 var n = deployed[i];
-                if ((n.Health < n.MaxHealth) && n.Health > 0)
+                if ((n.Stats.mRecord.CopyHealth < n.Stats.mRecord.MaxHealth) && n.Stats.mRecord.CopyHealth > 0)
                 {
                     return false;
                 }

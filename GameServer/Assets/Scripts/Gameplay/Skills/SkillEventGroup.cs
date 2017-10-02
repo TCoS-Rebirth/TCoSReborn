@@ -6,7 +6,7 @@ namespace Gameplay.Skills
 {
     public class SkillEventGroup : ScriptableObject
     {
-        public List<SkillEvent> events = new List<SkillEvent>();
+        public List<FSkill_Event> events = new List<FSkill_Event>();
 
         public void DeepClone()
         {

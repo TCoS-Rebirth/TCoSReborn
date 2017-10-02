@@ -12,7 +12,7 @@ namespace Gameplay.Events
             var playerSubj = subject as PlayerCharacter;
             if (playerSubj)
             {
-                return playerSubj.ItemManager.hasFreeSpace(Items.Items.Count);
+                return playerSubj.Items.HasFreeSpace(Items.Items.Count);
             }
             else return false;
         }
@@ -20,7 +20,7 @@ namespace Gameplay.Events
         protected override void Execute(Entity obj, Entity subject)
         {
             var playerSubj = subject as PlayerCharacter;
-            playerSubj.GiveInventory(Items);
+            playerSubj.Items.GiveInventory(Items);
         }
     }
 }

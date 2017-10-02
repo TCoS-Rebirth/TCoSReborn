@@ -25,5 +25,10 @@ namespace Gameplay.RequirementSpecifier
             //TODO: Implement Req_NPC_Type
             throw new NotImplementedException();
         }
+
+        public override bool CheckPawn(Character character)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

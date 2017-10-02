@@ -12,7 +12,7 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(PlayerCharacter p)
         {
-            foreach (var it in p.ItemManager.GetItems(EItemLocationType.ILT_Equipment))
+            foreach (var it in p.Items.GetItems(EItemLocationType.ILT_Equipment))
             {
                 if (it.Type.resourceID == equipmentID)
                 {
@@ -25,6 +25,13 @@ namespace Gameplay.RequirementSpecifier
 
         public override bool isMet(NpcCharacter n)
         {
+            return false;
+        }
+
+        public override bool CheckPawn(Character character)
+        {
+            var p = character as PlayerCharacter;
+            if (p != null) return isMet(p);
             return false;
         }
     }

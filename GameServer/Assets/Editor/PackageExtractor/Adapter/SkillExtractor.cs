@@ -17,7 +17,7 @@ namespace PackageExtractor.Adapter
     {
         List<SkillEffectCollection> effectCollections = new List<SkillEffectCollection>();
 
-        List<FSkill> extractedSkills = new List<FSkill>();
+        List<FSkill_Type> extractedSkills = new List<FSkill_Type>();
 
         Dictionary<string, Action<WrappedPackageObject, SBResources, SBLocalizedStrings>> extractorHandlers =
             new Dictionary<string, Action<WrappedPackageObject, SBResources, SBLocalizedStrings>>();
@@ -93,7 +93,7 @@ namespace PackageExtractor.Adapter
             }
             foreach (var so in objectsToSave)
             {
-                if (so is FSkill && extractedSkills.Contains(so as FSkill))
+                if (so is FSkill_Type && extractedSkills.Contains(so as FSkill_Type))
                 {
                     continue;
                 }
@@ -126,7 +126,7 @@ namespace PackageExtractor.Adapter
             extractorHandlers.Add("SBGame.FSkill_Type_Consumable", HandleExtractSkillConsumable);
         }
 
-        T Create<T>(WrappedPackageObject wpo, SBResources res) where T : FSkill
+        T Create<T>(WrappedPackageObject wpo, SBResources res) where T : FSkill_Type
         {
             var obj = ScriptableObject.CreateInstance<T>();
             objectsToSave.Add(obj);
@@ -146,7 +146,7 @@ namespace PackageExtractor.Adapter
 
         void HandleExtractSkill(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var s = Create<FSkill>(wpo, resources);
+            var s = Create<FSkill_Type>(wpo, resources);
             ExtractBasicSkill(s, wpo, resources, strings);
             extractedSkills.Add(s);
         }
@@ -174,7 +174,7 @@ namespace PackageExtractor.Adapter
             extractedSkills.Add(sc);
         }
 
-        void ExtractBasicSkill<T>(T s, WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : FSkill
+        void ExtractBasicSkill<T>(T s, WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : FSkill_Type
         {
             ReadString(wpo, "Group", out s.group, false);
             ReadEnum(wpo, "Category", out s.category, false);
@@ -207,8 +207,8 @@ namespace PackageExtractor.Adapter
             ReadInt(wpo, "MinSkillTier", out s.minSkillTier, false);
             ReadLocalizedString(wpo, "Name", strings, out s.skillname, false);
             ReadLocalizedString(wpo, "Description", strings, out s.description, false);
-            ReadByte(wpo, "Animation", out s.animation, false);
-            ReadByte(wpo, "Animation2", out s.animation2, false);
+            ReadEnum(wpo, "Animation", out s.animation, false);
+            ReadEnum(wpo, "Animation2", out s.animation2, false);
             ReadInt(wpo, "AnimationVariation", out s.animationVariation, false);
             ReadEnum(wpo, "RequiredWeapon", out s.requiredWeapon, false);
             ReadFloat(wpo, "AnimationSpeed", out s.animationSpeed, false);
@@ -235,15 +235,15 @@ namespace PackageExtractor.Adapter
             s.keyFrames.AddRange(ExtractKeyFrames(wpo, resources, strings));
         }
 
-        List<FSkill.SkillKeyFrame> ExtractKeyFrames(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
+        List<FSkill_Type.SkillKeyFrame> ExtractKeyFrames(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var keyFrames = new List<FSkill.SkillKeyFrame>();
+            var keyFrames = new List<FSkill_Type.SkillKeyFrame>();
             SBProperty arrayProp;
             if (wpo.sbObject.Properties.TryGetValue("KeyFrames", out arrayProp))
             {
                 foreach (var keyFrameProp in arrayProp.Array.Values)
                 {
-                    var kf = new FSkill.SkillKeyFrame();
+                    var kf = new FSkill_Type.SkillKeyFrame();
                     kf.Name = keyFrameProp.StructName;
                     SBProperty partProp;
                     if (keyFrameProp.Array.TryGetValue("Time", out partProp))
@@ -290,13 +290,13 @@ namespace PackageExtractor.Adapter
             return seg;
         }
 
-        SkillEvent SelectAndExtractSkillEventByType(WrappedPackageObject eventObj, SBResources resources, SBLocalizedStrings strings)
+        FSkill_Event SelectAndExtractSkillEventByType(WrappedPackageObject eventObj, SBResources resources, SBLocalizedStrings strings)
         {
-            SkillEvent se;
+            FSkill_Event se;
             switch (eventObj.sbObject.ClassName.Replace("\0", string.Empty))
             {
                 case "SBGame.FSkill_Event":
-                    se = CreateReadEvent<SkillEvent>(eventObj);
+                    se = CreateReadEvent<FSkill_Event>(eventObj);
                     break;
                 case "SBGame.FSkill_Event_BodySlot":
                     se = ExtractBodySlotEvent(eventObj, resources, strings);
@@ -305,13 +305,13 @@ namespace PackageExtractor.Adapter
                     se = ExtractEventChain(eventObj, resources, strings);
                     break;
                 case "SBGame.FSkill_Event_Direct":
-                    se = CreateReadDirectEvent<SkillEventDirect>(eventObj, resources, strings);
+                    se = CreateReadDirectEvent<FSkillEventDirect>(eventObj, resources, strings);
                     break;
                 case "SBGame.FSkill_Event_DirectAdvanced":
                     se = ExtractDirectAdvancedEvent(eventObj, resources, strings);
                     break;
                 case "SBGame.FSkill_Event_Duff":
-                    se = CreateReadDuffEvent<SkillEventDuff>(eventObj, resources, strings);
+                    se = CreateReadDuffEvent<FSkillEventDuff>(eventObj, resources, strings);
                     break;
                 //case "SBGame.FSkill_Event_Duff_CondEv":
                 //    se = null; //handled separately
@@ -322,7 +322,7 @@ namespace PackageExtractor.Adapter
                 //case "SBGame.FSkill_Event_Duff_DuffEff":
                 //    return null; //handled separately
                 case "SBGame.FSkill_Event_FX":
-                    se = CreateReadFXEvent<SkillEventFX>(eventObj, resources);
+                    se = CreateReadFXEvent<FSkillEventFx>(eventObj, resources);
                     break;
                 case "SBGame.FSkill_Event_FX_Advanced":
                     se = ExtractFXAdvancedEvent(eventObj, resources, strings);
@@ -331,7 +331,7 @@ namespace PackageExtractor.Adapter
                     se = ExtractSummonEvent(eventObj, resources, strings);
                     break;
                 case "SBGame.FSkill_Event_Target":
-                    se = CreateReadTargetEvent<SkillEventTarget>(eventObj, resources, strings);
+                    se = CreateReadTargetEvent<FSkillEventTarget>(eventObj, resources, strings);
                     break;
                 default:
                     if (eventObj.Name.Replace("\0", string.Empty).Contains("FSkill_Event"))
@@ -364,7 +364,7 @@ namespace PackageExtractor.Adapter
             var fxObj = FindReferencedObject(wpo, "ExecuteFXEvent");
             if (fxObj != null)
             {
-                sede.ExecuteFXEvent = SelectAndExtractSkillEventByType(fxObj, resources, strings) as SkillEventFX;
+                sede.ExecuteFXEvent = SelectAndExtractSkillEventByType(fxObj, resources, strings) as FSkillEventFx;
             }
             return sede;
         }
@@ -383,7 +383,7 @@ namespace PackageExtractor.Adapter
             var fxObj = FindReferencedObject(wpo, "ExecuteFXEvent");
             if (fxObj != null)
             {
-                sedd.ExecuteFXEvent = SelectAndExtractSkillEventByType(fxObj, resources, strings) as SkillEventFX;
+                sedd.ExecuteFXEvent = SelectAndExtractSkillEventByType(fxObj, resources, strings) as FSkillEventFx;
             }
             return sedd;
         }
@@ -413,7 +413,7 @@ namespace PackageExtractor.Adapter
             return sede;
         }
 
-        T CreateReadEvent<T>(WrappedPackageObject wpo) where T : SkillEvent
+        T CreateReadEvent<T>(WrappedPackageObject wpo) where T : FSkill_Event
         {
             var obj = ScriptableObject.CreateInstance<T>();
             objectsToSave.Add(obj);
@@ -450,19 +450,19 @@ namespace PackageExtractor.Adapter
             field = null;
         }
 
-        SkillEventBodySlot ExtractBodySlotEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
+        FSkillEventBodySlot ExtractBodySlotEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var seb = CreateReadTargetEvent<SkillEventBodySlot>(wpo, resources, strings);
+            var seb = CreateReadTargetEvent<FSkillEventBodySlot>(wpo, resources, strings);
             return seb;
         }
 
-        T CreateReadFXEvent<T>(WrappedPackageObject wpo, SBResources resources) where T : SkillEventFX
+        T CreateReadFXEvent<T>(WrappedPackageObject wpo, SBResources resources) where T : FSkillEventFx
         {
             var obj = CreateReadEvent<T>(wpo);
             SBProperty fxProp;
             if (wpo.sbObject.Properties.TryGetValue("FX", out fxProp))
             {
-                var clientFX = new SkillEventFX.Client_FX();
+                var clientFX = new FSkillEventFx.Client_FX();
                 SBProperty fieldProp;
                 if (fxProp.Array.TryGetValue("Sound", out fieldProp))
                 {
@@ -483,7 +483,7 @@ namespace PackageExtractor.Adapter
             return obj;
         }
 
-        T CreateReadTargetEvent<T>(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : SkillEventTarget
+        T CreateReadTargetEvent<T>(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : FSkillEventTarget
         {
             var obj = CreateReadFXEvent<T>(wpo, resources);
             ReadInt(wpo, "MaxTargets", out obj.MaxTargets);
@@ -508,9 +508,9 @@ namespace PackageExtractor.Adapter
             return obj;
         }
 
-        SkillEventChain ExtractEventChain(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
+        FSkillEventChain ExtractEventChain(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var sec = CreateReadTargetEvent<SkillEventChain>(wpo, resources, strings);
+            var sec = CreateReadTargetEvent<FSkillEventChain>(wpo, resources, strings);
             ReadInt(wpo, "MaxJumps", out sec.MaxJumps);
             ReadInt(wpo, "TargetsPerJump", out sec.TargetsPerJump);
             ReadInt(wpo, "MaxHitsPerTarget", out sec.MaxHitsPerTarget);
@@ -533,7 +533,7 @@ namespace PackageExtractor.Adapter
             return sec;
         }
 
-        T CreateReadDirectEvent<T>(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : SkillEventDirect
+        T CreateReadDirectEvent<T>(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : FSkillEventDirect
         {
             var obj = CreateReadTargetEvent<T>(wpo, resources, strings);
             ReadInt(wpo, "RepeatCount", out obj.RepeatCount);
@@ -551,7 +551,7 @@ namespace PackageExtractor.Adapter
                 var buffRef = FindReferencedObject(fieldProp);
                 if (buffRef != null)
                 {
-                    obj.Buff = SelectAndExtractSkillEventByType(buffRef, resources, strings) as SkillEventDuff;
+                    obj.Buff = SelectAndExtractSkillEventByType(buffRef, resources, strings) as FSkillEventDuff;
                 }
             }
             if (wpo.sbObject.Properties.TryGetValue("Debuff", out fieldProp))
@@ -559,7 +559,7 @@ namespace PackageExtractor.Adapter
                 var debuffRef = FindReferencedObject(fieldProp);
                 if (debuffRef != null)
                 {
-                    obj.Debuff = SelectAndExtractSkillEventByType(debuffRef, resources, strings) as SkillEventDuff;
+                    obj.Debuff = SelectAndExtractSkillEventByType(debuffRef, resources, strings) as FSkillEventDuff;
                 }
             }
             TryAssignFXField(wpo, "Teleport", out obj.Teleport);
@@ -571,19 +571,19 @@ namespace PackageExtractor.Adapter
             var missfxObj = FindReferencedObject(wpo, "MissFXEvent");
             if (missfxObj != null)
             {
-                obj.MissFXEvent = SelectAndExtractSkillEventByType(missfxObj, resources, strings) as SkillEventFX;
+                obj.MissFXEvent = SelectAndExtractSkillEventByType(missfxObj, resources, strings) as FSkillEventFx;
             }
             var hitFXObj = FindReferencedObject(wpo, "HitFXEvent");
             if (hitFXObj != null)
             {
-                obj.HitFXEvent = SelectAndExtractSkillEventByType(hitFXObj, resources, strings) as SkillEventFX;
+                obj.HitFXEvent = SelectAndExtractSkillEventByType(hitFXObj, resources, strings) as FSkillEventFx;
             }
             return obj;
         }
 
-        SkillEventDirectAdvanced ExtractDirectAdvancedEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
+        FSkillEventDirectAdvanced ExtractDirectAdvancedEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var seda = CreateReadDirectEvent<SkillEventDirectAdvanced>(wpo, resources, strings);
+            var seda = CreateReadDirectEvent<FSkillEventDirectAdvanced>(wpo, resources, strings);
             var missObj = FindReferencedObject(wpo, "MissEvent");
             if (missObj != null)
             {
@@ -602,7 +602,7 @@ namespace PackageExtractor.Adapter
             return seda;
         }
 
-        T CreateReadDuffEvent<T>(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : SkillEventDuff
+        T CreateReadDuffEvent<T>(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings) where T : FSkillEventDuff
         {
             var obj = CreateReadFXEvent<T>(wpo, resources);
             SBProperty effProp;
@@ -666,15 +666,15 @@ namespace PackageExtractor.Adapter
             return obj;
         }
 
-        SkillEventFXAdvanced ExtractFXAdvancedEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
+        FSkillEventFxAdvanced ExtractFXAdvancedEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var sefa = CreateReadFXEvent<SkillEventFXAdvanced>(wpo, resources);
+            var sefa = CreateReadFXEvent<FSkillEventFxAdvanced>(wpo, resources);
             SBProperty emitterArrayProp;
             if (wpo.sbObject.Properties.TryGetValue("Emitters", out emitterArrayProp))
             {
                 foreach (var emitterStructsProp in emitterArrayProp.IterateInnerProperties())
                 {
-                    var ae = new SkillEventFXAdvanced.AdvancedEmitter();
+                    var ae = new FSkillEventFxAdvanced.AdvancedEmitter();
                     SBProperty fieldRef;
                     if (emitterStructsProp.Array.TryGetValue("Emitter", out fieldRef))
                     {
@@ -696,9 +696,9 @@ namespace PackageExtractor.Adapter
             return sefa;
         }
 
-        SkillEventSummon ExtractSummonEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
+        FSkillEventSummon ExtractSummonEvent(WrappedPackageObject wpo, SBResources resources, SBLocalizedStrings strings)
         {
-            var ses = CreateReadFXEvent<SkillEventSummon>(wpo, resources);
+            var ses = CreateReadFXEvent<FSkillEventSummon>(wpo, resources);
             SBProperty summonProp;
             if (wpo.sbObject.Properties.TryGetValue("SummonEmitter", out summonProp))
             {
