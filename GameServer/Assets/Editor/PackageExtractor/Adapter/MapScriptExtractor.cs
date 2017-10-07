@@ -55,7 +55,7 @@ namespace PackageExtractor.Adapter
             }
 
             loadCols();
-            triggersHolder = targetZone.transform.FindChild("Triggers");
+            triggersHolder = targetZone.transform.Find("Triggers");
             if (!triggersHolder) {
                 Log("No triggers holder object found for that zone", Color.red);
                 return;

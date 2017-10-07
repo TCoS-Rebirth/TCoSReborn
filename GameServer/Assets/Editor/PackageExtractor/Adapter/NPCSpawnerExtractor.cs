@@ -56,7 +56,7 @@ namespace PackageExtractor.Adapter
                 Log("Select a zone first", Color.yellow);
                 return;
             }
-            var npcHolder = targetZone.transform.FindChild("Spawners");
+            var npcHolder = targetZone.transform.Find("Spawners");
             for (var i = npcHolder.childCount; i-- > 0;)
             {
                 var child = npcHolder.GetChild(i);
@@ -120,7 +120,7 @@ namespace PackageExtractor.Adapter
                                     ReadString(patrolObject, "StartPoint", out ppName);
 
                                     //Link patrol point to spawner
-                                    var WPsHolder = targetZone.transform.FindChild("Waypoints");
+                                    var WPsHolder = targetZone.transform.Find("Waypoints");
                                     foreach (Transform wpObj in WPsHolder)
                                     {
                                         if (wpObj.name == ppName)

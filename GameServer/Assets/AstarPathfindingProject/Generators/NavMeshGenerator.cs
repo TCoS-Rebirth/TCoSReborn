@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using Pathfinding.Serialization.JsonFx;
 using Pathfinding.Serialization;
+using UnityEngine.Profiling;
 
 namespace Pathfinding {
 	public interface INavmesh {

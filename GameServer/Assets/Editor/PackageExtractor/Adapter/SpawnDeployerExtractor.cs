@@ -40,7 +40,7 @@ namespace PackageExtractor.Adapter
                 Log("Select a zone first", Color.yellow);
                 return;
             }
-            var spawnersHolder = targetZone.transform.FindChild("Spawners");
+            var spawnersHolder = targetZone.transform.Find("Spawners");
             if (spawnersHolder == null)
             {
                 Log("SpawnersHolder not found", Color.yellow);
@@ -194,7 +194,7 @@ namespace PackageExtractor.Adapter
                                     ReadString(patrolObject, "StartPoint", out ppName);
 
                                     //Link patrol point to spawner
-                                    var WPsHolder = targetZone.transform.FindChild("Waypoints");
+                                    var WPsHolder = targetZone.transform.Find("Waypoints");
                                     foreach (Transform wpObj in WPsHolder)
                                     {
                                         if (wpObj.name == ppName)

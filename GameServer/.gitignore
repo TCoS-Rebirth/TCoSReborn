@@ -9,7 +9,7 @@ Config.xml
 *.userprefs
 *.pidb
 *.booproj
-
+.vs/
 
 *.DotSettings
 _ReSharper.Caches
