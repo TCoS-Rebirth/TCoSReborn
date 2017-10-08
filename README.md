@@ -1,2 +1,2 @@
 # TCoS_Server
-Unity Port of the TCoS Testserver
+Unity Port of the TCoS Testserver as selfcontained kind-of-sandbox
