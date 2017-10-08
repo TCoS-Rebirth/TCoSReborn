@@ -12,7 +12,7 @@ namespace Utility
             {
                 DestroyImmediate(transform.GetChild(0).gameObject, false);
             }
-            foreach (var note in MysqlDb.DevNoteDB.LoadAllNotes())
+            foreach (var note in DB.DevNoteDB.LoadAllNotes())
             {
                 var go = new GameObject("note");
                 go.transform.parent = transform;

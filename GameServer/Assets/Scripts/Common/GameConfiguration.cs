@@ -17,6 +17,8 @@ namespace Common
         public ServerDefaults server;
         public WorldDefaults world;
 
+        public int SupportedClientVersion = 28430;
+
         public static GameConfiguration Get
         {
             get

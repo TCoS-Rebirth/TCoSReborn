@@ -15,7 +15,6 @@ namespace Network
         public delegate void ConnectionDelegate(NetConnection connection);
 
         readonly List<NetConnection> _connections = new List<NetConnection>();
-        readonly IPAddress _ipAddress;
 
         readonly Queue<Message> _messageQueueRef;
         readonly int _port;
@@ -30,12 +29,11 @@ namespace Network
 
         Thread _thread;
 
-        public NetConnector(string loginIp, int loginPort, Queue<Message> incomingMessages)
+        public NetConnector(int loginPort, Queue<Message> incomingMessages)
         {
             _messageQueueRef = incomingMessages;
             try
             {
-                _ipAddress = IPAddress.Parse(loginIp);
                 _port = loginPort;
             }
             catch (FormatException)
@@ -77,7 +75,7 @@ namespace Network
 
         public bool Start()
         {
-            _thread = new Thread(Listen) {Name = string.Format("TcpServer:{0}:{1}", _ipAddress, _port)};
+            _thread = new Thread(Listen) {Name = string.Format("TcpServer:{0}", _port)};
             _thread.Start();
             _queueWorker = new BackgroundWorker {WorkerSupportsCancellation = true};
             _queueWorker.DoWork += ResolveSendMessageQueues;
@@ -121,7 +119,7 @@ namespace Network
 
         void Listen()
         {
-            var localEndPoint = new IPEndPoint(_ipAddress, _port);
+            var localEndPoint = new IPEndPoint(IPAddress.Any, _port);
             _listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             try
             {

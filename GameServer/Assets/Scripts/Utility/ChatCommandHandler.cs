@@ -271,7 +271,7 @@ namespace Utility
             if (parts.Length >= 2)
             {
                 var msg = fmsg.Substring(fmsg.IndexOf(' '), fmsg.Length - fmsg.IndexOf(' '));
-                MysqlDb.DevNoteDB.AddNote(p, msg);
+                DB.DevNoteDB.AddNote(p, msg);
                 ResponseMessage(p, "Message saved");
             }
             else

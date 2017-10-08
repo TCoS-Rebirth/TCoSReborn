@@ -17,7 +17,7 @@ namespace World
         /// </summary>
         public static List<DBPlayerCharacter> GetAccountCharacters(UserAccount acc)
         {
-            return MysqlDb.CharacterDB.GetAccountCharacters(acc.UID);
+            return DB.CharacterDB.GetAccountCharacters(acc.UID);
         }
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace World
         /// </summary>
         public static bool CanCreateNewCharacter(UserAccount acc)
         {
-            var numExistingCharacters = MysqlDb.CharacterDB.GetAccountCharacters(acc.UID).Count;
+            var numExistingCharacters = DB.CharacterDB.GetAccountCharacters(acc.UID).Count;
             return numExistingCharacters < GameConfiguration.Get.player.MaxCharactersPerWorld;
         }
 
@@ -34,7 +34,7 @@ namespace World
         /// </summary>
         public static DBPlayerCharacter GetAccountCharacter(UserAccount acc, int characterID)
         {
-            return MysqlDb.CharacterDB.GetAccountCharacter(characterID, acc.UID);
+            return DB.CharacterDB.GetAccountCharacter(characterID, acc.UID);
         }
 
         /// <summary>
@@ -42,7 +42,7 @@ namespace World
         /// </summary>
         public static bool DeleteAccountCharacter(UserAccount acc, int characterID)
         {
-            return MysqlDb.CharacterDB.DeleteCharacter(characterID, acc);
+            return DB.CharacterDB.DeleteCharacter(characterID, acc);
         }
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace World
         public static DBPlayerCharacter CreateNewCharacter(Message m)
         {
             var newCharacter = ReadPacketCreateDBCharacter(m);
-            if (MysqlDb.CharacterDB.CreateNewCharacter(newCharacter.AccountID, newCharacter))
+            if (DB.CharacterDB.CreateNewCharacter(newCharacter.AccountID, newCharacter))
             {
                 return newCharacter;
             }
@@ -85,7 +85,7 @@ namespace World
             newCharacter.Skills.Add(chosenSkill1);
             newCharacter.Skills.Add(chosenSkill2);
 
-            newCharacter.SerializedSkillDeck = string.Format("2#{0},{1},{2},0,0|{3},{4},0,0,0", fixedSkill1.ResourceId, fixedSkill2.ResourceId, fixedSkill3.ResourceId,
+            newCharacter.SerializedSkillDeck = string.Format("{0}|{1}|{2}|0|0|{3}|{4}|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0|0", fixedSkill1.ResourceId, fixedSkill2.ResourceId, fixedSkill3.ResourceId,
                 chosenSkill1.ResourceId, chosenSkill2.ResourceId);
 
             //Lods parsing
