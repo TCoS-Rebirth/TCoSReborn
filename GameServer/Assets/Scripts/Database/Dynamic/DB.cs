@@ -664,53 +664,65 @@ namespace Database.Dynamic
 
             static void SaveSkills(DBPlayerCharacter pc, SqliteTransaction tr)
             {
-                var clearCmd = DatabaseHelper.GetCharacterSkillsDeleteCommand(CachedConnection, pc, tr);
-                clearCmd.ExecuteNonQuery();
-                var skillSaveCommand = DatabaseHelper.GetCharacterSkillSaveCommand(CachedConnection, pc, null, tr);
+                using (var clearCmd = DatabaseHelper.GetCharacterSkillsDeleteCommand(CachedConnection, pc, tr))
+                {
+                    clearCmd.ExecuteNonQuery();
+                }
                 for (var i = 0; i < pc.Skills.Count; i++)
                 {
                     if (pc.Skills[i] == null) continue;
-                    skillSaveCommand = DatabaseHelper.GetCharacterSkillSaveCommand(skillSaveCommand.Connection, pc, pc.Skills[i], tr);
-                    skillSaveCommand.ExecuteNonQuery();
+                    using (var skillSaveCommand = DatabaseHelper.GetCharacterSkillSaveCommand(CachedConnection, pc, pc.Skills[i], tr))
+                    {
+                        skillSaveCommand.ExecuteNonQuery();
+                    }
                 }
             }
 
             static void SaveItems(DBPlayerCharacter pc, SqliteTransaction tr)
             {
-                var clearCmd = DatabaseHelper.GetCharacterItemsDeleteCommand(CachedConnection, pc, tr);
-                clearCmd.ExecuteNonQuery();
-                var saveCommand = DatabaseHelper.GetCharacterItemSaveCommand(CachedConnection, pc, null, tr);
+                using (var clearCmd = DatabaseHelper.GetCharacterItemsDeleteCommand(CachedConnection, pc, tr))
+                {
+                    clearCmd.ExecuteNonQuery();
+                }
                 for (var i = 0; i < pc.Items.Count; i++)
                 {
                     if (pc.Items[i] == null) continue;
-                    saveCommand = DatabaseHelper.GetCharacterItemSaveCommand(saveCommand.Connection, pc, pc.Items[i], tr);
-                    saveCommand.ExecuteNonQuery();
+                    using (var saveCommand = DatabaseHelper.GetCharacterItemSaveCommand(CachedConnection, pc, pc.Items[i], tr))
+                    {
+                        saveCommand.ExecuteNonQuery();
+                    }
                 }
             }
 
             static void SaveQuests(DBPlayerCharacter pc, SqliteTransaction tr)
             {
-                var clearCmd = DatabaseHelper.GetCharacterQuestsDeleteCommand(CachedConnection, pc, tr);
-                clearCmd.ExecuteNonQuery();
-                var questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(CachedConnection, pc, null, tr);
+                using (var clearCmd = DatabaseHelper.GetCharacterQuestsDeleteCommand(CachedConnection, pc, tr))
+                {
+                    clearCmd.ExecuteNonQuery();
+                }
                 for (var i = 0; i < pc.QuestTargets.Count; i++)
                 {
                     if (pc.QuestTargets[i] == null) continue;
-                    questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(questSaveCommand.Connection, pc, pc.QuestTargets[i], tr);
-                    questSaveCommand.ExecuteNonQuery();
+                    using (var questSaveCommand = DatabaseHelper.GetCharacterQuestTargetSaveCommand(CachedConnection, pc, pc.QuestTargets[i], tr))
+                    {
+                        questSaveCommand.ExecuteNonQuery();
+                    }
                 }
             }
 
             static void SavePerVars(DBPlayerCharacter pc, SqliteTransaction tr)
             {
-                var clearCmd = DatabaseHelper.GetCharacterPerVarsDeleteCommand(CachedConnection, pc, tr);
-                clearCmd.ExecuteNonQuery();
-                var perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(CachedConnection, pc, null, tr);
+                using (var clearCmd = DatabaseHelper.GetCharacterPerVarsDeleteCommand(CachedConnection, pc, tr))
+                {
+                    clearCmd.ExecuteNonQuery();
+                }
                 for (var i = 0; i < pc.PersistentVars.Count; i++)
                 {
                     if (pc.PersistentVars[i] == null) continue;
-                    perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(perVarSaveCommand.Connection, pc, pc.PersistentVars[i], tr);
-                    perVarSaveCommand.ExecuteNonQuery();
+                    using (var perVarSaveCommand = DatabaseHelper.GetCharacterPerVarSaveCommand(CachedConnection, pc, pc.PersistentVars[i], tr))
+                    {
+                        perVarSaveCommand.ExecuteNonQuery();
+                    }
                 }
             }
 
