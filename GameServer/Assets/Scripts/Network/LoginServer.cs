@@ -75,10 +75,12 @@ namespace Network
 
         public void ShutDown()
         {
+            Debug.Log("Shutting down LoginServer");
             if (_server != null)
             {
                 _server.Shutdown();
             }
+            Debug.Log("LoginServer shut down");
         }
 
         #region Handler

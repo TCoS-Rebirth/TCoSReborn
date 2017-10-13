@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Xml;
@@ -12,7 +13,7 @@ using Gameplay.Entities;
 using Network;
 using UnityEngine;
 using Gameplay.Entities.Interactives;
-
+using Debug = UnityEngine.Debug;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -129,12 +130,8 @@ namespace World
             return _zoneHandler.InsertPlayer(p, mapID, true);
         }
 
-        void Start()
+        public void Startup()
         {
-            if (!Application.isEditor)
-            {
-                Application.targetFrameRate = 30;
-            }
             if ((_serverConfiguration = LoadConfigFile()) == null)
             {
                 Debug.LogError("Config file not found (default file created");
@@ -221,6 +218,7 @@ namespace World
                 _loginServer.ShutDown();
             }
             DB.CloseConnection();
+            Process.GetCurrentProcess().Kill();//force quit, something still makes unity hang (threads?)
         }
 
         void HandlePlayerLogout(PlayerInfo p)

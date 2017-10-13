@@ -25,7 +25,7 @@ namespace Network
 
         BackgroundWorker _queueWorker;
 
-        bool _shutDownRequested;
+        volatile bool _shutDownRequested;
 
         Thread _thread;
 
@@ -92,12 +92,12 @@ namespace Network
             if (_thread != null)
             {
                 _shutDownRequested = true;
-                if (_listener.Connected)
+                try
                 {
                     _listener.Shutdown(SocketShutdown.Both);
                 }
+                catch { }
                 _listener.Close();
-                _waitHandler.Set();
                 lock (_connections)
                 {
                     for (var i = 0; i < _connections.Count; i++)
@@ -105,7 +105,7 @@ namespace Network
                         HandleDisconnect(_connections[i]);
                     }
                 }
-                _thread.Abort();
+                _waitHandler.Set();
                 if (_thread != null)
                 {
                     _thread.Join(1000);
@@ -114,6 +114,11 @@ namespace Network
             lock (_connections)
             {
                 _connections.Clear();
+            }
+            if (_thread != null)
+            {
+                _thread.Interrupt();
+                _thread.Abort();
             }
         }
 
@@ -267,10 +272,11 @@ namespace Network
         {
             if (connection.ClientSocket != null)
             {
-                if (connection.ClientSocket.Connected)
+                try
                 {
                     connection.ClientSocket.Shutdown(SocketShutdown.Both);
                 }
+                catch { }
                 connection.ClientSocket.Close();
             }
             if (OnDisconnected != null)
