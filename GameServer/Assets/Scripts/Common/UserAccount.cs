@@ -47,16 +47,18 @@ namespace Common
 
         public static string GetSha1Hash(string input)
         {
-            using (var sha1 = new SHA1Managed())
-            {
-                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
-                var sb = new StringBuilder(hash.Length*2);
-                for (var i = 0; i < hash.Length; i++)
-                {
-                    sb.Append(hash[i].ToString("X2"));
-                }
-                return sb.ToString();
-            }
+            return input;
+            //not needed in sandbox mode
+            //using (var sha1 = new SHA1Managed())
+            //{
+            //    var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(input));
+            //    var sb = new StringBuilder(hash.Length*2);
+            //    for (var i = 0; i < hash.Length; i++)
+            //    {
+            //        sb.Append(hash[i].ToString("X2"));
+            //    }
+            //    return sb.ToString();
+            //}
         }
     }
 }

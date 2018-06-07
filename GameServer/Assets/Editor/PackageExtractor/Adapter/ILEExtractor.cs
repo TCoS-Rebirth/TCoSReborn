@@ -60,7 +60,7 @@ namespace PackageExtractor.Adapter
                 return;
             }
 
-            var ieHolder = targetZone.transform.FindChild("InteractiveElements");
+            var ieHolder = targetZone.transform.Find("InteractiveElements");
             if (ieHolder == null)
             {
                 Log("InteractiveElementsHolder not found", Color.yellow);

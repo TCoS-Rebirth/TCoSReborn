@@ -54,7 +54,7 @@ namespace PackageExtractor.Adapter
 
             #region Destinations
 
-            var destHolder = targetZone.transform.FindChild("Destinations");
+            var destHolder = targetZone.transform.Find("Destinations");
             if (destHolder == null)
             {
                 Log("DestinationsHolder not found", Color.yellow);
@@ -99,7 +99,7 @@ namespace PackageExtractor.Adapter
 
             #region Portals
 
-            var portalHolder = targetZone.transform.FindChild("Portals");
+            var portalHolder = targetZone.transform.Find("Portals");
             if (portalHolder == null)
             {
                 Log("Portalholder not found", Color.yellow);

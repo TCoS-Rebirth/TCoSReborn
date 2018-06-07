@@ -6,7 +6,6 @@ using Common.UnrealTypes;
 using Database.Dynamic;
 using Gameplay.Entities;
 using Gameplay.Items;
-using Lidgren.Network;
 using UnityEngine;
 using Utility;
 using World;
@@ -26,17 +25,10 @@ namespace Network
         readonly Queue<PlayerInfo> _pendingPlayerRemoves = new Queue<PlayerInfo>();
 
         readonly List<PlayerInfo> _players = new List<PlayerInfo>();
-        float _lastDiscoveryRequest;
-
-        NetClient _loginConnector;
-        string _loginIP;
-        int _loginPort;
 
         Action<PlayerInfo> _onPlayerLogout;
 
         NetConnector _server;
-
-        Coroutine updatingRoutine;
 
         /// <summary>
         ///     returns a list of all connected players
@@ -63,15 +55,7 @@ namespace Network
         /// <returns></returns>
         public bool StartServer(ServerConfiguration config, Action<PlayerInfo> onPlayerLogout)
         {
-            _server = new NetConnector(config.ListenIP, config.ServerPort, _incomingMessages);
-            var npConfig = new NetPeerConfiguration("TCoSReborn");
-            npConfig.EnableMessageType(NetIncomingMessageType.DiscoveryResponse);
-            npConfig.EnableMessageType(NetIncomingMessageType.StatusChanged);
-            npConfig.ConnectionTimeout = 5f;
-            _loginConnector = new NetClient(npConfig);
-            _loginConnector.Start();
-            _loginIP = config.LoginServerIp;
-            _loginPort = config.LoginServerPort;
+            _server = new NetConnector(config.GameServerPort, _incomingMessages);
             RegisterHandlers();
             var success = _server.Start();
             if (success)
@@ -80,7 +64,6 @@ namespace Network
                 _server.OnConnected += server_OnConnected;
                 _server.OnDisconnected += server_OnDisconnected;
             }
-            updatingRoutine = StartCoroutine(UpdateQueues());
             return success;
         }
 
@@ -93,14 +76,6 @@ namespace Network
             if (_server != null)
             {
                 _server.Shutdown();
-            }
-            if (_loginConnector != null)
-            {
-                _loginConnector.Shutdown("");
-            }
-            if (updatingRoutine != null)
-            {
-                StopCoroutine(updatingRoutine);
             }
             Debug.Log("WorldServer shut down");
         }
@@ -180,142 +155,41 @@ namespace Network
 
         }
 
-        IEnumerator UpdateQueues()
+        void Update()
         {
-            while (true)
+            while (_incomingMessages.Count > 0)
             {
-                while (_incomingMessages.Count > 0)
+                Message m;
+                lock (_incomingMessages)
                 {
-                    lock (_incomingMessages)
-                    {
-                        var m = _incomingMessages.Dequeue();
-                        Action<Message> messageHandler;
-                        if (!Enum.IsDefined(typeof (GameHeader), m.Header))
-                        {
-                            Debug.Log("no messageType defined for: " + m.Header);
-                            continue;
-                        }
-                        if (_dispatchTable.TryGetValue((GameHeader) m.Header, out messageHandler))
-                        {
-                            messageHandler(m);
-                        }
-                        else
-                        {
-                            Debug.Log("no messageHandler defined for: " + (GameHeader) m.Header);
-                        }
-                    }
+                    m = _incomingMessages.Dequeue();
                 }
-                if (_pendingPlayerRemoves.Count > 0)
+                Action<Message> messageHandler;
+                if (!Enum.IsDefined(typeof (GameHeader), m.Header))
                 {
-                    var p = _pendingPlayerRemoves.Dequeue();
-                    if (_onPlayerLogout != null)
-                    {
-                        _onPlayerLogout(p);
-                    }
-                    _players.Remove(p);
+                    Debug.Log("no messageType defined for: " + m.Header);
+                    continue;
                 }
-                if (_loginConnector != null)
+                if (_dispatchTable.TryGetValue((GameHeader) m.Header, out messageHandler))
                 {
-                    UpdateLoginConnector();
+                    messageHandler(m);
                 }
-                yield return null;
+                else
+                {
+                    Debug.Log("no messageHandler defined for: " + (GameHeader) m.Header);
+                }
+                    
+            }
+            if (_pendingPlayerRemoves.Count > 0)
+            {
+                var p = _pendingPlayerRemoves.Dequeue();
+                if (_onPlayerLogout != null)
+                {
+                    _onPlayerLogout(p);
+                }
+                _players.Remove(p);
             }
         }
-
-        #region LoginServer
-
-        void UpdateLoginConnector()
-        {
-            if (_loginConnector.ConnectionStatus == NetConnectionStatus.Disconnected || _loginConnector.ConnectionStatus == NetConnectionStatus.None)
-            {
-                if (Time.time - _lastDiscoveryRequest > 3f)
-                {
-                    _loginConnector.DiscoverKnownPeer(_loginIP, _loginPort);
-                    Debug.Log("Trying to discover the Login Server to register to");
-                    _lastDiscoveryRequest = Time.time;
-                }
-            }
-            NetIncomingMessage msg;
-            while ((msg = _loginConnector.ReadMessage()) != null)
-            {
-                switch (msg.MessageType)
-                {
-                    case NetIncomingMessageType.StatusChanged:
-                        HandleLoginServerStatus((NetConnectionStatus) msg.ReadByte());
-                        break;
-                    case NetIncomingMessageType.Data:
-                        HandleLoginServerData(msg);
-                        break;
-                    case NetIncomingMessageType.DiscoveryResponse:
-                        if (msg.LengthBytes > 0 && msg.ReadString().Equals("LoginServer", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Debug.Log("Connecting to LoginServer");
-                            var infoMsg = _loginConnector.CreateMessage();
-                            infoMsg.Write((byte) CommunicationHeader.U2L_REGISTER_UNIVERSE);
-                            var info = GameWorld.Instance.ServerConfig;
-                            infoMsg.Write(info.ServerName);
-                            infoMsg.Write(info.ServerLanguage);
-                            infoMsg.Write(info.ServerType);
-                            infoMsg.Write((byte) info.AccessRestriction);
-                            infoMsg.Write(info.PublicIP);
-                            infoMsg.Write(info.ServerPort);
-                            _loginConnector.Connect(msg.SenderEndPoint, infoMsg);
-                        }
-                        break;
-                    case NetIncomingMessageType.WarningMessage:
-                        Debug.LogWarning(msg.ReadString());
-                        break;
-                    case NetIncomingMessageType.ErrorMessage:
-                        Debug.LogWarning(msg.ReadString());
-                        break;
-                }
-            }
-        }
-
-        void HandleLoginServerStatus(NetConnectionStatus status)
-        {
-            switch (status)
-            {
-                case NetConnectionStatus.Connected:
-                    Debug.Log("LoginServer connection established");
-                    break;
-                case NetConnectionStatus.Disconnected:
-                    Debug.Log("LoginServer connection lost");
-                    break;
-            }
-        }
-
-        void HandleLoginServerData(NetIncomingMessage msg)
-        {
-            if (msg.LengthBytes < 1)
-            {
-                Debug.Log("invalid loginserver message received");
-                return;
-            }
-            if (_loginConnector == null || _loginConnector.ServerConnection == null) return;
-            var header = (CommunicationHeader) msg.ReadByte();
-            switch (header)
-            {
-                case CommunicationHeader.L2U_QUERY_POPULATION:
-                    var oMsg = _loginConnector.CreateMessage();
-                    oMsg.Write((byte) CommunicationHeader.U2L_UPDATE_POPULATION);
-                    oMsg.Write(_players.Count);
-                    _loginConnector.ServerConnection.SendMessage(oMsg, NetDeliveryMethod.ReliableOrdered, 0);
-                    break;
-                case CommunicationHeader.L2U_ACCOUNT_REQUESTLOGIN:
-                    Debug.Log("TODO check for player limit, or similar reasons why this server would block incoming connections");
-                    var response = _loginConnector.CreateMessage();
-                    response.Write((byte) CommunicationHeader.U2L_ACCOUNT_REQUESTLOGIN_ACK);
-                    response.Write(true); //allow/disallow
-                    response.Write(msg.ReadString()); //accName
-                    response.Write(msg.ReadString()); //passHash
-                    response.Write(msg.ReadInt32()); //sessionKey
-                    _loginConnector.ServerConnection.SendMessage(response, NetDeliveryMethod.ReliableOrdered, 0);
-                    break;
-            }
-        }
-
-        #endregion
 
         #region Handler
 
@@ -324,7 +198,7 @@ namespace Network
         void HandleTravelConnect(Message m)
         {
             var key = m.ReadInt32();
-            var acc = MysqlDb.AccountDB.GetAccount(key);
+            var acc = DB.AccountDB.GetAccount(key);
             if (acc != null)
             {
                 var pInfo = new PlayerInfo(acc, m.Connection);
@@ -338,7 +212,7 @@ namespace Network
                 pInfo.CharacterCreationState = ECharacterCreationState.CCS_SELECT_CHARACTER;
                 acc.IsOnline = true;
                 acc.LastUniverse = GameWorld.Instance.UniverseID;
-                MysqlDb.AccountDB.UpdateAccount(acc);
+                DB.AccountDB.UpdateAccount(acc);
             }
             else
             {
@@ -458,6 +332,7 @@ namespace Network
                 return;
             }
             m.Connection.player.IsIngame = true;
+            queuedCharacter.ReceiveChatMessage("Server", GameWorld.Instance.ServerConfig.LoginMessage, EGameChatRanges.GCR_SYSTEM);
         }
 
         void HandleLogoutRequest(Message m)
@@ -532,7 +407,8 @@ namespace Network
         void HandleToggleWeapon(Message m)
         {
             var pc = m.GetAssociatedCharacter();
-            ((Game_PlayerCombatState)pc.CombatState).cl2sv_DrawSheatheWeapon();
+            pc.ReceiveChatMessage("Server", "Combat disabled (incomplete)", EGameChatRanges.GCR_SYSTEM);
+            //((Game_PlayerCombatState)pc.CombatState).cl2sv_DrawSheatheWeapon();
         }
 
         void HandleSwitchWeapon(Message m)

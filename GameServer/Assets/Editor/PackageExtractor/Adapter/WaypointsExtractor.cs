@@ -40,7 +40,7 @@ namespace PackageExtractor.Adapter
                 Log("Select a zone first", Color.yellow);
                 return;
             }
-            var pathHolder = targetZone.transform.FindChild("Waypoints");
+            var pathHolder = targetZone.transform.Find("Waypoints");
             if (pathHolder == null)
             {
                 pathHolder = new GameObject("Waypoints").transform;

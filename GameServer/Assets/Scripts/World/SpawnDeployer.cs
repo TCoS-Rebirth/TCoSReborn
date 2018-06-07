@@ -342,7 +342,7 @@ namespace World
             //but if max <= 0 we can return an empty list right now!
             if (maxDeployees <= 0)
             {
-                Debug.Log("SpawnDeployer : called newDeployees() but the unit is full!");
+                //Debug.Log("SpawnDeployer : called newDeployees() but the unit is full!");
                 return output;
             }
 
@@ -407,7 +407,7 @@ namespace World
             }
             else
             {
-                Debug.Log("SpawnDeployer : No NPC_Type candidates found to deploy!");
+                //Debug.Log("SpawnDeployer : No NPC_Type candidates found to deploy!");
             }
 
             /*

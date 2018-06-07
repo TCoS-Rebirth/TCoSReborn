@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Xml;
@@ -12,7 +13,7 @@ using Gameplay.Entities;
 using Network;
 using UnityEngine;
 using Gameplay.Entities.Interactives;
-
+using Debug = UnityEngine.Debug;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -129,12 +130,8 @@ namespace World
             return _zoneHandler.InsertPlayer(p, mapID, true);
         }
 
-        void Start()
+        public void Startup()
         {
-            if (!Application.isEditor)
-            {
-                Application.targetFrameRate = 30;
-            }
             if ((_serverConfiguration = LoadConfigFile()) == null)
             {
                 Debug.LogError("Config file not found (default file created");
@@ -185,7 +182,7 @@ namespace World
                 Debug.LogError("Not all Data could be initialized properly, canceling start");
                 Application.Quit();
             }
-            if (!MysqlDb.Initialize())
+            if (!DB.Initialize())
             {
                 Debug.LogError("Database initialization failed. Canceling start");
 #if UNITY_EDITOR
@@ -200,6 +197,7 @@ namespace World
         void OnZonesInitialized()
         {
             _worldServer.StartServer(_serverConfiguration, HandlePlayerLogout);
+            _loginServer.StartServer(_serverConfiguration);
             Debug.Log("Server running");
         }
 
@@ -214,9 +212,13 @@ namespace World
             if (_worldServer != null)
             {
                 _worldServer.ShutDown();
-                Destroy(_worldServer);
             }
-            MysqlDb.CloseConnection();
+            if (_loginServer != null)
+            {
+                _loginServer.ShutDown();
+            }
+            DB.CloseConnection();
+            Process.GetCurrentProcess().Kill();//force quit, something still makes unity hang (threads?)
         }
 
         void HandlePlayerLogout(PlayerInfo p)
@@ -224,7 +226,7 @@ namespace World
             Debug.Log("Player logged out: " + p.Account.Name + ". Cleaning up");
             //TODO: Handle unable to logout (e.g. check combat state?)
             p.Account.IsOnline = false;
-            MysqlDb.AccountDB.UpdateAccount(p.Account);
+            DB.AccountDB.UpdateAccount(p.Account);
             if (p.IsIngame && p.ActiveCharacter != null)
             {
                 SaveCharacter(p.ActiveCharacter);
@@ -244,7 +246,7 @@ namespace World
 
         void SaveCharacter(PlayerCharacter playerCharacter)
         {
-            MysqlDb.CharacterDB.SaveCharacterLogout(playerCharacter);
+            DB.CharacterDB.SaveCharacterLogout(playerCharacter);
         }
 
         /// <summary>
@@ -266,6 +268,7 @@ namespace World
         }
 #pragma warning disable 649
         [SerializeField] WorldServer _worldServer;
+        [SerializeField] LoginServer _loginServer;
 
         [SerializeField] ZoneHandler _zoneHandler;
 #pragma warning restore 649

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Common.UnrealTypes;
 using Gameplay.Items;
-using MySql.Data.MySqlClient;
+using Mono.Data.Sqlite;
 using UnityEngine;
 
 namespace Database.Dynamic.Internal
@@ -108,49 +108,30 @@ namespace Database.Dynamic.Internal
 
         #region Character saving
 
-        static MySqlCommand _updateExistingCharacterCommand;
-
-        public static MySqlCommand PrepareCharacterUpdateExistingCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        public static SqliteCommand PrepareCharacterUpdateExistingCommand(SqliteConnection connection, DBPlayerCharacter pc, SqliteTransaction transaction)
         {
-            if (_updateExistingCharacterCommand == null)
-            {
-                _updateExistingCharacterCommand =
-                    new MySqlCommand(
-                        "UPDATE playercharacters SET Appearance=@app, LastMapID=@lm, Faction=@fac, ArcheType=@arch, PawnState=@state, Position=@pos, Rotation=@rot, FamePep=@fp, Health=@health, Money=@money, BMFAttributeExtraPoints=@bmfaep, SkillDeck=@skilldeck WHERE AccountID = @accID AND CharacterID = @charID;",
-                        connection);
-                AddCharacterCommandParameters(_updateExistingCharacterCommand, pc);
-                _updateExistingCharacterCommand.Prepare();
-            }
-            else
-            {
-                FillCharacterCommandParameters(_updateExistingCharacterCommand, pc);
-            }
+            var _updateExistingCharacterCommand =
+                new SqliteCommand(
+                    "UPDATE playercharacters SET Appearance=@app, LastMapID=@lm, Faction=@fac, ArcheType=@arch, PawnState=@state, Position=@pos, Rotation=@rot, FamePep=@fp, Health=@health, Money=@money, BMFAttributeExtraPoints=@bmfaep, SkillDeck=@skilldeck WHERE AccountID = @accID AND CharacterID = @charID;",
+                    connection);
+            AddCharacterCommandParameters(_updateExistingCharacterCommand, pc);
             _updateExistingCharacterCommand.Transaction = transaction;
             return _updateExistingCharacterCommand;
         }
 
-        static MySqlCommand _saveNewCharacterCommand;
-
-        public static MySqlCommand GetCharacterSaveNewCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterSaveNewCommand(SqliteConnection connection, DBPlayerCharacter pc, SqliteTransaction transaction)
         {
-            if (_saveNewCharacterCommand == null)
-            {
-                _saveNewCharacterCommand =
-                    new MySqlCommand(
-                        "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,Health,Money,BMFAttributeExtraPoints,SkillDeck) VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@health,@money,@bmfaep,@skilldeck);",
-                        connection);
-                AddCharacterCommandParameters(_saveNewCharacterCommand, pc);
-                _saveNewCharacterCommand.Prepare();
-            }
-            else
-            {
-                FillCharacterCommandParameters(_saveNewCharacterCommand, pc);
-            }
+            var _saveNewCharacterCommand =
+                new SqliteCommand(
+                    "INSERT INTO playercharacters (AccountID,CharacterID,Name,Appearance,LastMapID,Faction,ArcheType,PawnState,Position,Rotation,FamePep,Health,Money,BMFAttributeExtraPoints,SkillDeck) " +
+                    "VALUES (@accID,@charID,@name,@app,@lm,@fac,@arch,@state,@pos,@rot,@fp,@health,@money,@bmfaep,@skilldeck);",
+                    connection);
+            AddCharacterCommandParameters(_saveNewCharacterCommand, pc);
             _saveNewCharacterCommand.Transaction = transaction;
             return _saveNewCharacterCommand;
         }
 
-        static void AddCharacterCommandParameters(MySqlCommand cmd, DBPlayerCharacter pc)
+        static void AddCharacterCommandParameters(SqliteCommand cmd, DBPlayerCharacter pc)
         {
             cmd.Parameters.AddWithValue("@accID", pc.AccountID);
             cmd.Parameters.AddWithValue("@charID", pc.DBID);
@@ -172,7 +153,7 @@ namespace Database.Dynamic.Internal
             cmd.Parameters.AddWithValue("@skilldeck", pc.SerializedSkillDeck);
         }
 
-        static void FillCharacterCommandParameters(MySqlCommand cmd, DBPlayerCharacter pc)
+        static void FillCharacterCommandParameters(SqliteCommand cmd, DBPlayerCharacter pc)
         {
             cmd.Parameters["@accID"].Value = pc.AccountID;
             cmd.Parameters["@charID"].Value = pc.DBID;
@@ -199,63 +180,33 @@ namespace Database.Dynamic.Internal
 
         #region Loading
 
-        static MySqlCommand _characterLoadCommand;
-
-        public static MySqlCommand GetCharactersLoadAllCommand(MySqlConnection connection)
+        public static SqliteCommand GetCharactersLoadAllCommand(SqliteConnection connection)
         {
-            if (_characterLoadCommand == null)
-            {
-                _characterLoadCommand = new MySqlCommand("SELECT * FROM playercharacters", connection);
-                _characterLoadCommand.Prepare();
-            }
+            var _characterLoadCommand = new SqliteCommand("SELECT * FROM playercharacters", connection);
             return _characterLoadCommand;
         }
 
-        static MySqlCommand _skillLoadCommand;
-
-        public static MySqlCommand GetCharacterAllSkillsLoadCommand(MySqlConnection connection)
+        public static SqliteCommand GetCharacterAllSkillsLoadCommand(SqliteConnection connection)
         {
-            if (_skillLoadCommand == null)
-            {
-                _skillLoadCommand = new MySqlCommand("SELECT * FROM playercharacterskills", connection);
-                _skillLoadCommand.Prepare();
-            }
+            var _skillLoadCommand = new SqliteCommand("SELECT * FROM playercharacterskills", connection);
             return _skillLoadCommand;
         }
 
-        static MySqlCommand _itemsLoadCommand;
-
-        public static MySqlCommand GetCharacterAllItemsLoadCommand(MySqlConnection connection)
+        public static SqliteCommand GetCharacterAllItemsLoadCommand(SqliteConnection connection)
         {
-            if (_itemsLoadCommand == null)
-            {
-                _itemsLoadCommand = new MySqlCommand("SELECT * FROM playercharacteritems", connection);
-                _itemsLoadCommand.Prepare();
-            }
+            var _itemsLoadCommand = new SqliteCommand("SELECT * FROM playercharacteritems", connection);
             return _itemsLoadCommand;
         }
 
-        static MySqlCommand _questsLoadCommand;
-
-        public static MySqlCommand GetCharacterAllQuestsLoadCommand(MySqlConnection connection)
+        public static SqliteCommand GetCharacterAllQuestsLoadCommand(SqliteConnection connection)
         {
-            if (_questsLoadCommand == null)
-            {
-                _questsLoadCommand = new MySqlCommand("SELECT * FROM playercharacterquests", connection);
-                _questsLoadCommand.Prepare();
-            }
+            var _questsLoadCommand = new SqliteCommand("SELECT * FROM playercharacterquests", connection);
             return _questsLoadCommand;
         }
 
-        static MySqlCommand _perVarsLoadCommand;
-
-        public static MySqlCommand GetCharacterPerVarsLoadCommand(MySqlConnection connection)
+        public static SqliteCommand GetCharacterPerVarsLoadCommand(SqliteConnection connection)
         {
-            if (_perVarsLoadCommand == null)
-            {
-                _perVarsLoadCommand = new MySqlCommand("SELECT * FROM playercharacterpersistentvars", connection);
-                _perVarsLoadCommand.Prepare();
-            }
+            var _perVarsLoadCommand = new SqliteCommand("SELECT * FROM playercharacterpersistentvars", connection);
             return _perVarsLoadCommand;
         }
 
@@ -263,185 +214,89 @@ namespace Database.Dynamic.Internal
 
         #region Saving
 
-        static MySqlCommand _characterSkillSaveCommand;
-
-        public static MySqlCommand GetCharacterSkillSaveCommand(MySqlConnection connection, DBPlayerCharacter pc, DBSkill skill, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterSkillSaveCommand(SqliteConnection connection, DBPlayerCharacter pc, DBSkill skill, SqliteTransaction transaction)
         {
-            if (_characterSkillSaveCommand == null)
-            {
-                const string cmd = "INSERT INTO playercharacterskills (CharacterID,SkillID,SigilSlots) VALUES (@charID,@skillID,@Slots);";
-                _characterSkillSaveCommand = new MySqlCommand(cmd, connection);
-                _characterSkillSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
-                _characterSkillSaveCommand.Parameters.AddWithValue("@skillID", skill != null ? skill.ResourceId : -1);
-                _characterSkillSaveCommand.Parameters.AddWithValue("@Slots", skill != null ? skill.SigilSlots : 0);
-                _characterSkillSaveCommand.Prepare();
-            }
-            else
-            {
-                _characterSkillSaveCommand.Parameters["@charID"].Value = pc.DBID;
-                _characterSkillSaveCommand.Parameters["@skillID"].Value = skill != null ? skill.ResourceId : -1;
-                _characterSkillSaveCommand.Parameters["@Slots"].Value = skill != null ? skill.SigilSlots : 0;
-            }
+            var _characterSkillSaveCommand = new SqliteCommand("INSERT INTO playercharacterskills (CharacterID,SkillID,SigilSlots) VALUES (@charID,@skillID,@Slots);", connection);
+            _characterSkillSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
+            _characterSkillSaveCommand.Parameters.AddWithValue("@skillID", skill != null ? skill.ResourceId : -1);
+            _characterSkillSaveCommand.Parameters.AddWithValue("@Slots", skill != null ? skill.SigilSlots : 0);
             _characterSkillSaveCommand.Transaction = transaction;
             return _characterSkillSaveCommand;
         }
 
-        static MySqlCommand _characterSkillsDeleteCommand;
-
-        public static MySqlCommand GetCharacterSkillsDeleteCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterSkillsDeleteCommand(SqliteConnection connection, DBPlayerCharacter pc, SqliteTransaction transaction)
         {
-            if (_characterSkillsDeleteCommand == null)
-            {
-                _characterSkillsDeleteCommand = new MySqlCommand("DELETE FROM playercharacterskills WHERE CharacterID=@charid", connection);
-                _characterSkillsDeleteCommand.Parameters.AddWithValue("@charid", pc.DBID);
-                _characterSkillsDeleteCommand.Prepare();
-            }
-            else
-            {
-                _characterSkillsDeleteCommand.Parameters["@charid"].Value = pc.DBID;
-            }
+            var _characterSkillsDeleteCommand = new SqliteCommand("DELETE FROM playercharacterskills WHERE CharacterID=@charid", connection);
+            _characterSkillsDeleteCommand.Parameters.AddWithValue("@charid", pc.DBID);
             _characterSkillsDeleteCommand.Transaction = transaction;
             return _characterSkillsDeleteCommand;
         }
 
-        static MySqlCommand _characterItemsSaveCommand;
-
-        public static MySqlCommand GetCharacterItemSaveCommand(MySqlConnection connection, DBPlayerCharacter pc, Game_Item item, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterItemSaveCommand(SqliteConnection connection, DBPlayerCharacter pc, Game_Item item, SqliteTransaction transaction)
         {
-            if (_characterItemsSaveCommand == null)
-            {
-                _characterItemsSaveCommand =
-                    new MySqlCommand(
-                        "INSERT INTO playercharacteritems (ID,CharacterID,Stacks,ResourceID,LocationType,LocationSlot,Attuned,Color1,Color2,Serial) VALUES (@id,@charID,@stacks,@resID,@locType,@locSlot,@att,@col1,@col2,@serial);",
-                        connection);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@id", item != null ? item.DBID : -1);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@stacks", item != null ? item.StackSize : 0);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@resID", item != null ? item.Type.resourceID : -1);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@locType", item != null ? item.LocationType : 0);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@locSlot", item != null ? item.LocationSlot : 0);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@att", item != null ? (int) item.Attuned : 0);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@col1", item != null ? (int) item.Color1 : 0);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@col2", item != null ? (int) item.Color2 : 0);
-                _characterItemsSaveCommand.Parameters.AddWithValue("@serial", 0);
-                _characterItemsSaveCommand.Prepare();
-            }
-            else
-            {
-                _characterItemsSaveCommand.Parameters["@id"].Value = item != null ? item.DBID : -1;
-                _characterItemsSaveCommand.Parameters["@charID"].Value = pc.DBID;
-                _characterItemsSaveCommand.Parameters["@stacks"].Value = item != null ? item.StackSize : 0;
-                _characterItemsSaveCommand.Parameters["@resID"].Value = item != null ? item.Type.resourceID : -1;
-                _characterItemsSaveCommand.Parameters["@locType"].Value = item != null ? item.LocationType : 0;
-                _characterItemsSaveCommand.Parameters["@locSlot"].Value = item != null ? item.LocationSlot : 0;
-                _characterItemsSaveCommand.Parameters["@att"].Value = item != null ? (int) item.Attuned : 0;
-                _characterItemsSaveCommand.Parameters["@col1"].Value = item != null ? (int) item.Color1 : 0;
-                _characterItemsSaveCommand.Parameters["@col2"].Value = item != null ? (int) item.Color2 : 0;
-                _characterItemsSaveCommand.Parameters["@serial"].Value = 0;
-            }
+            var _characterItemsSaveCommand =
+                new SqliteCommand(
+                    "INSERT INTO playercharacteritems (ID,CharacterID,Stacks,ResourceID,LocationType,LocationSlot,Attuned,Color1,Color2,Serial) VALUES (@id,@charID,@stacks,@resID,@locType,@locSlot,@att,@col1,@col2,@serial);",
+                    connection);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@id", item != null ? item.DBID : -1);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@stacks", item != null ? item.StackSize : 0);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@resID", item != null ? item.Type.resourceID : -1);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@locType", item != null ? item.LocationType : 0);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@locSlot", item != null ? item.LocationSlot : 0);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@att", item != null ? (int) item.Attuned : 0);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@col1", item != null ? (int) item.Color1 : 0);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@col2", item != null ? (int) item.Color2 : 0);
+            _characterItemsSaveCommand.Parameters.AddWithValue("@serial", 0);
             _characterItemsSaveCommand.Transaction = transaction;
             return _characterItemsSaveCommand;
         }
 
-        static MySqlCommand _characterItemsDeleteCommand;
-
-        public static MySqlCommand GetCharacterItemsDeleteCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterItemsDeleteCommand(SqliteConnection connection, DBPlayerCharacter pc, SqliteTransaction transaction)
         {
-            if (_characterItemsDeleteCommand == null)
-            {
-                _characterItemsDeleteCommand = new MySqlCommand("DELETE FROM playercharacteritems WHERE CharacterID=@charID", connection);
-                _characterItemsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
-            }
-            else
-            {
-                _characterItemsDeleteCommand.Parameters["@charID"].Value = pc.DBID;
-            }
+            var _characterItemsDeleteCommand = new SqliteCommand("DELETE FROM playercharacteritems WHERE CharacterID=@charID", connection);
+            _characterItemsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
             _characterItemsDeleteCommand.Transaction = transaction;
             return _characterItemsDeleteCommand;
         }
 
-        static MySqlCommand _characterQuestTargetSaveCommand;
-
-        public static MySqlCommand GetCharacterQuestTargetSaveCommand(MySqlConnection connection, DBPlayerCharacter pc, DBQuestTarget target, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterQuestTargetSaveCommand(SqliteConnection connection, DBPlayerCharacter pc, DBQuestTarget target, SqliteTransaction transaction)
         {
-            if (_characterQuestTargetSaveCommand == null)
-            {
-                const string cmd = "INSERT INTO playercharacterquests (CharacterID,QuestID,IsComplete,TargetIndex,TargetProgress) VALUES (@charID,@questID,@isComplete,@tarIndex,@tarProg);";
-                _characterQuestTargetSaveCommand = new MySqlCommand(cmd, connection);
-                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
-                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@questID", target != null? target.ResourceId : -1);
-                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@isComplete", target != null && target.isCompleted);
-                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarIndex", target != null ? target.targetIndex : 0);
-                _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarProg", target != null ? target.targetProgress : 0);
-                _characterQuestTargetSaveCommand.Prepare();
-            }
-            else
-            {
-                _characterQuestTargetSaveCommand.Parameters["@charID"].Value = pc.DBID;
-                _characterQuestTargetSaveCommand.Parameters["@questID"].Value = target != null ? target.ResourceId : -1;
-                _characterQuestTargetSaveCommand.Parameters["@isComplete"].Value = target != null && target.isCompleted;
-                _characterQuestTargetSaveCommand.Parameters["@tarIndex"].Value = target != null ? target.targetIndex : 0;
-                _characterQuestTargetSaveCommand.Parameters["@tarProg"].Value = target != null ? target.targetProgress : 0;
-            }
+            const string cmd = "INSERT INTO playercharacterquests (CharacterID,QuestID,IsComplete,TargetIndex,TargetProgress) VALUES (@charID,@questID,@isComplete,@tarIndex,@tarProg);";
+            var _characterQuestTargetSaveCommand = new SqliteCommand(cmd, connection);
+            _characterQuestTargetSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
+            _characterQuestTargetSaveCommand.Parameters.AddWithValue("@questID", target != null? target.ResourceId : -1);
+            _characterQuestTargetSaveCommand.Parameters.AddWithValue("@isComplete", target != null && target.isCompleted);
+            _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarIndex", target != null ? target.targetIndex : 0);
+            _characterQuestTargetSaveCommand.Parameters.AddWithValue("@tarProg", target != null ? target.targetProgress : 0);
             _characterQuestTargetSaveCommand.Transaction = transaction;
             return _characterQuestTargetSaveCommand;
         }
 
-        static MySqlCommand _characterQuestsDeleteCommand;
-
-        public static MySqlCommand GetCharacterQuestsDeleteCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterQuestsDeleteCommand(SqliteConnection connection, DBPlayerCharacter pc, SqliteTransaction transaction)
         {
-            if (_characterQuestsDeleteCommand == null)
-            {
-                _characterQuestsDeleteCommand = new MySqlCommand("DELETE FROM playercharacterquests WHERE CharacterID=@charID", connection);
-                _characterQuestsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
-            }
-            else
-            {
-                _characterQuestsDeleteCommand.Parameters["@charID"].Value = pc.DBID;
-            }
+            var _characterQuestsDeleteCommand = new SqliteCommand("DELETE FROM playercharacterquests WHERE CharacterID=@charID", connection);
+            _characterQuestsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
             _characterQuestsDeleteCommand.Transaction = transaction;
             return _characterQuestsDeleteCommand;
         }
 
-        static MySqlCommand _characterPerVarSaveCommand;
-
-        public static MySqlCommand GetCharacterPerVarSaveCommand(MySqlConnection connection, DBPlayerCharacter pc, DBPersistentVar var, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterPerVarSaveCommand(SqliteConnection connection, DBPlayerCharacter pc, DBPersistentVar var, SqliteTransaction transaction)
         {
-            if (_characterPerVarSaveCommand == null)
-            {
-                const string cmd = "INSERT INTO playercharacterpersistentvars (CharacterID,ContextID,VarID,Value) VALUES (@charID,@contextId,@varID,@value);";
-                _characterPerVarSaveCommand = new MySqlCommand(cmd, connection);
-                _characterPerVarSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
-                _characterPerVarSaveCommand.Parameters.AddWithValue("@contextID", var != null ? var.ContextId : -1);
-                _characterPerVarSaveCommand.Parameters.AddWithValue("@varID", var != null ? var.VarId : -1);
-                _characterPerVarSaveCommand.Parameters.AddWithValue("@value", var != null ? var.Value : 0);
-                _characterPerVarSaveCommand.Prepare();
-            }
-            else
-            {
-                _characterPerVarSaveCommand.Parameters["@charID"].Value = pc.DBID;
-                _characterPerVarSaveCommand.Parameters["@contextID"].Value = var != null ? var.ContextId : -1;
-                _characterPerVarSaveCommand.Parameters["@varID"].Value = var != null ? var.VarId : -1;
-                _characterPerVarSaveCommand.Parameters["@value"].Value = var != null ? var.Value : 0;
-            }
+             const string cmd = "INSERT INTO playercharacterpersistentvars (CharacterID,ContextID,VarID,Value) VALUES (@charID,@contextId,@varID,@value);";
+            var _characterPerVarSaveCommand = new SqliteCommand(cmd, connection);
+            _characterPerVarSaveCommand.Parameters.AddWithValue("@charID", pc.DBID);
+            _characterPerVarSaveCommand.Parameters.AddWithValue("@contextID", var != null ? var.ContextId : -1);
+            _characterPerVarSaveCommand.Parameters.AddWithValue("@varID", var != null ? var.VarId : -1);
+            _characterPerVarSaveCommand.Parameters.AddWithValue("@value", var != null ? var.Value : 0);
             _characterPerVarSaveCommand.Transaction = transaction;
             return _characterPerVarSaveCommand;
         }
 
-        static MySqlCommand _characterPerVarsDeleteCommand;
-
-        public static MySqlCommand GetCharacterPerVarsDeleteCommand(MySqlConnection connection, DBPlayerCharacter pc, MySqlTransaction transaction)
+        public static SqliteCommand GetCharacterPerVarsDeleteCommand(SqliteConnection connection, DBPlayerCharacter pc, SqliteTransaction transaction)
         {
-            if (_characterPerVarsDeleteCommand == null)
-            {
-                _characterPerVarsDeleteCommand = new MySqlCommand("DELETE FROM playercharacterpersistentvars WHERE CharacterID=@charID", connection);
-                _characterPerVarsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
-            }
-            else
-            {
-                _characterPerVarsDeleteCommand.Parameters["@charID"].Value = pc.DBID;
-            }
+            var _characterPerVarsDeleteCommand = new SqliteCommand("DELETE FROM playercharacterpersistentvars WHERE CharacterID=@charID", connection);
+            _characterPerVarsDeleteCommand.Parameters.AddWithValue("@charID", pc.DBID);
             _characterPerVarsDeleteCommand.Transaction = transaction;
             return _characterPerVarsDeleteCommand;
         }

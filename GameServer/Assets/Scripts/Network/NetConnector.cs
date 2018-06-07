@@ -15,7 +15,6 @@ namespace Network
         public delegate void ConnectionDelegate(NetConnection connection);
 
         readonly List<NetConnection> _connections = new List<NetConnection>();
-        readonly IPAddress _ipAddress;
 
         readonly Queue<Message> _messageQueueRef;
         readonly int _port;
@@ -26,16 +25,15 @@ namespace Network
 
         BackgroundWorker _queueWorker;
 
-        bool _shutDownRequested;
+        volatile bool _shutDownRequested;
 
         Thread _thread;
 
-        public NetConnector(string loginIp, int loginPort, Queue<Message> incomingMessages)
+        public NetConnector(int loginPort, Queue<Message> incomingMessages)
         {
             _messageQueueRef = incomingMessages;
             try
             {
-                _ipAddress = IPAddress.Parse(loginIp);
                 _port = loginPort;
             }
             catch (FormatException)
@@ -77,7 +75,7 @@ namespace Network
 
         public bool Start()
         {
-            _thread = new Thread(Listen) {Name = string.Format("TcpServer:{0}:{1}", _ipAddress, _port)};
+            _thread = new Thread(Listen) {Name = string.Format("TcpServer:{0}", _port)};
             _thread.Start();
             _queueWorker = new BackgroundWorker {WorkerSupportsCancellation = true};
             _queueWorker.DoWork += ResolveSendMessageQueues;
@@ -94,12 +92,12 @@ namespace Network
             if (_thread != null)
             {
                 _shutDownRequested = true;
-                if (_listener.Connected)
+                try
                 {
                     _listener.Shutdown(SocketShutdown.Both);
                 }
+                catch { }
                 _listener.Close();
-                _waitHandler.Set();
                 lock (_connections)
                 {
                     for (var i = 0; i < _connections.Count; i++)
@@ -107,7 +105,7 @@ namespace Network
                         HandleDisconnect(_connections[i]);
                     }
                 }
-                _thread.Abort();
+                _waitHandler.Set();
                 if (_thread != null)
                 {
                     _thread.Join(1000);
@@ -117,11 +115,16 @@ namespace Network
             {
                 _connections.Clear();
             }
+            if (_thread != null)
+            {
+                _thread.Interrupt();
+                _thread.Abort();
+            }
         }
 
         void Listen()
         {
-            var localEndPoint = new IPEndPoint(_ipAddress, _port);
+            var localEndPoint = new IPEndPoint(IPAddress.Any, _port);
             _listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             try
             {
@@ -269,10 +272,11 @@ namespace Network
         {
             if (connection.ClientSocket != null)
             {
-                if (connection.ClientSocket.Connected)
+                try
                 {
                     connection.ClientSocket.Shutdown(SocketShutdown.Both);
                 }
+                catch { }
                 connection.ClientSocket.Close();
             }
             if (OnDisconnected != null)

@@ -564,7 +564,7 @@ namespace World
         {
             if (_destinations.Count == 0)
             {
-                var t = destinationsHolder.FindChild(destinationTag);
+                var t = destinationsHolder.Find(destinationTag);
                 if (t)
                 {
                     return t.GetComponent<PlayerStart>();

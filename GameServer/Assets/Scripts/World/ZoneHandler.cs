@@ -215,7 +215,7 @@ namespace World
         {
             foreach (var z in _zones)
             {
-                var NPCs = z.transform.FindChild("Npcs");
+                var NPCs = z.transform.Find("Npcs");
                 var ts = NPCs.GetComponentsInChildren<NpcCharacter>();
                 for (var i = ts.Length; i-- > 0;)
                 {
@@ -248,7 +248,7 @@ namespace World
         {
             foreach (var z in _zones)
             {
-                var spawnersObj = z.transform.FindChild("Spawners");
+                var spawnersObj = z.transform.Find("Spawners");
                 var spawners = spawnersObj.GetComponentsInChildren<NpcSpawner>();
                 var deployers = spawnersObj.GetComponentsInChildren<SpawnDeployer>();
                 for (var i = spawners.Length; i-- > 0;)

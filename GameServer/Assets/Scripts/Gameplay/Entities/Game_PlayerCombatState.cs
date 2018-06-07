@@ -2,6 +2,7 @@ using System;
 using Common;
 using Gameplay.Items;
 using Network;
+using UnityEngine.Assertions;
 
 namespace Gameplay.Entities
 {
@@ -14,9 +15,16 @@ namespace Gameplay.Entities
         {
             base.Init(owner);
             Owner = owner as PlayerCharacter;
-            mMainWeapon = Owner.Items.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON).Type.resourceID;
+            var mh = Owner.Items.GetEquippedItem(EquipmentSlot.ES_MELEEWEAPON);
+            if (mh != null)
+            {
+                mMainWeapon = mh.Type.resourceID;
+            }
             var offH = Owner.Items.GetEquippedItem(EquipmentSlot.ES_SHIELD);
-            if (offH != null) mOffhandWeapon = offH.Type.resourceID;
+            if (offH != null)
+            {
+                mOffhandWeapon = offH.Type.resourceID;
+            }
         }
 
         public void cl2sv_DrawSheatheWeapon()

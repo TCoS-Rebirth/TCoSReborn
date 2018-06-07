@@ -39,7 +39,7 @@ namespace World
 
         public bool IsSessionValid()
         {
-            var dbKey = MysqlDb.AccountDB.GetSessionKey(Account);
+            var dbKey = DB.AccountDB.GetSessionKey(Account);
             return dbKey != -1 && dbKey == Account.SessionKey;
         }
     }

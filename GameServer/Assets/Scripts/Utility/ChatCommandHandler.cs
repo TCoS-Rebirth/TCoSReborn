@@ -19,17 +19,17 @@ namespace Utility
             new ChatCommand(AccountPrivilege.Player, "Prints available commands to your account type", Cmd_ListAllowedCommands, ".cmd", ".commands"),
             new ChatCommand(AccountPrivilege.Player, "Revives your character at the nearest respawn point", Cmd_Respawn, ".respawn", ".revive"),
             new ChatCommand(AccountPrivilege.Player, "Prints your position in the chat", Cmd_PrintPosition, ".pos", ".position", ".location"),
-            new ChatCommand(AccountPrivilege.Player, "Leaves a note for the devs. Saves your characters location and zone: Usage: .note YourMessageHere", Cmd_LeaveNote,
-                ".note", ".message"),
+            //new ChatCommand(AccountPrivilege.Player, "Leaves a note for the devs. Saves your characters location and zone: Usage: .note YourMessageHere", Cmd_LeaveNote,
+            //    ".note", ".message"),
             new ChatCommand(AccountPrivilege.Player, "Prints help for a given command. Usage: .help command", Cmd_PrintHelp, ".help"),
-            new ChatCommand(AccountPrivilege.GM, "Teleports your character to the given position. Usage: .tele x y z (no fractions)", Cmd_Teleport, ".tele", ".port",
+            new ChatCommand(AccountPrivilege.GM, "Teleports your character to the given position. Usage: .tele x y z (no fractions). Use .respawn if you get lost", Cmd_Teleport, ".tele", ".port",
                 ".teleport"),
             new ChatCommand(AccountPrivilege.GM, "Moves your character to the given Shard ('random' location). Usage: .travel PREFIX_SHARDNAME (use .shards for list)",
                 Cmd_Travel, ".travel", ".shardtravel"),
             new ChatCommand(AccountPrivilege.GM, "Lists all available shards with their internal ID", Cmd_ListShards, ".shards", ".listshards", ".destinations"),
-            new ChatCommand(AccountPrivilege.GM, "Toggles DebugMode (enables certain chat notifications). usage .debug on/off", Cmd_SetDebugMode, ".debug", ".debugmode"),
-            new ChatCommand(AccountPrivilege.GM, "Sets your characters physique to the given value (-5 to +5). Usage: .physique X", Cmd_SetPhysique, ".physique",
-                ".setphysique"),
+            //new ChatCommand(AccountPrivilege.GM, "Toggles DebugMode (enables certain chat notifications). usage .debug on/off", Cmd_SetDebugMode, ".debug", ".debugmode"),
+            //new ChatCommand(AccountPrivilege.GM, "Sets your characters physique to the given value (-5 to +5). Usage: .physique X", Cmd_SetPhysique, ".physique",
+            //    ".setphysique"),
             new ChatCommand(AccountPrivilege.GM, "Adds the given amount of fame points to this character. Usage: .addfame X", Cmd_AddFame, ".addfame",
                 ".givefame")
         };
@@ -184,7 +184,16 @@ namespace Utility
                     var z = GameWorld.Instance.GetZone(m);
                     if (z.IsEnabled)
                     {
-                        p.Owner.LoadClientMap(m);
+                        var ps = z.FindNearestRespawn(p.Position);
+                        if (ps != null)
+                        {
+                            p.SetLocation(ps.Position);
+                            p.Owner.LoadClientMap(m);
+                        }
+                        else
+                        {
+                            ResponseMessage(p, "Zone has no point to port to, try walking there");
+                        }
                         return;
                     }
                     ResponseMessage(p, "Zone disabled");
@@ -196,7 +205,16 @@ namespace Utility
                     var z = GameWorld.Instance.GetZone((MapIDs) num);
                     if (z && z.IsEnabled)
                     {
-                        p.Owner.LoadClientMap((MapIDs) num);
+                        var ps = z.FindNearestRespawn(p.Position);
+                        if (ps != null)
+                        {
+                            p.SetLocation(ps.Position);
+                            p.Owner.LoadClientMap((MapIDs) num);
+                        }
+                        else
+                        {
+                            ResponseMessage(p, "Zone has no point to port to, try walking there");
+                        }
                         return;
                     }
                     ResponseMessage(p, "Zone not found or disabled");
@@ -209,7 +227,16 @@ namespace Utility
                     {
                         if (zones[i].IsEnabled)
                         {
-                            p.Owner.LoadClientMap(zones[i].ID);
+                            var ps = zones[i].FindNearestRespawn(p.Position);
+                            if (ps != null)
+                            {
+                                p.SetLocation(ps.Position);
+                                p.Owner.LoadClientMap(zones[i].ID);
+                            }
+                            else
+                            {
+                                ResponseMessage(p, "Zone has no point to port to, try walking there");
+                            }
                             return;
                         }
                         ResponseMessage(p, "Zone disabled");
@@ -271,7 +298,7 @@ namespace Utility
             if (parts.Length >= 2)
             {
                 var msg = fmsg.Substring(fmsg.IndexOf(' '), fmsg.Length - fmsg.IndexOf(' '));
-                MysqlDb.DevNoteDB.AddNote(p, msg);
+                DB.DevNoteDB.AddNote(p, msg);
                 ResponseMessage(p, "Message saved");
             }
             else

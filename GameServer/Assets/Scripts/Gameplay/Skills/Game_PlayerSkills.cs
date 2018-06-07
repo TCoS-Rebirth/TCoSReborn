@@ -159,8 +159,7 @@ namespace Gameplay.Skills
             var skillIDs = serializedData.Split(new[] {'|'}, StringSplitOptions.RemoveEmptyEntries);
             if (skillIDs.Length != 30)
             {
-                Debug.LogError("serialized DBSkilldeck has wrong length");
-                return;
+                Debug.LogWarning("serialized DBSkilldeck has wrong length");
             }
             var newDeck = new FSkill_Type[30];
             for (var i = 0; i < skillIDs.Length; i++)
